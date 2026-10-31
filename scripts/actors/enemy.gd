@@ -332,6 +332,8 @@ func _end_attack(my_id: int) -> void:
 func _slam_at(p: Vector2, r: float, dmg: float) -> void:
 	Audio.sfx("slam")
 	G.shake(5.0, 0.3)
+	G.shockwave(p, 0.9, 0.45)
+	Fx.scorch(p, r * 0.7)
 	Fx.ring(p, 6.0, r * 1.2, Color(1, 0.6, 0.3), 0.4, 6.0)
 	Fx.burst(p, Color(1, 0.55, 0.25), 22, 130.0, 0.6, "fx_px", 180.0)
 	Fx.burst(p, Color(0.5, 0.45, 0.5, 0.8), 10, 60.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6, false)
@@ -407,6 +409,7 @@ func on_hurt(new_hp: float, dmg: float, dir: Vector2, crit: bool, broke: bool) -
 	Fx.number(global_position + Vector2(0, cfg.off), dmg, Color(1, 0.85, 0.3) if crit else Color(1, 1, 1), crit)
 	Fx.burst(global_position + Vector2(0, cfg.off * 0.6), Color(1, 0.9, 0.7), 8 if not crit else 16, 110.0, 0.35, "fx_px", 50.0, dir)
 	Fx.burst(global_position + Vector2(0, cfg.off * 0.6), Color(1, 0.5, 0.2), 4, 60.0, 0.5, "fx_soft", 70.0, dir, 0.3)
+	Fx.sparks(global_position + Vector2(0, cfg.off * 0.6), dir if dir != Vector2.ZERO else Vector2.UP, Color(1, 0.7, 0.35), 5 if not crit else 12, 140.0, 90.0)
 	sprite.scale = Vector2(1.2, 0.85)
 	if _hp_bar:
 		_hp_bar.visible = true
@@ -441,6 +444,9 @@ func on_parried() -> void:
 func die() -> void:
 	if state == "dead":
 		return
+	if is_boss:
+		G.shockwave(global_position + Vector2(0, cfg.off), 2.0, 1.0)
+		G.chroma(2.0, 1.0)
 	state = "dead"
 	_attack_id += 1
 	velocity = Vector2.ZERO

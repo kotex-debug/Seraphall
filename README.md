@@ -22,6 +22,8 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 | Lanza de Luz / Nova de Ceniza | Q / E | RB / → |
 | Ira Seráfica (definitiva) | R | R3 |
 | Curar (Lágrima) | C | ↑ |
+| Objeto rápido (bomba, incienso…) | X | ↓ |
+| Mapa | M | - |
 | Interactuar / revivir | F | B |
 | Menú (personaje, árbol, armas, misiones) | Tab | Select |
 
@@ -32,12 +34,18 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 - **Amigo:** *Unirse con código* → escribe el código.
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
 
-## ✨ Contenido de la demo (v0.1)
-- Estrato I: Vestíbulo de Ceniza (5 zonas)
+## ✨ Contenido de la demo (v0.2)
+- Estrato I: Vestíbulo de Ceniza: ruinas flotando sobre el Abismo de la Espiral (6 zonas)
+- **Cinemáticas frontales de jefe** al estilo de las grandes presentaciones: Seravel y El Carcelero
 - Jefe principal **Seravel, Guardiana de las Puertas** (2 fases) y jefe menor **El Carcelero**
-- 5 armas mejorables (+10), árbol de habilidades con 25 nodos en 5 ramas, 6 atributos
-- 5 misiones (principal, secundarias y caza) con recompensas
-- Español e inglés, música y efectos originales
+- Interfaz pixel art animada, árbol de habilidades en forma de sigilo radial (25 nodos)
+- Inventario: consumibles, amuletos con efectos pasivos, objetos clave y materiales; botín de enemigos
+- Lugares de paz: el **Mirador del Ala Rota**, donde puedes sentarte a contemplar y recuperar **recuerdos**
+- Mapa del Estrato con niebla de exploración
+- Efectos de combate: ondas de choque, aberración cromática, chispas, estrellas de impacto, almas
+- 5 armas mejorables (+10), 6 atributos, 5 misiones, español e inglés, música original (8 pistas)
+
+Fuentes: Jersey 10/15, Silkscreen y Pixelify Sans (SIL Open Font License, ver `assets/fonts`).
 
 ## 🛠️ Desarrollo
 Hecho con **Godot 4.7** (gratis y de código abierto).

@@ -381,9 +381,42 @@ def tile_void():
         a[y, :, :] = (v, v - 4 if v > 4 else 0, v + 8, 255)
     return Image.fromarray(a)
 
+def tile_cliff(part, seed=0):
+    """Cara de acantilado bajo el borde del suelo (part 0 = arriba, 1 = abajo con picos que se desvanecen)."""
+    rr = random.Random(seed * 13 + part)
+    a = np.zeros((T, T, 4), dtype=np.uint8)
+    teeth = [rr.randint(3, 13) for _ in range(T)]
+    for x in range(1, T):
+        teeth[x] = (teeth[x] + teeth[x - 1]) // 2
+    for y in range(T):
+        for x in range(T):
+            gy = y + part * T
+            if part == 1 and y > teeth[x]:
+                continue
+            strata = (gy // 3 + (x // 5)) % 3
+            base = 78 - gy * 1.6
+            v = base + (8 if strata == 0 else (-6 if strata == 2 else 0)) + rr.randint(-3, 3)
+            a[y, x] = (int(v * 0.92), int(v * 0.78), int(v * 1.12), 255)
+    if part == 0:
+        a[0, :, :3] = (150, 132, 160)
+        a[1, :, :3] = (96, 84, 108)
+        for x in range(0, T, 5):
+            for y in range(3, 9):
+                a[y, (x + seed) % T, :3] = (34, 26, 40)
+    else:
+        for x in range(T):
+            ty = teeth[x]
+            if 0 <= ty < T:
+                a[ty, x, :3] = (30, 22, 36)
+    return Image.fromarray(a)
+
+def tile_clear():
+    return canvas(T, T)
+
 tiles = [tile_floor(0), tile_floor(1), tile_floor(2), tile_floor(3), tile_ash(0), tile_ash(1),
          tile_wall_top(), tile_wall_face(0), tile_wall_face(1), tile_wall_face(3), tile_carpet(), tile_grate(), tile_void(),
-         tile_floor(6, (0.9, 0.95, 1.15)), tile_floor(7, (0.9, 0.95, 1.15)), tile_floor(9, (1.1, 1.0, 0.85))]
+         tile_floor(6, (0.9, 0.95, 1.15)), tile_floor(7, (0.9, 0.95, 1.15)), tile_floor(9, (1.1, 1.0, 0.85)),
+         tile_cliff(0, 1), tile_cliff(1, 1), tile_clear(), tile_floor(12, (0.95, 1.08, 0.95))]
 strip(tiles).save(f"{OUT}/tiles.png")
 
 # ---------------------------------------------------------------- decoración
@@ -560,6 +593,67 @@ def icon(kind):
         d.rectangle([4, 2, 12, 14], fill=C("d8c8a0")); d.line([(6, 5), (10, 5)], fill=C("6a4a30")); d.line([(6, 8), (10, 8)], fill=C("6a4a30"))
     return outline(img)
 
+def item_icon(kind):
+    img = canvas(16, 16); d = ImageDraw.Draw(img)
+    if kind == "bomb":
+        ell(d, 8, 9, 5, 5, C("3a3442")); ell(d, 7, 8, 2, 2, C("6a6278")); d.line([(10, 4), (12, 2)], fill=C("c8a060"))
+        d.point((13, 1), fill=C("ffd040")); d.point((12, 1), fill=C("ff7030"))
+    elif kind == "phoenix":
+        d.polygon([(3, 14), (10, 2), (13, 3), (7, 14)], fill=C("ff7030")); d.polygon([(5, 12), (10, 4), (11, 5), (7, 12)], fill=C("ffd060"))
+        d.line([(2, 15), (11, 3)], fill=C("fff0c0"))
+    elif kind == "incense":
+        d.rectangle([5, 9, 10, 14], fill=C("8a6a4a")); d.rectangle([5, 9, 10, 10], fill=C("c09a60"))
+        for i in range(4):
+            d.point((7 + (i % 2), 7 - i * 2), fill=C("d8d0f0"))
+    elif kind == "ointment":
+        d.rectangle([4, 7, 11, 13], fill=C("6a7a8a")); d.rectangle([4, 5, 11, 7], fill=C("c0c8d0")); d.rectangle([6, 9, 9, 11], fill=C("40c0b0"))
+    elif kind == "key":
+        ell(d, 5, 6, 3, 3, C("ffd060")); ell(d, 5, 6, 1, 1, C("2a2030")); d.rectangle([7, 6, 14, 7], fill=C("ffd060")); d.rectangle([12, 8, 13, 10], fill=C("ffd060"))
+    elif kind == "scroll":
+        d.rectangle([3, 4, 12, 12], fill=C("e8d8b0")); d.rectangle([2, 3, 4, 13], fill=C("b89a70")); d.rectangle([11, 3, 13, 13], fill=C("b89a70"))
+        d.line([(5, 6), (10, 6)], fill=C("8a6a4a")); d.line([(5, 9), (9, 9)], fill=C("8a6a4a"))
+    elif kind == "iron":
+        d.polygon([(2, 11), (8, 5), (14, 8), (9, 14)], fill=C("8aa0c8")); d.polygon([(8, 5), (14, 8), (10, 9)], fill=C("c8d8ff"))
+    elif kind == "amulet_wing":
+        d.line([(4, 1), (8, 6), (12, 1)], fill=C("c8a060")); ell(d, 8, 10, 4, 4, C("f0f0ff")); d.polygon([(6, 10), (8, 6), (10, 10), (8, 13)], fill=C("90c8ff"))
+    elif kind == "amulet_ash":
+        d.line([(4, 1), (8, 6), (12, 1)], fill=C("c8a060")); d.polygon([(8, 5), (12, 9), (8, 14), (4, 9)], fill=C("6a5a5a")); d.polygon([(8, 7), (10, 9), (8, 12), (6, 9)], fill=C("ff6a20"))
+    elif kind == "amulet_eye":
+        d.line([(4, 1), (8, 6), (12, 1)], fill=C("c8a060")); ell(d, 8, 10, 5, 3, C("f8e8f0")); ell(d, 8, 10, 2, 2, C("ff3050")); d.point((8, 10), fill=C("200810"))
+    elif kind == "memory":
+        d.polygon([(8, 1), (13, 8), (8, 15), (3, 8)], fill=C("a0d8ff")); d.polygon([(8, 3), (11, 8), (8, 13)], fill=C("e8f8ff"))
+    elif kind == "heart":
+        d.polygon([(8, 14), (2, 7), (2, 4), (4, 2), (7, 3), (8, 4), (9, 3), (12, 2), (14, 4), (14, 7)], fill=C("ff2e4d"))
+        d.rectangle([4, 4, 5, 5], fill=C("ffb0c0"))
+    elif kind == "bench":
+        pass
+    return outline(img)
+
+for k in ("bomb", "phoenix", "incense", "ointment", "key", "scroll", "iron", "amulet_wing", "amulet_ash", "amulet_eye", "memory", "heart"):
+    item_icon(k).save(f"{OUT}/icon_{k}.png")
+
+def bench():
+    img = canvas(28, 14); d = ImageDraw.Draw(img)
+    d.rectangle([1, 4, 26, 7], fill=C("6a6478")); d.rectangle([1, 4, 26, 4], fill=C("8a8498"))
+    d.rectangle([3, 8, 5, 13], fill=C("4a4456")); d.rectangle([22, 8, 24, 13], fill=C("4a4456"))
+    d.point((10, 5), fill=C("5a5468")); d.point((17, 6), fill=C("5a5468"))
+    return outline(img)
+bench().save(f"{OUT}/bench.png")
+
+def broken_wing():
+    img = canvas(48, 40); d = ImageDraw.Draw(img)
+    stone = C("8a8496"); dark = C("5a5468")
+    for i in range(7):
+        k = i / 6.0
+        ang = math.radians(-20 - 60 * k)
+        L = 38 - k * 14
+        x0, y0 = 6, 36
+        x1, y1 = x0 + math.cos(ang) * L, y0 + math.sin(ang) * L
+        d.line([(x0, y0), (x1, y1)], fill=stone if i % 2 == 0 else dark, width=4)
+    d.polygon([(0, 34), (16, 32), (20, 39), (0, 39)], fill=C("4a4456"))
+    return outline(img)
+broken_wing().save(f"{OUT}/broken_wing.png")
+
 for k in ("eco", "feather", "flask", "filo", "ala", "luz", "ceniza", "arconte", "lance", "nova", "orbit", "fire", "quest"):
     icon(k).save(f"{OUT}/icon_{k}.png")
 
@@ -591,3 +685,182 @@ def title_bg():
 
 title_bg().save(f"{OUT}/title_bg.png")
 print("Arte generado en", os.path.abspath(OUT))
+
+# ================================================================ arte de cinemáticas (vista frontal)
+CIN = os.path.join(OUT, "cinematic")
+os.makedirs(CIN, exist_ok=True)
+
+def hshade(img, light=1.12, dark=0.72):
+    """Sombreado frontal: más claro a la izquierda, más oscuro a la derecha, por silueta."""
+    a = np.array(img).astype(float)
+    alpha = a[:, :, 3] > 0
+    h, w = alpha.shape
+    for y in range(h):
+        xs = np.where(alpha[y])[0]
+        if len(xs) == 0:
+            continue
+        x0, x1 = xs.min(), xs.max()
+        span = max(1, x1 - x0)
+        for x in xs:
+            k = (x - x0) / span
+            f = light if k < 0.3 else (dark if k > 0.72 else 1.0)
+            a[y, x, :3] *= f
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+def feather_wing(W, H, base, shade_col, tip_col, seed=1):
+    """Ala izquierda vista de frente: raíz a la derecha, plumas en abanico hacia la izquierda."""
+    img = canvas(W, H); d = ImageDraw.Draw(img); rr = random.Random(seed)
+    root = (W - 8, 28)
+    layers = [  # (n, longitud, anchura, color, desfase)
+        (11, 74, 4.5, tip_col, 0.0),
+        (10, 54, 5.0, shade_col, 0.05),
+        (9, 32, 5.5, base, 0.1),
+    ]
+    for (n, L, wdt, col, off) in layers:
+        for i in range(n):
+            k = i / (n - 1)
+            a = math.pi + 1.05 - k * 1.95 + off
+            length = L * (0.55 + 0.45 * math.sin(0.35 + k * 2.4)) * (0.95 + 0.1 * rr.random())
+            bx = root[0] - 6 * k
+            by = root[1] + 18 * k
+            dx, dy = math.cos(a), math.sin(a)
+            tipx, tipy = bx + dx * length, by + dy * length
+            px, py = -dy * wdt, dx * wdt
+            d.polygon([(bx + px * 0.5, by + py * 0.5), (bx + dx * length * 0.7 + px, by + dy * length * 0.7 + py),
+                       (tipx, tipy), (bx + dx * length * 0.7 - px * 0.3, by + dy * length * 0.7 - py * 0.3), (bx - px * 0.3, by - py * 0.3)], fill=col)
+            d.line([(bx, by), (bx + dx * length * 0.85, by + dy * length * 0.85)], fill=shade(col, 0.82))
+    # hueso del ala (borde superior)
+    d.line([root, (root[0] - 30, root[1] - 18), (root[0] - 52, root[1] - 26)], fill=base, width=4)
+    return outline(img)
+
+def seravel_cine():
+    W, H = 72, 112
+    body = canvas(W, H); d = ImageDraw.Draw(body)
+    cx = W // 2
+    white, lav, crimson, gold, skin = C("f4eefa"), C("b8a8d8"), C("c01838"), C("ffd060"), C("f8e0d0")
+    hair = C("a898d8"); armor = C("e0dcec")
+    # vestido largo flotante con bajos rasgados
+    pts = [(cx - 9, 46), (cx + 9, 46), (cx + 16, 80), (cx + 22, 104)]
+    for i in range(6):
+        x = cx + 22 - i * 9
+        pts.append((x - 4, 111 if i % 2 == 0 else 104))
+    pts += [(cx - 22, 104), (cx - 16, 80)]
+    d.polygon(pts, fill=white)
+    d.polygon([(cx - 3, 46), (cx + 3, 46), (cx + 6, 108), (cx - 6, 108)], fill=shade(white, 0.9))
+    for k in range(4):
+        d.line([(cx - 12 + k * 8, 60), (cx - 16 + k * 10, 104)], fill=lav)
+    # fajín carmesí y borde dorado
+    d.rectangle([cx - 10, 44, cx + 10, 49], fill=crimson)
+    d.polygon([(cx + 2, 49), (cx + 7, 49), (cx + 10, 74), (cx + 5, 72)], fill=crimson)
+    d.line([(cx - 22, 104), (cx + 22, 104)], fill=gold)
+    # torso con coraza
+    d.polygon([(cx - 11, 26), (cx + 11, 26), (cx + 9, 45), (cx - 9, 45)], fill=armor)
+    d.line([(cx, 27), (cx, 44)], fill=gold)
+    d.arc([cx - 9, 28, cx - 1, 38], 200, 340, fill=gold); d.arc([cx + 1, 28, cx + 9, 38], 200, 340, fill=gold)
+    # hombreras
+    ell(d, cx - 12, 28, 5, 4, armor); ell(d, cx + 12, 28, 5, 4, armor)
+    d.arc([cx - 17, 24, cx - 7, 32], 180, 360, fill=gold); d.arc([cx + 7, 24, cx + 17, 32], 180, 360, fill=gold)
+    # brazos
+    d.polygon([(cx - 16, 30), (cx - 12, 30), (cx - 13, 52), (cx - 17, 52)], fill=white)
+    d.polygon([(cx + 12, 30), (cx + 16, 30), (cx + 18, 50), (cx + 14, 52)], fill=white)
+    ell(d, cx - 15, 54, 2.5, 2.5, skin); ell(d, cx + 16, 53, 2.5, 2.5, skin)
+    # cuello y cabeza
+    d.rectangle([cx - 3, 20, cx + 3, 26], fill=skin)
+    ell(d, cx, 15, 7, 8, skin)
+    # pelo largo a ambos lados
+    d.polygon([(cx - 8, 10), (cx - 11, 22), (cx - 13, 40), (cx - 8, 36), (cx - 6, 18)], fill=hair)
+    d.polygon([(cx + 8, 10), (cx + 11, 22), (cx + 13, 40), (cx + 8, 36), (cx + 6, 18)], fill=hair)
+    d.chord([cx - 8, 5, cx + 8, 20], 180, 360, fill=hair)
+    d.polygon([(cx - 8, 12), (cx - 2, 8), (cx - 4, 14)], fill=hair)
+    # ojos cerrados y labios
+    d.line([(cx - 4, 16), (cx - 2, 16)], fill=C("6a5070")); d.line([(cx + 2, 16), (cx + 4, 16)], fill=C("6a5070"))
+    d.point((cx, 20), fill=C("c06070"))
+    body = hshade(outline(body))
+    body.save(f"{CIN}/seravel_body.png")
+    # ojos abiertos (capa)
+    eyes = canvas(W, H); de = ImageDraw.Draw(eyes)
+    de.rectangle([cx - 5, 15, cx - 2, 16], fill=C("ff2040")); de.rectangle([cx + 2, 15, cx + 5, 16], fill=C("ff2040"))
+    de.point((cx - 3, 15), fill=C("fff0f0")); de.point((cx + 4, 15), fill=C("fff0f0"))
+    eyes.save(f"{CIN}/seravel_eyes.png")
+    # alas
+    wl = feather_wing(96, 104, C("fffaf2"), C("e4dcec"), C("c8bce0"), 3)
+    wl.save(f"{CIN}/seravel_wing.png")
+    # aureola
+    hal = canvas(44, 14); dh = ImageDraw.Draw(hal)
+    dh.ellipse([1, 1, 42, 12], outline=C("ffe060"), width=2); dh.ellipse([4, 3, 39, 10], outline=C("fff6c0"))
+    hal.save(f"{CIN}/seravel_halo.png")
+    # espada larga
+    sw = canvas(12, 84); ds = ImageDraw.Draw(sw)
+    ds.rectangle([4, 0, 7, 10], fill=C("f0e0ff")); ds.rectangle([0, 10, 11, 13], fill=C("ffd060"))
+    ds.polygon([(3, 14), (8, 14), (8, 76), (5.5, 83), (3, 76)], fill=C("fff4f0"))
+    ds.line([(5, 15), (5, 78)], fill=C("ff4060"))
+    outline(sw).save(f"{CIN}/seravel_sword.png")
+
+def carcelero_cine():
+    W, H = 92, 112
+    img = canvas(W, H); d = ImageDraw.Draw(img)
+    cx = W // 2
+    metal, dark, rust, chain = C("6e6a76"), C("3e3a46"), C("8a4a30"), C("9a96a2")
+    # piernas
+    d.rectangle([cx - 20, 82, cx - 7, 110], fill=dark); d.rectangle([cx + 7, 82, cx + 20, 110], fill=dark)
+    d.rectangle([cx - 23, 104, cx - 5, 111], fill=metal); d.rectangle([cx + 5, 104, cx + 23, 111], fill=metal)
+    # torso enorme
+    d.polygon([(cx - 30, 30), (cx + 30, 30), (cx + 26, 84), (cx - 26, 84)], fill=metal)
+    for y in range(36, 84, 7):
+        d.line([(cx - 28, y), (cx + 28, y)], fill=rust)
+    for k in range(-2, 3):
+        d.line([(cx + k * 10, 32), (cx + k * 10, 82)], fill=shade(metal, 0.8))
+    # cadenas cruzadas
+    for i in range(0, 52, 4):
+        d.ellipse([cx - 28 + i, 34 + i * 0.8, cx - 24 + i, 38 + i * 0.8], outline=chain)
+        d.ellipse([cx + 24 - i, 34 + i * 0.8, cx + 28 - i, 38 + i * 0.8], outline=chain)
+    # hombros y brazos
+    ell(d, cx - 32, 34, 9, 8, metal); ell(d, cx + 32, 34, 9, 8, metal)
+    d.polygon([(cx - 40, 38), (cx - 28, 38), (cx - 30, 74), (cx - 42, 74)], fill=dark)
+    d.polygon([(cx + 28, 38), (cx + 40, 38), (cx + 42, 74), (cx + 30, 74)], fill=dark)
+    ell(d, cx - 36, 78, 6, 5, metal); ell(d, cx + 36, 78, 6, 5, metal)
+    # casco jaula
+    d.rectangle([cx - 13, 6, cx + 13, 30], fill=C("140c12"))
+    for x in range(cx - 13, cx + 14, 4):
+        d.line([(x, 6), (x, 30)], fill=metal)
+    d.line([(cx - 13, 14), (cx + 13, 14)], fill=metal); d.line([(cx - 13, 22), (cx + 13, 22)], fill=metal)
+    d.arc([cx - 14, 0, cx + 14, 14], 180, 360, fill=metal, width=2)
+    img = hshade(outline(img))
+    img.save(f"{CIN}/carcelero_body.png")
+    eyes = canvas(W, H); de = ImageDraw.Draw(eyes)
+    de.rectangle([cx - 7, 17, cx - 3, 19], fill=C("ff6a20")); de.rectangle([cx + 3, 17, cx + 7, 19], fill=C("ff6a20"))
+    de.point((cx - 5, 17), fill=C("fff0c0")); de.point((cx + 5, 17), fill=C("fff0c0"))
+    eyes.save(f"{CIN}/carcelero_eyes.png")
+    ball = canvas(40, 70); db = ImageDraw.Draw(ball)
+    for y in range(0, 48, 4):
+        db.ellipse([18, y, 22, y + 5], outline=chain)
+    ell(db, 20, 58, 10, 10, C("4a4650"))
+    for a in range(0, 360, 45):
+        r = math.radians(a)
+        db.polygon([(20 + math.cos(r) * 9, 58 + math.sin(r) * 9), (20 + math.cos(r + 0.25) * 9, 58 + math.sin(r + 0.25) * 9), (20 + math.cos(r + 0.12) * 15, 58 + math.sin(r + 0.12) * 15)], fill=C("8a8690"))
+    outline(ball).save(f"{CIN}/carcelero_ball.png")
+
+def player_back(pal, name):
+    W, H = 30, 40
+    img = canvas(W, H); d = ImageDraw.Draw(img)
+    cx = W // 2
+    # alas pequeñas
+    d.polygon([(cx - 3, 14), (cx - 13, 6), (cx - 14, 18), (cx - 6, 22)], fill=pal["wing"])
+    d.polygon([(cx + 3, 14), (cx + 13, 6), (cx + 14, 18), (cx + 6, 22)], fill=shade(pal["wing"], 0.85))
+    # capa
+    d.polygon([(cx - 7, 14), (cx + 7, 14), (cx + 9, 36), (cx - 9, 36)], fill=pal["cloak"])
+    d.line([(cx, 15), (cx, 35)], fill=shade(pal["cloak"], 0.8))
+    d.rectangle([cx - 5, 35, cx - 2, 39], fill=pal["legs"]); d.rectangle([cx + 2, 35, cx + 5, 39], fill=pal["legs"])
+    # cabeza (pelo de espaldas)
+    ell(d, cx, 9, 5, 5.5, pal["hair"])
+    d.ellipse([cx - 5, 0, cx + 5, 3], outline=pal["halo"])
+    # espada a un lado
+    d.line([(cx + 9, 18), (cx + 13, 38)], fill=C("e0e4f0"), width=2)
+    out = hshade(outline(img))
+    out.save(f"{CIN}/{name}.png")
+
+seravel_cine()
+carcelero_cine()
+player_back(P1, "player_back_p1")
+player_back(P2, "player_back_p2")
+print("Cinemáticas generadas")

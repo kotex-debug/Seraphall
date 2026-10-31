@@ -5,6 +5,9 @@ signal language_changed
 signal shake_requested(amount: float, duration: float)
 signal flash_requested(color: Color, duration: float)
 signal toast_requested(text: String, color: Color)
+signal shockwave_requested(pos: Vector2, strength: float, duration: float)
+signal chroma_requested(amount: float, duration: float)
+signal punch_requested(amount: float)
 
 var lang := "es"  # "es" | "en"
 var music_volume := 0.8
@@ -39,8 +42,8 @@ const TXT := {
 	"partner_left": ["Tu compañero se ha ido.", "Your partner has left."],
 	"host_left": ["El anfitrión cerró la partida.", "The host closed the game."],
 	"press_any": ["Pulsa cualquier tecla", "Press any key"],
-	"controls": ["WASD mover · Ratón apuntar · Clic izq. ataque · Clic der. pesado (mantén) · Espacio dash · Shift parry · Q/E hechizos · R Ira · C curar · F interactuar · Tab menú",
-		"WASD move · Mouse aim · LMB attack · RMB heavy (hold) · Space dash · Shift parry · Q/E spells · R Wrath · C heal · F interact · Tab menu"],
+	"controls": ["WASD mover · Ratón apuntar · Clic izq. ataque · Clic der. pesado (mantén) · Espacio dash · Shift parry · Q/E hechizos · R Ira · C curar · X objeto · F interactuar · Tab menú · M mapa",
+		"WASD move · Mouse aim · LMB attack · RMB heavy (hold) · Space dash · Shift parry · Q/E spells · R Wrath · C heal · X item · F interact · Tab menu · M map"],
 	"interact": ["[F] %s", "[F] %s"],
 	"rest": ["Descansar", "Rest"],
 	"light_brasa": ["Encender la Brasa", "Kindle the Ember"],
@@ -49,7 +52,7 @@ const TXT := {
 	"revive": ["Mantén F para revivir", "Hold F to revive"],
 	"brasa_lit": ["BRASA ENCENDIDA", "EMBER KINDLED"],
 	"you_died": ["HAS CAÍDO", "YOU HAVE FALLEN"],
-	"downed": ["Caído — tu compañero puede revivirte", "Downed — your partner can revive you"],
+	"downed": ["Caído - tu compañero puede revivirte", "Downed - your partner can revive you"],
 	"archon_defeated": ["ARCONTE DERROTADO", "ARCHON DEFEATED"],
 	"enemy_felled": ["ENEMIGO ABATIDO", "ENEMY FELLED"],
 	"level_up": ["¡Subes de nivel!", "Level up!"],
@@ -107,7 +110,23 @@ const TXT := {
 	"area_gallery": ["Galería Rota", "Broken Gallery"],
 	"area_yard": ["Patio del Carcelero", "Jailer's Yard"],
 	"area_circle": ["Círculo de la Guardiana", "Circle of the Warden"],
-	"stratum1": ["ESTRATO I — VESTÍBULO DE CENIZA", "STRATUM I — ASH VESTIBULE"],
+	"area_mirador": ["Mirador del Ala Rota", "Broken Wing Overlook"],
+	"contemplate": ["Contemplar", "Contemplate"],
+	"memory_got": ["RECUERDO RECUPERADO", "MEMORY RECOVERED"],
+	"tab_inventory": ["Inventario", "Inventory"],
+	"tab_map": ["Mapa", "Map"],
+	"use": ["Usar", "Use"],
+	"quick_slot": ["Asignar a [X]", "Assign to [X]"],
+	"consumables": ["Consumibles", "Consumables"],
+	"amulets": ["Amuletos", "Amulets"],
+	"key_items": ["Objetos clave", "Key items"],
+	"materials": ["Materiales", "Materials"],
+	"memories": ["Recuerdos", "Memories"],
+	"unequip": ["Quitar", "Remove"],
+	"item_got": ["Obtienes: %s", "Obtained: %s"],
+	"you_are_here": ["Estás aquí", "You are here"],
+	"unexplored": ["Zona sin explorar", "Unexplored area"],
+	"stratum1": ["ESTRATO I - VESTÍBULO DE CENIZA", "STRATUM I - ASH VESTIBULE"],
 	"gate_locked": ["La puerta está sellada. El Carcelero guarda la llave.", "The gate is sealed. The Jailer holds the key."],
 	"key_got": ["Obtienes la Llave del Vestíbulo", "You obtain the Vestibule Key"],
 	"skip": ["[Espacio] saltar", "[Space] skip"],
@@ -168,7 +187,8 @@ func _setup_input() -> void:
 	var keys := {
 		"up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN], "left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SPACE], "parry": [KEY_SHIFT], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
-		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE],
+		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
+		"map": [KEY_M],
 	}
 	for action in keys:
 		if not InputMap.has_action(action):
@@ -187,7 +207,7 @@ func _setup_input() -> void:
 	# mando
 	var pad := {"dash": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "heavy": JOY_BUTTON_Y, "parry": JOY_BUTTON_LEFT_SHOULDER,
 		"spell1": JOY_BUTTON_RIGHT_SHOULDER, "interact": JOY_BUTTON_B, "menu": JOY_BUTTON_BACK, "pause": JOY_BUTTON_START,
-		"heal": JOY_BUTTON_DPAD_UP, "wrath": JOY_BUTTON_RIGHT_STICK, "spell2": JOY_BUTTON_DPAD_RIGHT}
+		"heal": JOY_BUTTON_DPAD_UP, "wrath": JOY_BUTTON_RIGHT_STICK, "spell2": JOY_BUTTON_DPAD_RIGHT, "item": JOY_BUTTON_DPAD_DOWN}
 	for action in pad:
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = pad[action]
@@ -213,6 +233,15 @@ func shake(amount := 3.0, duration := 0.2) -> void:
 
 func flash(color := Color(1, 1, 1, 0.5), duration := 0.12) -> void:
 	flash_requested.emit(color, duration)
+
+func shockwave(pos: Vector2, strength := 1.0, duration := 0.5) -> void:
+	shockwave_requested.emit(pos, strength, duration)
+
+func chroma(amount := 1.0, duration := 0.3) -> void:
+	chroma_requested.emit(amount, duration)
+
+func punch(amount := 0.05) -> void:
+	punch_requested.emit(amount)
 
 func toast(text: String, color := Color(1, 0.9, 0.6)) -> void:
 	toast_requested.emit(text, color)

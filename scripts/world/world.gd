@@ -17,9 +17,12 @@ const ROOMS := [
 	{"id": "gallery", "rect": Rect2i(72, 48, 20, 24)},
 	{"id": "hall1", "rect": Rect2i(47, 69, 4, 12)},
 	{"id": "sanct", "rect": Rect2i(40, 80, 18, 13)},
+	{"id": "mir_link", "rect": Rect2i(38, 85, 3, 3)},
+	{"id": "mirador", "rect": Rect2i(29, 82, 10, 8)},
 ]
 const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
-	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "gatehall": "area_yard", "circle": "area_circle"}
+	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "gatehall": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct"}
+const PEACE_AREAS := ["area_sanct", "area_mirador"]
 
 var main: Node
 var grid := PackedByteArray()
@@ -81,6 +84,8 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	_build_ambient()
+	_build_background()
+	_build_post()
 	hud = preload("res://scripts/ui/hud.gd").new()
 	hud.world = self
 	add_child(hud)
@@ -126,17 +131,25 @@ func _build_map() -> void:
 				grid[y * MAPW + x] = 1
 				if room_of[y * MAPW + x] == -1 or not r.id.begins_with("hall"):
 					room_of[y * MAPW + x] = i
-	# paredes
+	# paredes al norte (2), bordes de acantilado (3) y faldón del acantilado (4)
 	for y in MAPH:
 		for x in MAPW:
 			if grid[y * MAPW + x] != 0:
 				continue
-			for dy in range(-1, 3):
+			if _floor_at(x, y + 1) or _floor_at(x, y + 2):
+				grid[y * MAPW + x] = 2
+				continue
+			var near := false
+			for dy in range(-1, 2):
 				for dx in range(-1, 2):
-					var nx := x + dx
-					var ny := y + dy
-					if nx >= 0 and ny >= 0 and nx < MAPW and ny < MAPH and grid[ny * MAPW + nx] == 1:
-						grid[y * MAPW + x] = 2
+					if _floor_at(x + dx, y + dy):
+						near = true
+			if near:
+				grid[y * MAPW + x] = 3
+	for y in MAPH:
+		for x in MAPW:
+			if grid[y * MAPW + x] == 0 and y > 0 and grid[(y - 1) * MAPW + x] == 3 and _floor_at(x, y - 2):
+				grid[y * MAPW + x] = 4
 	var ts := _build_tileset()
 	floor_layer = TileMapLayer.new()
 	floor_layer.tile_set = ts
@@ -166,6 +179,8 @@ func _build_map() -> void:
 					t = 10
 				if rid == "chains" and rng.randf() < 0.04:
 					t = 11
+				if rid == "mirador" or rid == "alcove":
+					t = 19 if rng.randf() < 0.6 else t
 				floor_layer.set_cell(c, 0, Vector2i(t, 0))
 			elif g == 2:
 				var below := y + 1 < MAPH and grid[(y + 1) * MAPW + x] == 1
@@ -173,6 +188,14 @@ func _build_map() -> void:
 					wall_layer.set_cell(c, 0, Vector2i(7 + rng.randi_range(0, 2), 0))
 				else:
 					wall_layer.set_cell(c, 0, Vector2i(6, 0))
+			elif g == 3:
+				wall_layer.set_cell(c, 0, Vector2i(16 if _floor_at(x, y - 1) else 18, 0))
+			elif g == 4:
+				floor_layer.set_cell(c, 0, Vector2i(17, 0))
+	var rim := EdgeRim.new()
+	rim.world = self
+	rim.z_index = -9
+	add_child(rim)
 
 func _build_tileset() -> TileSet:
 	var ts := TileSet.new()
@@ -184,13 +207,16 @@ func _build_tileset() -> TileSet:
 	src.texture = Fx.tex("tiles")
 	src.texture_region_size = Vector2i(TS, TS)
 	ts.add_source(src, 0)
-	for i in 16:
+	for i in 20:
 		src.create_tile(Vector2i(i, 0))
-	for i in [6, 7, 8, 9, 12]:
+	for i in [6, 7, 8, 9, 12, 16, 18]:
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, PackedVector2Array([Vector2(-8, -8), Vector2(8, -8), Vector2(8, 8), Vector2(-8, 8)]))
 	return ts
+
+func _floor_at(x: int, y: int) -> bool:
+	return x >= 0 and y >= 0 and x < MAPW and y < MAPH and grid[y * MAPW + x] == 1
 
 func tile_pos(tx: float, ty: float) -> Vector2:
 	return Vector2(tx * TS + TS / 2.0, ty * TS + TS / 2.0)
@@ -287,6 +313,49 @@ func _build_props() -> void:
 		var p := tile_pos(49, 14) + Vector2(cos(a), sin(a)) * 160.0
 		_prop("candle", p, 4, i % 4, 0.0, Color(1, 0.8, 0.45), 1.6)
 	_prop("statue", tile_pos(40, 5)); _prop("statue", tile_pos(58, 5)).flip_h = true
+	# Mirador del Ala Rota: lugar de paz
+	_prop("broken_wing", tile_pos(30.5, 84.5))
+	_prop("candle", tile_pos(37, 83), 4, 1, 0.0, Color(0.7, 0.85, 1.0), 1.2)
+	_prop("candle", tile_pos(31, 88.5), 4, 2, 0.0, Color(0.7, 0.85, 1.0), 1.2)
+	for fp in [[Vector2(32, 87), 14, Color(0.85, 0.92, 1.0)], [Vector2(36, 88.5), 10, Color(0.7, 0.8, 1.0)], [Vector2(34.5, 83.5), 8, Color(1.0, 0.85, 0.95)],
+			[Vector2(30, 86.5), 9, Color(0.85, 0.92, 1.0)], [Vector2(31, 39.5), 10, Color(1.0, 0.8, 0.5)], [Vector2(35, 41.5), 8, Color(1.0, 0.75, 0.55)],
+			[Vector2(42.5, 91.5), 7, Color(0.85, 0.92, 1.0)], [Vector2(55.5, 91.5), 7, Color(0.85, 0.92, 1.0)]]:
+		var f := FlowerPatch.new()
+		f.position = tile_pos(fp[0].x, fp[0].y)
+		f.count = fp[1]
+		f.petal = fp[2]
+		entities.add_child(f)
+	for zone in [Rect2(29 * TS, 82 * TS, 10 * TS, 8 * TS), Rect2(29 * TS, 36 * TS, 8 * TS, 7 * TS), Rect2(40 * TS, 80 * TS, 18 * TS, 13 * TS)]:
+		_fireflies(zone)
+
+func _fireflies(r: Rect2) -> void:
+	var p := CPUParticles2D.new()
+	p.position = r.get_center()
+	p.amount = int(r.size.x * r.size.y / 900.0)
+	p.lifetime = 6.0
+	p.preprocess = 6.0
+	p.texture = Fx.tex("fx_soft")
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	p.emission_rect_extents = r.size / 2.0
+	p.direction = Vector2(0, -1)
+	p.spread = 180.0
+	p.gravity = Vector2(0, -2)
+	p.initial_velocity_min = 2.0
+	p.initial_velocity_max = 8.0
+	p.orbit_velocity_min = -0.05
+	p.orbit_velocity_max = 0.05
+	p.scale_amount_min = 0.12
+	p.scale_amount_max = 0.22
+	var g := Gradient.new()
+	g.set_color(0, Color(0.8, 1.0, 0.6, 0.0))
+	g.add_point(0.3, Color(0.85, 1.0, 0.55, 1.0))
+	g.add_point(0.5, Color(0.85, 1.0, 0.55, 0.3))
+	g.add_point(0.7, Color(0.85, 1.0, 0.55, 1.0))
+	g.set_color(g.get_point_count() - 1, Color(0.8, 1.0, 0.6, 0.0))
+	p.color_ramp = g
+	p.material = Fx.add_material()
+	p.z_index = 20
+	add_child(p)
 
 func _build_gate() -> void:
 	gate_spr = Sprite2D.new()
@@ -322,6 +391,86 @@ func set_gate(open: bool, instant := false) -> void:
 		Audio.sfx("gate")
 		G.shake(3.0, 0.6)
 		Fx.burst(gate_spr.global_position + Vector2(0, 16), Color(0.6, 0.55, 0.6, 0.8), 20, 60.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.6, false)
+
+var bg_rect: ColorRect
+var post_rect: ColorRect
+var _waves: Array = []   # [pos_mundo, t, dur, fuerza]
+var _chroma := 0.0
+var _desat := 0.0
+var _calm := 0.0
+
+func _build_background() -> void:
+	var cl := CanvasLayer.new()
+	cl.layer = -10
+	cl.name = "Background"
+	add_child(cl)
+	bg_rect = ColorRect.new()
+	bg_rect.size = Vector2(640, 360)
+	bg_rect.material = UIKit.mat("abyss")
+	cl.add_child(bg_rect)
+
+func _build_post() -> void:
+	var cl := CanvasLayer.new()
+	cl.layer = 2
+	cl.name = "PostFX"
+	add_child(cl)
+	post_rect = ColorRect.new()
+	post_rect.size = Vector2(640, 360)
+	post_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	post_rect.material = UIKit.mat("post_fx")
+	cl.add_child(post_rect)
+	G.shockwave_requested.connect(_on_shockwave)
+	G.chroma_requested.connect(_on_chroma)
+	G.punch_requested.connect(_on_punch)
+
+func _on_shockwave(pos: Vector2, strength: float, dur: float) -> void:
+	_waves.append([pos, 0.0, dur, strength])
+	if _waves.size() > 4:
+		_waves.pop_front()
+
+func _on_chroma(amount: float, dur: float) -> void:
+	_chroma = max(_chroma, amount)
+	var tw := create_tween()
+	tw.tween_property(self, "_chroma", 0.0, dur)
+
+func _on_punch(amount: float) -> void:
+	var tw := create_tween()
+	tw.tween_property(camera, "zoom", Vector2.ONE * (1.0 + amount), 0.04)
+	tw.tween_property(camera, "zoom", Vector2.ONE, 0.22).set_trans(Tween.TRANS_CUBIC)
+
+func _update_post(delta: float) -> void:
+	if bg_rect:
+		var bm: ShaderMaterial = bg_rect.material
+		bm.set_shader_parameter("cam", camera.position)
+		bm.set_shader_parameter("calm", _calm)
+	if post_rect == null:
+		return
+	var pm: ShaderMaterial = post_rect.material
+	var vt := get_viewport().get_canvas_transform()
+	var vs := get_viewport().get_visible_rect().size
+	for i in 4:
+		var key := "w%d" % i
+		if i < _waves.size():
+			var w: Array = _waves[i]
+			w[1] += delta
+			var k: float = clamp(w[1] / w[2], 0.0, 1.0)
+			var sp: Vector2 = (vt * w[0]) / vs
+			pm.set_shader_parameter(key, Vector4(sp.x, sp.y, lerpf(0.0, 0.45, k), w[3] * (1.0 - k)))
+		else:
+			pm.set_shader_parameter(key, Vector4.ZERO)
+	for i in range(_waves.size() - 1, -1, -1):
+		if _waves[i][1] >= _waves[i][2]:
+			_waves.remove_at(i)
+	var slow := Engine.time_scale < 0.6 and Engine.time_scale > 0.1
+	_desat = lerpf(_desat, 0.55 if slow else 0.0, clamp(delta * 10.0 / max(Engine.time_scale, 0.05), 0.0, 1.0))
+	pm.set_shader_parameter("desat", _desat)
+	pm.set_shader_parameter("tint", Color(0.55, 0.75, 1.0, _desat * 0.5))
+	pm.set_shader_parameter("chroma", _chroma)
+	var lp := local_player()
+	var danger := 0.0
+	if lp and lp.is_alive():
+		danger = clamp(1.0 - lp.hp / Prog.max_hp() / 0.3, 0.0, 1.0)
+	pm.set_shader_parameter("danger", danger)
 
 func _build_ambient() -> void:
 	var ash := CPUParticles2D.new()
@@ -389,9 +538,11 @@ func _spawn_interactables() -> void:
 	_add_inter("brasa", "gate", tile_pos(32, 39))
 	_add_inter("npc", "brenna", tile_pos(43.5, 84), {"sheet": "npc_brenna", "name": ["Brenna, la herrera", "Brenna, the smith"], "light": Color(1, 0.5, 0.25)})
 	_add_inter("npc", "carto", tile_pos(55, 84), {"sheet": "npc_carto", "name": ["El Cartógrafo Ciego", "The Blind Cartographer"], "flip": true, "light": Color(0.6, 0.7, 1.0)})
-	_add_inter("chest", "chest_chains", tile_pos(61, 55), {"feathers": 2, "ecos": 120})
-	_add_inter("chest", "chest_gallery", tile_pos(90, 50), {"weapon": "spear"})
-	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250})
+	_add_inter("chest", "chest_chains", tile_pos(61, 55), {"feathers": 2, "ecos": 120, "items": {"bomb": 2}})
+	_add_inter("chest", "chest_gallery", tile_pos(90, 50), {"weapon": "spear", "items": {"amulet_wing": 1, "ointment": 1}})
+	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250, "items": {"iron": 1, "incense": 1}})
+	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150})
+	_add_inter("bench", "bench_mirador", tile_pos(34, 85.5), {"memory": "m1"})
 	_add_inter("pickup", "f1", tile_pos(36, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f2", tile_pos(62, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f3", tile_pos(74, 70), {"icon": "feather", "feathers": 1})
@@ -481,6 +632,7 @@ func is_menu_open() -> bool:
 
 # ====================================================================== bucle
 func _process(delta: float) -> void:
+	_update_post(delta)
 	var lp := local_player()
 	if lp:
 		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
@@ -531,6 +683,8 @@ func _check_area(lp: Player) -> void:
 	var r := room_at(lp.global_position)
 	if r == "" or not AREAS.has(r):
 		return
+	if not Prog.flags.get("seen_" + r, false):
+		Prog.flags["seen_" + r] = true
 	var a: String = AREAS[r]
 	if a != _area:
 		var first := _area == ""
@@ -538,7 +692,18 @@ func _check_area(lp: Player) -> void:
 		if not first:
 			hud.show_area("", G.T(a))
 		var target := Color(0.42, 0.45, 0.6) if a == "area_gallery" else (Color(0.55, 0.45, 0.5) if a == "area_circle" else Color(0.5, 0.46, 0.58))
+		if a == "area_mirador":
+			target = Color(0.62, 0.62, 0.75)
 		create_tween().tween_property(canvas_mod, "color", target, 1.5)
+		var peaceful := a in PEACE_AREAS
+		create_tween().tween_property(self, "_calm", 1.0 if peaceful else 0.0, 2.0)
+		if active_boss == null and not _contemplating:
+			Audio.play_music("peace" if peaceful else "explore", 2.5)
+	if r == "yard" and not wflags.get("carcelero_intro", false) and not wflags.get("carcelero_dead", false) and lp.is_alive() and lp.global_position.y < 43 * TS:
+		if multiplayer.is_server():
+			_server_start_carcelero()
+		else:
+			_request_carcelero.rpc_id(1)
 	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive():
 		if multiplayer.is_server():
 			_server_start_boss()
@@ -592,6 +757,8 @@ func try_interact(p: Player) -> void:
 			_talk(it.id)
 		"chest":
 			bcast("_open_chest", [it.id])
+		"bench":
+			_contemplate(it)
 
 func _physics_process(_delta: float) -> void:
 	var lp := local_player()
@@ -610,7 +777,10 @@ func _physics_process(_delta: float) -> void:
 				it.set_opened()
 				interactables.erase("ecosdrop")
 				return
-			bcast("_pickup", [it.id])
+			if it.data.get("local", false):
+				_pickup(it.id)
+			else:
+				bcast("_pickup", [it.id])
 
 # ====================================================================== red: utilidades
 func bcast(method: String, args: Array) -> void:
@@ -764,6 +934,8 @@ func _enemy_die(idx: int) -> void:
 	e.die()
 	Prog.add_ecos(e.cfg.ecos)
 	Fx.text(e.global_position + Vector2(0, 26), "+%d %s" % [int(e.cfg.ecos * Prog.ecos_mult()), G.T("ecos")], Color(0.6, 0.85, 1.0), 8)
+	_drop_loot(e)
+	Fx.souls(e.global_position + Vector2(0, -8), local_player(), 5 if not e.is_boss else 24)
 	match e.type:
 		"hueco":
 			Prog.quest_progress("husks")
@@ -771,6 +943,57 @@ func _enemy_die(idx: int) -> void:
 			_on_carcelero_dead(e)
 		"seravel":
 			_on_seravel_dead(e)
+
+const LOOT := {"hueco": [["bomb", 0.14], ["incense", 0.05]], "acolito": [["incense", 0.14], ["bomb", 0.08]],
+	"bestia": [["ointment", 0.16], ["bomb", 0.1]], "carcelero": [["key_vestibule", 1.0], ["amulet_ash", 1.0], ["iron", 1.0]],
+	"seravel": [["phoenix", 1.0], ["iron", 1.0]]}
+
+func _drop_loot(e: Enemy) -> void:
+	## Cada jugador tira su propio botín (determinista por enemigo para no duplicar en red)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(str(e.idx) + str(Prog.playtime).substr(0, 3) + str(Net.my_id()))
+	for l in LOOT.get(e.type, []):
+		if rng.randf() < l[1]:
+			if l[0] == "key_vestibule" and Prog.item_count("key_vestibule") > 0:
+				continue
+			var it := _add_inter("pickup", "loot_%d_%s_%d" % [e.idx, l[0], Time.get_ticks_msec()], e.global_position + Vector2(rng.randf_range(-10, 10), rng.randf_range(-6, 6)),
+				{"icon": Prog.ITEMS[l[0]].icon, "items": {l[0]: 1}, "local": true})
+			it.set_meta("loot", true)
+
+func throw_bomb(from: Vector2, to: Vector2, owner: int) -> void:
+	bcast("_bomb", [from, to, owner])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _bomb(from: Vector2, to: Vector2, owner: int) -> void:
+	var b := Sprite2D.new()
+	b.texture = Fx.tex("icon_bomb")
+	b.position = from
+	fx_layer.add_child(b)
+	Audio.sfx("swing", -4.0)
+	var tw := b.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(b, "position:x", to.x, 0.5)
+	tw.tween_method(func(k: float): b.position.y = lerpf(from.y, to.y, k) - sin(k * PI) * 46.0, 0.0, 1.0, 0.5)
+	tw.tween_property(b, "rotation", TAU * 2.0, 0.5)
+	tw.chain().tween_callback(_bomb_explode.bind(b, to, owner))
+
+func _bomb_explode(b: Node, pos: Vector2, owner: int) -> void:
+	b.queue_free()
+	Audio.sfx("nova")
+	Audio.sfx("slam", -4.0)
+	G.shake(6.0, 0.35)
+	G.shockwave(pos, 1.4, 0.6)
+	G.chroma(1.2, 0.3)
+	Fx.impact(pos, Color(1, 0.6, 0.2), 30.0)
+	Fx.ring(pos, 4.0, 58.0, Color(1, 0.55, 0.2), 0.45, 8.0)
+	Fx.burst(pos, Color(1, 0.55, 0.15), 40, 160.0, 0.8, "fx_soft", 180.0, Vector2.UP, 0.5)
+	Fx.sparks(pos, Vector2.UP, Color(1, 0.8, 0.3), 24, 180.0, 360.0)
+	Fx.scorch(pos, 30.0)
+	Fx.light_flash(pos, Color(1, 0.55, 0.2), 2.5, 2.0, 0.5)
+	if owner == Net.my_id():
+		for e in enemies_alive():
+			if e.global_position.distance_to(pos) < 52.0 + e.body_radius:
+				request_damage_enemy(e, Prog.spell_damage(42.0), (e.global_position - pos).normalized(), 40.0, true)
 
 func spawn_extra_enemy(type: String, pos: Vector2) -> void:
 	if multiplayer.is_server():
@@ -804,6 +1027,8 @@ func spawn_projectile_local(pos: Vector2, vel: Vector2, dmg: float, kind: String
 func cast_nova(pos: Vector2, r: float, dmg: float, owner: int, big: bool) -> void:
 	Audio.sfx("nova")
 	G.shake(4.0 if big else 2.5, 0.25)
+	G.shockwave(pos, 1.2 if big else 0.8, 0.45)
+	Fx.scorch(pos, r * 0.5)
 	Fx.ring(pos + Vector2(0, -6), 6.0, r, Color(1, 0.6, 0.25), 0.4, 8.0)
 	Fx.ring(pos + Vector2(0, -6), 2.0, r * 0.7, Color(1, 0.9, 0.5), 0.3, 4.0)
 	Fx.burst(pos, Color(1, 0.6, 0.25), 40 if big else 26, r * 2.5, 0.6, "fx_soft", 180.0, Vector2.RIGHT, 0.4)
@@ -822,17 +1047,22 @@ func cast_wrath(pos: Vector2, dmg: float, owner: int) -> void:
 	G.shake(7.0, 0.5)
 	G.flash(Color(1, 0.95, 0.7, 0.28), 0.3)
 	G.slowmo("wrath", 0.25, 0.35)
-	for i in 4:
-		Fx.slash(pos + Vector2(0, -8), i * PI / 2.0, 52.0, 200.0, Color(1, 0.9, 0.55, 0.95), 18.0, 0.4, i % 2 == 0)
+	G.shockwave(pos, 2.0, 0.7)
+	G.chroma(2.2, 0.6)
+	G.punch(0.08)
+	Fx.impact(pos + Vector2(0, -8), Color(1, 0.9, 0.5), 48.0, 10)
+	Fx.sparks(pos + Vector2(0, -8), Vector2.UP, Color(1, 0.9, 0.5), 40, 260.0, 360.0, 120.0)
+	for i in 2:
+		Fx.slash(pos + Vector2(0, -8), i * PI + 0.4, 56.0, 150.0, Color(1, 0.85, 0.45, 0.6), 12.0, 0.4, i % 2 == 0)
 	Fx.ring(pos + Vector2(0, -8), 8.0, 95.0, Color(1, 0.9, 0.6), 0.5, 10.0)
 	Fx.burst(pos + Vector2(0, -8), Color(1, 0.95, 0.7), 60, 220.0, 0.9, "fx_feather", 180.0, Vector2.UP, 1.4, false, Vector2(0, 30))
-	Fx.light_flash(pos, Color(1, 0.9, 0.6), 3.0, 3.0, 0.8)
+	Fx.light_flash(pos, Color(1, 0.9, 0.6), 1.4, 2.2, 0.6)
 	var pillar := Sprite2D.new()
 	pillar.texture = Fx.tex("fx_soft")
 	pillar.material = Fx.add_material()
 	pillar.scale = Vector2(2.0, 14.0)
 	pillar.position = pos + Vector2(0, -80)
-	pillar.modulate = Color(1, 0.95, 0.7, 0.9)
+	pillar.modulate = Color(1, 0.95, 0.7, 0.55)
 	fx_layer.add_child(pillar)
 	var tw := pillar.create_tween()
 	tw.tween_property(pillar, "scale:x", 5.0, 0.15)
@@ -905,7 +1135,7 @@ func _reset_enemies() -> void:
 			continue
 		e.reset_state()
 		if e.is_boss:
-			e.active = e.type == "carcelero"
+			e.active = e.type == "carcelero" and wflags.get("carcelero_intro", false)
 	for i in enemies.size():
 		enemies[i].idx = i
 	if active_boss and active_boss.type == "seravel" and not wflags.get("seravel_dead", false):
@@ -934,8 +1164,9 @@ func _pickup(id: String) -> void:
 	var it: Interactable = interactables.get(id)
 	if it == null or it.used:
 		return
-	wflags["used_" + id] = true
-	Prog.flags["used_" + id] = true
+	if not it.data.get("local", false):
+		wflags["used_" + id] = true
+		Prog.flags["used_" + id] = true
 	Audio.sfx("pickup")
 	Fx.burst(it.global_position + Vector2(0, -8), Color(0.9, 0.9, 1), 16, 60.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.3)
 	_grant(it.data)
@@ -951,6 +1182,9 @@ func _grant(d: Dictionary) -> void:
 		G.toast("+%d %s" % [d.ecos, G.T("ecos")], Color(0.6, 0.85, 1))
 	if d.has("weapon"):
 		Prog.add_weapon(d.weapon)
+	if d.has("items"):
+		for k in d.items:
+			Prog.add_item(k, d.items[k])
 	if d.has("quest"):
 		if not Prog.quests.has(d.quest):
 			Prog.start_quest(d.quest)
@@ -1028,30 +1262,55 @@ func _boss_intro(idx: int) -> void:
 		lp.cutscene = true
 		if lp.global_position.y > 27 * TS:
 			lp.respawn_at(tile_pos(49, 24))
-	Audio.stop_music(1.5)
-	hud.letterbox(true)
-	_cam_focus = boss.global_position + Vector2(0, -24)
-	await get_tree().create_timer(1.4).timeout
-	Audio.sfx("roar")
-	G.shake(4.0, 0.8)
-	hud.title_card(G.T("boss_seravel"), ["Arconte del Primer Estrato", "Archon of the First Stratum"])
-	await get_tree().create_timer(1.2).timeout
-	var lines := [
-		["Seravel", ["Otro Desplumado... ¿Cuántos más enviará la Voz antes de entender?", "Another Featherless... How many more will the Voice send before you understand?"]],
-		["Seravel", ["Nadie cruza estas puertas. Ni hacia abajo... ni hacia arriba.", "No one passes these gates. Not downward... nor upward."]],
-		["Seravel", ["Te concederé lo que todos piden al final. Descanso.", "I will grant you what they all beg for in the end. Rest."]],
-	]
-	var done := func():
-		_cam_focus = null
-		hud.letterbox(false)
-		if lp:
-			lp.cutscene = false
-		boss.active = true
-		boss.state = "chase"
-		boss.cooldown = 0.8
-		hud.show_boss(boss)
-		Audio.play_music("boss1", 0.3)
-	dialog.play(lines, done, true)
+		lp.cutscene = true
+	await _play_cinematic("seravel")
+	if lp:
+		lp.cutscene = false
+	boss.active = true
+	boss.state = "chase"
+	boss.cooldown = 0.8
+	hud.show_boss(boss)
+	Audio.play_music("boss1", 0.3)
+	G.shockwave(boss.global_position + Vector2(0, -20), 1.5, 0.6)
+
+func _play_cinematic(kind: String) -> void:
+	var cine := preload("res://scripts/ui/boss_cinematic.gd").new()
+	var lp := local_player()
+	cine.setup(kind, lp.variant if lp else 1)
+	add_child(cine)
+	await cine.finished
+
+@rpc("any_peer", "call_remote", "reliable")
+func _carcelero_intro(idx: int) -> void:
+	if wflags.get("carcelero_intro", false):
+		return
+	wflags["carcelero_intro"] = true
+	var e: Enemy = enemies[idx]
+	var lp := local_player()
+	if lp:
+		lp.cutscene = true
+	await _play_cinematic("carcelero")
+	if lp:
+		lp.cutscene = false
+	e.active = true
+	e.state = "chase"
+	e.cooldown = 1.0
+	active_boss = e
+	hud.show_boss(e)
+	Audio.play_music("boss1", 0.3)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_carcelero() -> void:
+	if multiplayer.is_server():
+		_server_start_carcelero()
+
+func _server_start_carcelero() -> void:
+	if wflags.get("carcelero_intro", false) or wflags.get("carcelero_dead", false):
+		return
+	for e in enemies:
+		if e.type == "carcelero" and e.is_alive():
+			bcast("_carcelero_intro", [e.idx])
+			return
 
 func show_boss_line(line: Array) -> void:
 	hud.subtitle("Seravel", G.L(line), 3.0)
@@ -1169,8 +1428,107 @@ func _play_intro() -> void:
 		hud.letterbox(false)
 		lp.revive(1.0)
 		hud.show_area(G.T("stratum1"), G.T("area_sanct"))
-		G.toast(G.T("controls"), Color(0.85, 0.85, 0.9))
+		get_tree().create_timer(4.5).timeout.connect(G.toast.bind(G.T("controls"), Color(0.85, 0.85, 0.9)))
 	dialog.play(lines, done, true)
+
+var _contemplating := false
+
+func _contemplate(it: Interactable) -> void:
+	if _contemplating:
+		return
+	var lp := local_player()
+	_contemplating = true
+	lp.cutscene = true
+	lp.velocity = Vector2.ZERO
+	lp.position = it.position + Vector2(0, 2)
+	lp.facing = -1
+	lp.sitting = true
+	hud.letterbox(true)
+	Audio.play_music("memory", 2.5)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(camera, "zoom", Vector2(0.72, 0.72), 5.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(canvas_mod, "color", Color(0.75, 0.75, 0.9), 4.0)
+	_cam_focus = it.position + Vector2(-90, 30)
+	var mem_id: String = it.data.get("memory", "m1")
+	var mem: Dictionary = Prog.MEMORIES[mem_id]
+	var lines: Array = []
+	for l in mem.lines:
+		lines.append(G.L(l))
+	await hud.memory_sequence(G.L(mem.title), lines)
+	if Prog.unlock_memory(mem_id):
+		hud.big_message(G.T("memory_got"), Color(0.75, 0.9, 1.0), 2.5)
+		Audio.sfx("levelup", -6.0)
+	var tw2 := create_tween().set_parallel(true)
+	tw2.tween_property(camera, "zoom", Vector2.ONE, 1.5).set_trans(Tween.TRANS_SINE)
+	tw2.tween_property(canvas_mod, "color", Color(0.62, 0.62, 0.75), 1.5)
+	_cam_focus = null
+	hud.letterbox(false)
+	lp.sitting = false
+	lp.cutscene = false
+	_contemplating = false
+	Audio.play_music("peace", 3.0)
+
+class EdgeRim extends Node2D:
+	## Bordes iluminados del suelo que da al vacío
+	var world: Node
+	func _draw() -> void:
+		var W: int = world.MAPW
+		for y in world.MAPH:
+			for x in W:
+				if not world._floor_at(x, y):
+					continue
+				var p := Vector2(x * 16, y * 16)
+				var gl: int = world.grid[y * W + x - 1] if x > 0 else 0
+				var gr: int = world.grid[y * W + x + 1] if x < W - 1 else 0
+				var gd: int = world.grid[(y + 1) * W + x] if y < world.MAPH - 1 else 0
+				if gl == 3:
+					draw_rect(Rect2(p, Vector2(1, 16)), Color(0.75, 0.68, 0.85, 0.55))
+					draw_rect(Rect2(p + Vector2(1, 0), Vector2(2, 16)), Color(0, 0, 0, 0.25))
+				if gr == 3:
+					draw_rect(Rect2(p + Vector2(15, 0), Vector2(1, 16)), Color(0.75, 0.68, 0.85, 0.55))
+					draw_rect(Rect2(p + Vector2(13, 0), Vector2(2, 16)), Color(0, 0, 0, 0.25))
+				if gd == 3:
+					draw_rect(Rect2(p + Vector2(0, 14), Vector2(16, 2)), Color(0, 0, 0, 0.3))
+
+class FlowerPatch extends Node2D:
+	## Flores que se mecen con el viento y brillan suavemente
+	var count := 10
+	var petal := Color(0.85, 0.92, 1.0)
+	var t := 0.0
+	var _seeds := []
+	func _ready() -> void:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(position.x * 7 + position.y * 13)
+		for i in count:
+			_seeds.append([Vector2(rng.randf_range(-18, 18), rng.randf_range(-8, 8)), rng.randf_range(5, 10), rng.randf() * TAU, rng.randi() % 3])
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = petal
+		l.texture_scale = 0.9
+		l.energy = 0.55
+		l.position = Vector2(0, -4)
+		add_child(l)
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		for s in _seeds:
+			var base: Vector2 = s[0]
+			var h: float = s[1]
+			var sway := sin(t * 1.6 + s[2] + base.x * 0.1) * 1.6
+			var top := (base + Vector2(sway, -h)).round()
+			draw_line(base, top, Color(0.32, 0.42, 0.36), 1.0)
+			draw_line(base + Vector2(0, -h * 0.4), base + Vector2(-2 + sway * 0.4, -h * 0.6), Color(0.32, 0.42, 0.36), 1.0)
+			var c := petal
+			match int(s[3]):
+				0:
+					draw_rect(Rect2(top - Vector2(1, 1), Vector2(3, 3)), c)
+					draw_rect(Rect2(top, Vector2(1, 1)), Color(1, 0.9, 0.5))
+				1:
+					draw_rect(Rect2(top - Vector2(2, 0), Vector2(5, 1)), c)
+					draw_rect(Rect2(top - Vector2(0, 2), Vector2(1, 4)), c)
+				_:
+					draw_rect(Rect2(top - Vector2(1, 2), Vector2(2, 3)), c.darkened(0.1))
 
 class ArenaRing extends Node2D:
 	var t := 0.0

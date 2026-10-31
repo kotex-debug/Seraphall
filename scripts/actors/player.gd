@@ -41,6 +41,8 @@ var revive_progress := 0.0
 var crit_next := false
 var last_breath_used := false
 var cutscene := false
+var sitting := false
+var _buff_fx_t := 0.0
 var fire_trail_t := 0.0
 var orbit_angle := 0.0
 var _orbit_hit := {}
@@ -189,7 +191,14 @@ func _local_update(delta: float) -> void:
 	# recursos
 	stam_delay -= delta
 	if stam_delay <= 0.0 and state != "dash":
-		stamina = min(Prog.max_stamina(), stamina + (42.0 + Prog.attr.aguante * 1.5) * delta)
+		stamina = min(Prog.max_stamina(), stamina + (42.0 + Prog.attr.aguante * 1.5) * Prog.stamina_regen_mult() * delta)
+	_buff_fx_t -= delta
+	if _buff_fx_t <= 0.0 and not Prog.buffs.is_empty():
+		_buff_fx_t = 0.12
+		if Prog.buffs.has("incense"):
+			Fx.burst(global_position + Vector2(randf_range(-8, 8), randf_range(-16, 0)), Color(1, 0.75, 0.3), 1, 25.0, 0.7, "fx_soft", 30.0, Vector2.UP, 0.25)
+		if Prog.buffs.has("ointment"):
+			Fx.burst(global_position + Vector2(randf_range(-8, 8), randf_range(-16, 0)), Color(0.4, 0.9, 1.0), 1, 20.0, 0.7, "fx_px", 30.0, Vector2.UP, 1.0)
 	light = min(Prog.max_light(), light + 3.5 * (1.4 if Prog.has_skill("l3") else 1.0) * delta)
 	if Prog.has_skill("c5") and Net.is_online():
 		for p in world.players_list():
@@ -326,6 +335,8 @@ func _read_actions() -> void:
 			_squash(Vector2(0.9, 1.1))
 	elif Input.is_action_just_pressed("interact"):
 		world.try_interact(self)
+	elif Input.is_action_just_pressed("item"):
+		_use_quick_item()
 
 func _update_aim() -> void:
 	var joy := Input.get_vector("left", "right", "up", "down")
@@ -340,6 +351,32 @@ func _update_aim() -> void:
 			aim = m.normalized()
 	if state == "move" or state == "charge":
 		facing = 1 if aim.x >= 0.0 else -1
+
+func _use_quick_item() -> void:
+	var id := Prog.quick_item
+	if Prog.item_count(id) <= 0:
+		for k in ["bomb", "incense", "ointment"]:
+			if Prog.item_count(k) > 0:
+				id = k
+				Prog.quick_item = k
+				break
+	if Prog.item_count(id) <= 0:
+		return
+	match id:
+		"bomb":
+			Prog.remove_item("bomb")
+			var m := get_global_mouse_position() - global_position
+			var dist: float = clamp(m.length(), 30.0, 120.0)
+			world.throw_bomb(global_position + Vector2(0, -12), global_position + aim * dist, Net.my_id())
+			_swing(80.0, 0.1, true)
+		"incense", "ointment":
+			if Prog.use_item(id):
+				var c := Color(1, 0.75, 0.3) if id == "incense" else Color(0.4, 0.9, 1.0)
+				Audio.sfx("heal", -2.0)
+				Fx.ring(global_position + Vector2(0, -8), 4.0, 36.0, c, 0.5, 4.0)
+				Fx.burst(global_position + Vector2(0, -8), c, 24, 70.0, 0.8, "fx_soft", 180.0, Vector2.UP, 0.35)
+				Fx.text(global_position, G.L(Prog.ITEMS[id].name), c, 9)
+	_squash(Vector2(0.9, 1.15))
 
 func spend_stamina(n: float) -> bool:
 	if stamina <= 0.0:
@@ -411,6 +448,12 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 			crit = true
 		world.request_damage_enemy(e, d, to.normalized(), poise, crit)
 		_on_hit_landed(d, final or crit)
+		var hp_pos: Vector2 = e.global_position + Vector2(0, -8)
+		Fx.impact(hp_pos, Color(1, 0.85, 0.5) if not crit else Color(1, 0.4, 0.3), 14.0 if not (final or crit) else 22.0)
+		Fx.sparks(hp_pos, to.normalized(), Color(1, 0.8, 0.4), 6 if not final else 12, 170.0, 80.0)
+		if Prog.has_amulet("amulet_ash") and randf() < 0.25:
+			world.request_damage_enemy(e, d * 0.35, Vector2.ZERO, 0.0, false)
+			Fx.burst(hp_pos, Color(1, 0.5, 0.15), 10, 60.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.35)
 		var bleed: bool = Prog.weapon_data().get("bleed", false)
 		if bleed and randf() < 0.35:
 			world.request_damage_enemy(e, d * 0.4, to.normalized(), 0.0, false)
@@ -418,6 +461,9 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 		crit_next = false
 		G.hitstop(0.075 if final else 0.045)
 		G.shake(3.0 if final else 1.6, 0.12)
+		if final:
+			G.punch(0.035)
+			G.chroma(0.6, 0.2)
 
 func _on_hit_landed(d: float, big: bool) -> void:
 	wrath = min(100.0, wrath + d * 0.45 * (1.4 if Prog.has_skill("f6") else 1.0))
@@ -446,6 +492,8 @@ func _release_heavy() -> void:
 	Fx.slash(global_position + Vector2(0, -8), aim.angle(), rng * 0.85, arc, Color(1, 0.8, 0.45, 0.95), 16.0 + 4.0 * lvl, 0.28, true)
 	if lvl >= 2:
 		Fx.ring(global_position, 6.0, rng * 1.2, Color(1, 0.8, 0.45), 0.35, 5.0)
+		G.shockwave(global_position + aim * 20.0, 1.0, 0.45)
+		G.punch(0.05)
 	if Net.is_online():
 		world.peer_rpc(self, "_net_fx", ["heavy", [aim.angle(), rng, arc, lvl]])
 	_squash(Vector2(1.3, 0.75))
@@ -545,6 +593,7 @@ func take_hit(dmg: float, dir: Vector2, enemy_idx: int) -> String:
 	dmg *= Prog.damage_taken_mult()
 	hp -= dmg
 	Audio.sfx("hurt")
+	G.chroma(0.8, 0.25)
 	G.shake(4.0, 0.2)
 	G.flash(Color(1, 0.1, 0.1, 0.25), 0.15)
 	_flash(1.0, Color(1, 0.3, 0.3))
@@ -568,6 +617,7 @@ func take_hit(dmg: float, dir: Vector2, enemy_idx: int) -> String:
 	return "hit"
 
 func _perfect_dodge() -> void:
+	G.chroma(1.0, 0.5)
 	Fx.text(global_position, G.T("perfect"), Color(0.6, 0.9, 1.0), 9)
 	G.slowmo("instant", 0.3, 0.55 if Prog.has_skill("a3") else 0.4)
 	G.flash(Color(0.4, 0.7, 1.0, 0.18), 0.3)
@@ -583,6 +633,10 @@ func _parry_success(enemy_idx: int) -> void:
 	Fx.light_flash(global_position, Color(1, 0.95, 0.7), 2.0, 1.2, 0.3)
 	G.hitstop(0.18, 0.02)
 	G.flash(Color(1, 1, 1, 0.35), 0.1)
+	G.shockwave(global_position + Vector2(0, -8), 1.3, 0.45)
+	G.chroma(1.6, 0.35)
+	Fx.impact(global_position + aim * 10 + Vector2(0, -8), Color(1, 0.95, 0.6), 30.0, 8)
+	Fx.sparks(global_position + aim * 10 + Vector2(0, -8), aim, Color(1, 0.9, 0.5), 20, 220.0, 100.0)
 	G.shake(3.0, 0.15)
 	wrath = min(100.0, wrath + 20.0)
 	crit_next = true
@@ -595,6 +649,15 @@ func _parry_success(enemy_idx: int) -> void:
 		world.bcast("cast_nova", [global_position, 48.0, Prog.spell_damage(20.0), Net.my_id(), false])
 
 func _on_zero_hp() -> void:
+	if Prog.item_count("phoenix") > 0:
+		Prog.remove_item("phoenix")
+		revive(0.5)
+		G.flash(Color(1, 0.6, 0.2, 0.6), 0.6)
+		G.shockwave(global_position, 2.0, 0.7)
+		G.chroma(2.0, 0.6)
+		Fx.burst(global_position + Vector2(0, -10), Color(1, 0.55, 0.15), 50, 160.0, 1.2, "fx_feather", 180.0, Vector2.UP, 1.4, false, Vector2(0, -40))
+		Fx.text(global_position, G.L(["¡RENACER!", "REBORN!"]), Color(1, 0.7, 0.3), 12)
+		return
 	var partner_alive := false
 	for p in world.players_list():
 		if p != self and p.is_alive():
@@ -702,6 +765,9 @@ func _animate(delta: float) -> void:
 		f = 1
 	sprite.region_rect = Rect2(f * FW, row[0] * FH, FW, FH)
 	sprite.flip_h = facing < 0
+	sprite.offset.y = -8.0 if sitting else -11.0
+	if sitting:
+		sprite.region_rect = Rect2(0, 0, FW, FH)
 	# respiración y estiramiento suave
 	sprite.scale = sprite.scale.lerp(Vector2.ONE, clamp(delta * 10.0, 0.0, 1.0))
 	if state == "heal":

@@ -21,6 +21,8 @@ var _hit := {}
 var _spr: Sprite2D
 var _light: PointLight2D
 var _t := 0.0
+var _trail: Array[Vector2] = []
+var _col := Color.WHITE
 
 func _ready() -> void:
 	z_index = 12
@@ -45,7 +47,9 @@ func _ready() -> void:
 	_light.energy = 0.9
 	_light.color = col
 	add_child(_light)
+	_col = col
 	rotation = vel.angle()
+	material = Fx.add_material()
 
 func _physics_process(delta: float) -> void:
 	_t += delta
@@ -62,6 +66,10 @@ func _physics_process(delta: float) -> void:
 	if accel != 0.0:
 		vel += vel.normalized() * accel * delta
 	position += vel * delta
+	_trail.push_front(global_position)
+	if _trail.size() > (10 if kind == "lance" else 6):
+		_trail.pop_back()
+	queue_redraw()
 	life -= delta
 	if life <= 0.0:
 		_die(false)
@@ -107,8 +115,22 @@ func _check_hits() -> void:
 					return
 				pierce -= 1
 
+func _draw() -> void:
+	if kind == "wave":
+		return
+	var n := _trail.size()
+	for i in range(1, n):
+		var a := 1.0 - float(i) / n
+		var p1 := to_local(_trail[i - 1])
+		var p2 := to_local(_trail[i])
+		draw_line(p1, p2, Color(_col, a * 0.8), (3.5 if kind == "lance" else 2.5) * a + 0.5)
+	if n > 1:
+		draw_line(Vector2.ZERO, to_local(_trail[min(2, n - 1)]), Color(1, 1, 1, 0.8), 1.0)
+
 func _die(hit: bool) -> void:
 	if hit:
 		var c := _light.color
 		Fx.burst(global_position, c, 10, 60.0, 0.35)
+		Fx.impact(global_position, c, 12.0, 6)
+		Fx.sparks(global_position, -vel.normalized(), c, 8, 120.0, 120.0)
 	queue_free()

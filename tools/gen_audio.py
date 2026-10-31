@@ -237,6 +237,69 @@ def boss(phase=1):
                     T.add(brass(nf(nm, o + 1), beat * 0.5, 0.7), t0 + beat * 3.5)
     return T.render(0.25, 1.0)
 
+def piano(f, dur, vel=1.0):
+    t = t_arr(dur); n = len(t)
+    y = np.zeros(n)
+    for h, amp in ((1, 1.0), (2, 0.45), (3, 0.22), (4, 0.12), (5, 0.06)):
+        fh = f * h * (1 + 0.0004 * h * h)
+        y += amp * np.sin(2 * np.pi * fh * t) * np.exp(-t * (1.6 + h * 0.9))
+    y *= np.minimum(1.0, t / 0.004)
+    return lp(y, 4200) * vel * 0.45
+
+def musicbox(f, dur, vel=1.0):
+    t = t_arr(dur)
+    y = np.sin(2 * np.pi * f * t) + 0.35 * np.sin(2 * np.pi * f * 4.0 * t) * np.exp(-t * 6) + 0.2 * np.sin(2 * np.pi * f * 2.0 * t)
+    return y * np.exp(-t * 2.6) * vel * 0.3
+
+def soft_pad(f, dur, vel=1.0):
+    t = t_arr(dur); n = len(t)
+    y = sum(np.sin(2 * np.pi * f * k * t + rng.uniform(0, 6)) / k for k in (1, 2, 3)) + 0.5 * np.sin(2 * np.pi * f * 1.003 * t)
+    return lp(y, 1200) * env(n, 2.0, 0.5, 0.8, 2.0, n) * vel * 0.1
+
+def peace():
+    """Santuario / lugares de paz: caja de música y cuerdas suaves (Re mayor / Si menor)."""
+    bpm = 64; beat = 60 / bpm; bar = beat * 3   # compás de 3/4
+    prog = [("D", [("D", 3), ("A", 3), ("F#", 4)]), ("Bm", [("B", 2), ("F#", 3), ("D", 4)]), ("G", [("G", 2), ("D", 3), ("B", 3)]), ("A", [("A", 2), ("E", 3), ("C#", 4)]),
+            ("D", [("D", 3), ("A", 3), ("F#", 4)]), ("F#m", [("F#", 2), ("C#", 3), ("A", 3)]), ("G", [("G", 2), ("D", 3), ("B", 3)]), ("A", [("A", 2), ("E", 3), ("A", 3)])]
+    T = Track(bar * len(prog) * 2)
+    mel = [("F#", 5), ("A", 5), ("D", 6), ("C#", 6), ("B", 5), ("A", 5), ("G", 5), ("F#", 5), ("E", 5), ("F#", 5), ("A", 5), ("E", 5),
+           ("F#", 5), ("D", 5), ("E", 5), ("C#", 5), ("D", 5), ("F#", 5), ("A", 5), ("B", 5), ("A", 5), ("G", 5), ("E", 5), ("C#", 5)]
+    for rep in range(2):
+        for i, (name, notes) in enumerate(prog):
+            t0 = (rep * len(prog) + i) * bar
+            for nm, o in notes:
+                T.add(soft_pad(nf(nm, o), bar + 1.5, 0.9), t0)
+            # arpegio de piano suave
+            arp = [notes[0], notes[1], notes[2], notes[1], notes[2], notes[1]]
+            for k, (nm, o) in enumerate(arp):
+                T.add(piano(nf(nm, o + (1 if k >= 2 else 0)), 2.5, 0.5 if k else 0.7), t0 + k * beat / 2)
+            # melodía de caja de música (3 notas por compás)
+            for k in range(3):
+                nm, o = mel[(i * 3 + k) % len(mel)]
+                if rep == 1 or k != 1:
+                    T.add(musicbox(nf(nm, o), 2.5, 0.75), t0 + k * beat)
+    return T.render(0.55, 1.6)
+
+def memory():
+    """Contemplación: piano lento y melancólico (Si menor)."""
+    bpm = 52; beat = 60 / bpm; bar = beat * 4
+    prog = [[("B", 2), ("F#", 3), ("D", 4)], [("G", 2), ("D", 3), ("B", 3)], [("D", 3), ("A", 3), ("F#", 4)], [("A", 2), ("E", 3), ("C#", 4)],
+            [("E", 2), ("B", 2), ("G", 3)], [("G", 2), ("D", 3), ("B", 3)], [("F#", 2), ("C#", 3), ("A#", 3)], [("B", 2), ("F#", 3), ("B", 3)]]
+    mel = [("F#", 5), ("D", 5), ("B", 4), ("C#", 5), ("D", 5), ("E", 5), ("F#", 5), ("A", 5), ("G", 5), ("F#", 5), ("E", 5), ("D", 5),
+           ("E", 5), ("D", 5), ("C#", 5), ("B", 4)]
+    T = Track(bar * len(prog))
+    for i, notes in enumerate(prog):
+        t0 = i * bar
+        for k, (nm, o) in enumerate(notes):
+            T.add(piano(nf(nm, o), 4.0, 0.6), t0 + k * 0.03)
+        T.add(piano(nf(notes[1][0], notes[1][1] + 1), 3.0, 0.4), t0 + beat * 2)
+        for k in range(2):
+            nm, o = mel[(i * 2 + k) % len(mel)]
+            T.add(piano(nf(nm, o), 3.5, 0.75), t0 + k * beat * 2 + beat * 0.5)
+        for nm, o in notes:
+            T.add(soft_pad(nf(nm, o + 1), bar + 1.0, 0.6), t0)
+    return T.render(0.6, 1.8)
+
 def victory():
     T = Track(7.0)
     for i, (nm, o) in enumerate([("D", 4), ("F", 4), ("A", 4), ("D", 5)]):
@@ -252,7 +315,7 @@ import sys
 FORCE = "--force" in sys.argv
 print("Componiendo música...")
 for _name, _fn in (("music_theme", theme), ("music_explore", explore), ("music_boss1", lambda: boss(1)),
-                   ("music_boss2", lambda: boss(2)), ("music_victory", victory)):
+                   ("music_boss2", lambda: boss(2)), ("music_victory", victory), ("music_peace", peace), ("music_memory", memory)):
     if FORCE or not os.path.exists(os.path.join(OUT, _name + ".ogg")):
         save(_name, _fn())
 

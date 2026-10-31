@@ -25,6 +25,46 @@ const WEAPONS := {
 		"desc": ["Arma de Arconte. El tercer corte libera una onda de luz.", "Archon weapon. The third slash releases a wave of light."]},
 }
 
+# ------------------------------------------------------------------ objetos
+## type: consumable | amulet | key | material ; rarity 0-4
+const ITEMS := {
+	"bomb": {"type": "consumable", "icon": "bomb", "rarity": 1, "name": ["Bomba de Ceniza", "Ash Bomb"],
+		"desc": ["Lánzala con [X]: estalla en llamas y daña a todos los enemigos cercanos.", "Throw with [X]: bursts into flame, damaging all nearby enemies."]},
+	"incense": {"type": "consumable", "icon": "incense", "rarity": 1, "name": ["Incienso de Fe", "Incense of Faith"],
+		"desc": ["+30% de daño durante 30 segundos.", "+30% damage for 30 seconds."]},
+	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "name": ["Ungüento de Hierro", "Iron Ointment"],
+		"desc": ["-35% de daño recibido durante 30 segundos.", "-35% damage taken for 30 seconds."]},
+	"phoenix": {"type": "consumable", "icon": "phoenix", "rarity": 3, "name": ["Pluma de Fénix", "Phoenix Feather"],
+		"desc": ["Si caes, renaces al instante con la mitad de vida. Se consume sola.", "If you fall, you are instantly reborn at half health. Used automatically."]},
+	"amulet_wing": {"type": "amulet", "icon": "amulet_wing", "rarity": 2, "name": ["Amuleto del Ala Rota", "Broken Wing Amulet"],
+		"desc": ["+30% recuperación de aguante.", "+30% stamina recovery."]},
+	"amulet_eye": {"type": "amulet", "icon": "amulet_eye", "rarity": 3, "name": ["Ojo de la Guardiana", "Warden's Eye"],
+		"desc": ["+10% probabilidad de crítico.", "+10% critical chance."]},
+	"amulet_ash": {"type": "amulet", "icon": "amulet_ash", "rarity": 2, "name": ["Sello de Ceniza", "Ash Seal"],
+		"desc": ["Tus golpes pueden quemar (+35% daño extra).", "Your hits may burn (+35% bonus damage)."]},
+	"key_vestibule": {"type": "key", "icon": "key", "rarity": 2, "name": ["Llave del Vestíbulo", "Vestibule Key"],
+		"desc": ["Abre la puerta sellada hacia el Círculo de la Guardiana.", "Opens the sealed gate to the Circle of the Warden."]},
+	"map_carto": {"type": "key", "icon": "scroll", "rarity": 1, "name": ["Mapa del Cartógrafo", "Cartographer's Map"],
+		"desc": ["Un mapa dibujado a tientas. Huele a vela y a polvo.", "A map drawn by touch. It smells of candle and dust."]},
+	"iron": {"type": "material", "icon": "iron", "rarity": 2, "name": ["Hierro Celeste", "Celestial Iron"],
+		"desc": ["Metal caído del cielo. Brenna lo usa para mejoras avanzadas.", "Metal fallen from the sky. Brenna uses it for advanced upgrades."]},
+}
+const RARITY_COLORS := [Color(0.75, 0.72, 0.78), Color(0.55, 0.9, 0.55), Color(0.35, 0.75, 1.0), Color(0.85, 0.45, 1.0), Color(1.0, 0.75, 0.25)]
+
+const MEMORIES := {
+	"m1": {"title": ["El Jardín de las Alas", "The Garden of Wings"], "lines": [
+		["Antes de la Espiral, había un jardín donde nadie contaba los días.", "Before the Spiral, there was a garden where no one counted the days."],
+		["Aprendimos a volar entre sus árboles de luz. Torpes. Riendo.", "We learned to fly among its trees of light. Clumsy. Laughing."],
+		["Alguien me prometió que volveríamos cuando todo terminara.", "Someone promised me we would return when it was all over."],
+		["No recuerdo su rostro. Solo el calor de su mano en la mía.", "I don't remember their face. Only the warmth of their hand in mine."],
+	]},
+	"m2": {"title": ["La Última Brasa", "The Last Ember"], "lines": [
+		["La primera brasa la encendió una niña con las alas quemadas.", "The first ember was lit by a girl with burnt wings."],
+		["Dijo que mientras ardiera, nadie se perdería del todo.", "She said that while it burned, no one would be lost entirely."],
+		["Todavía arde.", "It still burns."],
+	]},
+}
+
 # ------------------------------------------------------------------ árbol de habilidades
 ## pos = (columna, fila) dentro de la rama; req = nodos necesarios
 const SKILLS := {
@@ -104,9 +144,19 @@ var flags := {}  # banderas de mundo: brasa_lit, carcelero_dead, seravel_dead, c
 var last_brasa := "sanct"
 var dropped_ecos := {}  # {"amount": n, "pos": [x, y]}
 var playtime := 0.0
+var inventory := {}            # id -> cantidad
+var amulets_eq := ["", ""]
+var quick_item := "bomb"
+var memories := {}             # id -> true
+var buffs := {}                # efectos temporales (no se guardan): id -> segundos
 
 func _process(delta: float) -> void:
 	playtime += delta
+	for k in buffs.keys():
+		buffs[k] -= delta
+		if buffs[k] <= 0.0:
+			buffs.erase(k)
+			changed.emit()
 
 func reset() -> void:
 	level = 1; ecos = 0; feathers = 0
@@ -114,6 +164,7 @@ func reset() -> void:
 	attr_points = 0; skill_points = 1; skills = {}
 	weapons = {"sword": 0}; equipped = "sword"; flasks_max = 3; free_upgrades = 0
 	quests = {}; flags = {}; last_brasa = "sanct"; dropped_ecos = {}; playtime = 0.0
+	inventory = {"bomb": 2, "incense": 1}; amulets_eq = ["", ""]; quick_item = "bomb"; memories = {}; buffs = {}
 	changed.emit()
 
 # ------------------------------------------------------------------ estadísticas derivadas
@@ -122,6 +173,15 @@ func has_skill(id: String) -> bool:
 
 func max_hp() -> float:
 	return 100.0 + (attr.vigor - 1) * 14.0
+
+func has_amulet(id: String) -> bool:
+	return id in amulets_eq
+
+func stamina_regen_mult() -> float:
+	return 1.3 if has_amulet("amulet_wing") else 1.0
+
+func buff_damage_mult() -> float:
+	return 1.3 if buffs.has("incense") else 1.0
 
 func max_stamina() -> float:
 	return 100.0 + (attr.aguante - 1) * 7.0
@@ -149,16 +209,16 @@ func weapon_damage(id := "") -> float:
 	var dmg: float = w.dmg * scale * (1.0 + 0.09 * up)
 	if has_skill("f1"):
 		dmg *= 1.12
-	return dmg
+	return dmg * buff_damage_mult()
 
 func spell_damage(base: float) -> float:
-	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0)
+	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0) * buff_damage_mult()
 
 func crit_chance() -> float:
-	return 0.05 + 0.012 * (attr.destreza - 1)
+	return 0.05 + 0.012 * (attr.destreza - 1) + (0.1 if has_amulet("amulet_eye") else 0.0)
 
 func damage_taken_mult() -> float:
-	return 0.88 if has_skill("c2") else 1.0
+	return (0.88 if has_skill("c2") else 1.0) * (0.65 if buffs.has("ointment") else 1.0)
 
 func ecos_mult() -> float:
 	return 1.0 + 0.03 * (attr.arcano - 1)
@@ -230,6 +290,65 @@ func upgrade_weapon(id: String) -> bool:
 		ecos -= c[0]
 		feathers -= c[1]
 	weapons[id] = lv + 1
+	changed.emit()
+	return true
+
+# ------------------------------------------------------------------ inventario
+func item_count(id: String) -> int:
+	return int(inventory.get(id, 0))
+
+func add_item(id: String, n := 1, silent := false) -> void:
+	if not ITEMS.has(id):
+		return
+	inventory[id] = item_count(id) + n
+	if ITEMS[id].type == "amulet":
+		inventory[id] = 1
+	if not silent:
+		G.toast(G.T("item_got") % (G.L(ITEMS[id].name) + ("" if n <= 1 else " x%d" % n)), RARITY_COLORS[ITEMS[id].rarity])
+	changed.emit()
+
+func remove_item(id: String, n := 1) -> bool:
+	if item_count(id) < n:
+		return false
+	inventory[id] = item_count(id) - n
+	if inventory[id] <= 0:
+		inventory.erase(id)
+	changed.emit()
+	return true
+
+## Consumir un objeto (los efectos de lanzamiento los aplica el jugador). Devuelve true si se usó.
+func use_item(id: String) -> bool:
+	if ITEMS.get(id, {}).get("type", "") != "consumable" or id == "phoenix":
+		return false
+	if not remove_item(id):
+		return false
+	match id:
+		"incense":
+			buffs["incense"] = 30.0
+		"ointment":
+			buffs["ointment"] = 30.0
+	changed.emit()
+	return true
+
+func equip_amulet(id: String) -> void:
+	if not inventory.has(id) or has_amulet(id):
+		return
+	var slot := amulets_eq.find("")
+	if slot < 0:
+		slot = 1
+	amulets_eq[slot] = id
+	changed.emit()
+
+func unequip_amulet(id: String) -> void:
+	var i := amulets_eq.find(id)
+	if i >= 0:
+		amulets_eq[i] = ""
+	changed.emit()
+
+func unlock_memory(id: String) -> bool:
+	if memories.has(id):
+		return false
+	memories[id] = true
 	changed.emit()
 	return true
 
@@ -305,7 +424,8 @@ func to_dict() -> Dictionary:
 	return {"v": 1, "level": level, "ecos": ecos, "feathers": feathers, "attr": attr, "attr_points": attr_points,
 		"skill_points": skill_points, "skills": skills, "weapons": weapons, "equipped": equipped, "flasks_max": flasks_max,
 		"free_upgrades": free_upgrades, "quests": quests, "flags": flags, "last_brasa": last_brasa,
-		"dropped_ecos": dropped_ecos, "playtime": playtime, "lang": G.lang}
+		"dropped_ecos": dropped_ecos, "playtime": playtime, "lang": G.lang, "inventory": inventory,
+		"amulets_eq": amulets_eq, "quick_item": quick_item, "memories": memories}
 
 func from_dict(d: Dictionary) -> void:
 	level = int(d.get("level", 1)); ecos = int(d.get("ecos", 0)); feathers = int(d.get("feathers", 0))
@@ -323,6 +443,15 @@ func from_dict(d: Dictionary) -> void:
 		quests[k] = {"state": dq[k].get("state", "active"), "step": int(dq[k].get("step", 0)), "progress": int(dq[k].get("progress", 0))}
 	flags = d.get("flags", {}); last_brasa = d.get("last_brasa", "sanct"); dropped_ecos = d.get("dropped_ecos", {})
 	playtime = float(d.get("playtime", 0.0))
+	inventory = {}
+	var inv: Dictionary = d.get("inventory", {"bomb": 2})
+	for k in inv:
+		inventory[k] = int(inv[k])
+	var ae: Array = d.get("amulets_eq", ["", ""])
+	amulets_eq = [str(ae[0]) if ae.size() > 0 else "", str(ae[1]) if ae.size() > 1 else ""]
+	quick_item = d.get("quick_item", "bomb")
+	memories = d.get("memories", {})
+	buffs = {}
 	changed.emit()
 
 func save_game() -> void:

@@ -162,6 +162,8 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			Audio.play_music("boss2", 0.5)
 			G.shake(8.0, 1.2)
 			G.flash(Color(1, 0.2, 0.2, 0.5), 0.5)
+			G.shockwave(global_position + Vector2(0, -20), 2.2, 0.9)
+			G.chroma(2.0, 0.8)
 			Fx.ring(global_position + Vector2(0, -20), 10.0, 160.0, Color(1, 0.3, 0.3), 0.9, 8.0)
 			Fx.burst(global_position + Vector2(0, -20), Color(1, 0.3, 0.3), 60, 200.0, 1.2, "fx_feather", 180.0, Vector2.UP, 1.4, false, Vector2(0, 40))
 			_hit_circle(global_position, 60.0, 10.0, Vector2.ZERO)

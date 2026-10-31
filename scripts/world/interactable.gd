@@ -81,6 +81,10 @@ func _ready() -> void:
 			light.energy = 0.7
 			add_child(light)
 			radius = 26.0
+		"bench":
+			spr.texture = Fx.tex("bench")
+			spr.offset = Vector2(0, -6)
+			radius = 24.0
 		"chest":
 			spr.texture = Fx.tex("chest")
 			spr.region_enabled = true
@@ -131,9 +135,11 @@ func prompt() -> String:
 		"brasa":
 			return G.T("interact") % (G.T("rest") if used else G.T("light_brasa"))
 		"npc":
-			return G.T("interact") % (G.T("talk") + " — " + G.L(data.get("name", ["", ""])))
+			return G.T("interact") % (G.T("talk") + " - " + G.L(data.get("name", ["", ""])))
 		"chest":
 			return "" if used else G.T("interact") % G.T("open")
+		"bench":
+			return G.T("interact") % G.T("contemplate")
 	return ""
 
 func _process(delta: float) -> void:
