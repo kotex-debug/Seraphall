@@ -381,7 +381,7 @@ func show_panel(kind: String) -> void:
 		l2.custom_minimum_size = Vector2(300, 0)
 		box.add_child(l2)
 		_code_edit = LineEdit.new()
-		_code_edit.placeholder_text = "XXXXX-XXXXX"
+		_code_edit.placeholder_text = "XXXXX-XXXXX  /  IP"
 		_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_code_edit.max_length = 21
 		_code_edit.custom_minimum_size = Vector2(300, 26)

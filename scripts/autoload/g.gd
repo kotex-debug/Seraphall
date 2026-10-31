@@ -34,7 +34,7 @@ const TXT := {
 	"language": ["Idioma: Español", "Language: English"],
 	"quit": ["Salir", "Quit"],
 	"back": ["Volver", "Back"],
-	"enter_code": ["Introduce el código de partida", "Enter the game code"],
+	"enter_code": ["Introduce el código de partida (o la IP del anfitrión)", "Enter the game code (or the host's IP)"],
 	"connect": ["Conectar", "Connect"],
 	"connecting": ["Conectando...", "Connecting..."],
 	"conn_failed": ["No se pudo conectar. Revisa el código.", "Could not connect. Check the code."],

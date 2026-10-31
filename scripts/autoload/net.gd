@@ -74,6 +74,12 @@ func _upnp_finished(ok: bool, ip: String) -> void:
 
 # ------------------------------------------------------------------ cliente
 func join(code: String) -> Error:
+	# También acepta una IP directa (útil con redes virtuales como Radmin VPN, ZeroTier o Tailscale)
+	var raw := code.strip_edges()
+	var host_part := raw.split(":")[0]
+	if host_part.is_valid_ip_address():
+		var port := int(raw.split(":")[1]) if raw.count(":") == 1 else PORT
+		return join_ip(host_part, port)
 	close()
 	var target := decode(code)
 	if target.is_empty():
