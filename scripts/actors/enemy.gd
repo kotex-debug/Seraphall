@@ -16,6 +16,12 @@ const TYPES := {
 	"carcelero": {"sheet": "enemy_carcelero", "fw": 40, "fh": 40, "hp": 680.0, "speed": 46.0, "radius": 14.0, "dmg": 28.0, "poise": 130.0,
 		"ecos": 650, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",
 		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"choir": {"sheet": "boss_singer", "fw": 26, "fh": 36, "hp": 1150.0, "speed": 42.0, "radius": 42.0, "dmg": 20.0, "poise": 170.0,
+		"ecos": 1800, "aggro": 320.0, "range": 260.0, "cd": 1.3, "off": -20.0, "boss": true, "title": "boss_choir",
+		"anims": {"idle": [0, 4, 6.0], "walk": [0, 4, 6.0], "attack": [0, 4, 8.0], "dead": [0, 0]}},
+	"sombra": {"sheet": "fx_soft", "fw": 24, "fh": 26, "hp": 240.0, "speed": 96.0, "radius": 7.0, "dmg": 22.0, "poise": 70.0,
+		"ecos": 0, "aggro": 230.0, "range": 150.0, "cd": 0.95, "off": -11.0,
+		"anims": {"idle": [0, 4, 6.0], "walk": [1, 6, 11.0], "attack": [2, 3, 10.0], "dead": [3, 1]}},
 	"seravel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 1500.0, "speed": 70.0, "radius": 13.0, "dmg": 24.0, "poise": 200.0,
 		"ecos": 3000, "aggro": 400.0, "range": 200.0, "cd": 1.2, "off": -26.0, "boss": true, "title": "boss_seravel",
 		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},
@@ -41,6 +47,11 @@ var phase := 1
 var is_boss := false
 var active := true    # los jefes se activan con su escena
 var lunge := Vector2.ZERO
+var asc := 0              # nivel de Ascensión (revancha)
+var dmg_mult := 1.0
+var cd_mult := 1.0
+var slow_t := 0.0
+var rank := 0
 var _attack_id := 0
 var _net_pos := Vector2.ZERO
 var _frame := 0.0
@@ -60,6 +71,7 @@ func setup(p_idx: int, p_type: String, pos: Vector2, p_world: Node) -> void:
 	name = "E%d" % idx
 	is_boss = cfg.get("boss", false)
 	active = not is_boss
+	rank = Prog.BOSS_INFO.get(type, {}).get("rank", 0)
 
 func _ready() -> void:
 	collision_layer = 4
@@ -100,7 +112,11 @@ func _ready() -> void:
 	reset_state()
 
 func reset_state() -> void:
-	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0)
+	var d: Dictionary = world.diff() if world else Prog.diff()
+	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0) * d.hp * (1.0 + 0.35 * asc) * (1.0 + 0.5 * Prog.ng)
+	dmg_mult = d.dmg * (1.0 + 0.25 * asc) * (1.0 + 0.3 * Prog.ng)
+	cd_mult = d.cd * (1.0 - 0.1 * asc)
+	slow_t = 0.0
 	hp = max_hp
 	max_poise = cfg.poise
 	poise = 0.0
@@ -133,7 +149,8 @@ func _physics_process(delta: float) -> void:
 	_animate(delta)
 
 func _server_tick(delta: float) -> void:
-	cooldown -= delta
+	cooldown -= delta * (0.6 if slow_t > 0.0 else 1.0)
+	slow_t = max(0.0, slow_t - delta)
 	last_hit_t += delta
 	if last_hit_t > 2.0 and poise > 0.0:
 		poise = max(0.0, poise - max_poise * 0.25 * delta)
@@ -187,7 +204,7 @@ func _chase(target: Node2D, delta: float) -> void:
 	for e in world.enemies_alive():
 		if e != self and e.global_position.distance_to(global_position) < body_radius * 2.2:
 			want += (global_position - e.global_position).normalized() * 0.6
-	velocity = velocity.lerp(want.limit_length(1.0) * cfg.speed, clamp(delta * 6.0, 0.0, 1.0))
+	velocity = velocity.lerp(want.limit_length(1.0) * cfg.speed * (0.55 if slow_t > 0.0 else 1.0), clamp(delta * 6.0, 0.0, 1.0))
 
 func _choose_attack(d: float) -> String:
 	match type:
@@ -195,6 +212,10 @@ func _choose_attack(d: float) -> String:
 			return "slash"
 		"bestia":
 			return "charge" if d > 40.0 else "bite"
+		"sombra":
+			if d > 70.0 and randf() < 0.45:
+				return "dark_lance"
+			return "shadow_dash"
 		"carcelero":
 			if phase == 2 and randf() < 0.4:
 				return "triple"
@@ -307,6 +328,41 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			Fx.slash(global_position + Vector2(0, -10), dir.angle(), 46.0, 240.0, Color(1, 0.6, 0.35, 0.9), 16.0, 0.3)
 			_hit_circle(global_position, 60.0, cfg.dmg * 0.85, dir)
 			if not await _wait(0.7, my_id): return
+		"shadow_dash":
+			_play("attack", 0)
+			Fx.telegraph_line(global_position, dir.angle(), 120.0, 14.0, 0.42, Color(0.7, 0.3, 1.0))
+			_tell(0.42, Color(0.7, 0.4, 1.0))
+			if not await _wait(0.42, my_id): return
+			Audio.sfx("dash", -2.0)
+			var hit2 := false
+			var t2 := 0.0
+			while t2 < 0.22:
+				if multiplayer.is_server():
+					velocity = dir * 420.0
+					lunge = dir * 420.0
+				Fx.afterimage(sprite, sprite.global_position, Color(0.5, 0.2, 0.8, 0.6))
+				if not hit2:
+					hit2 = _hit_circle(global_position, body_radius + 7.0, cfg.dmg * 0.7, dir)
+				if not await _wait(0.016, my_id): return
+				t2 += 0.016
+			if multiplayer.is_server():
+				lunge = Vector2.ZERO
+				velocity = Vector2.ZERO
+			_play("attack", 1)
+			Audio.sfx("swing", -2.0)
+			Fx.slash(global_position + Vector2(0, -8), dir.angle(), 24.0, 150.0, Color(0.6, 0.3, 1.0, 0.9), 10.0, 0.2)
+			_hit_arc(global_position + Vector2(0, -6), dir.angle(), 32.0, 150.0, cfg.dmg)
+			if not await _wait(0.5, my_id): return
+		"dark_lance":
+			_play("attack", 0)
+			Fx.light_flash(global_position + Vector2(0, -10), Color(0.6, 0.3, 1.0), 1.0, 0.6, 0.4)
+			_tell(0.45, Color(0.7, 0.4, 1.0))
+			if not await _wait(0.45, my_id): return
+			_play("attack", 2)
+			Audio.sfx("lance", -2.0)
+			for a in [-0.15, 0.0, 0.15]:
+				world.spawn_projectile_local(global_position + Vector2(0, -10), dir.rotated(a) * 230.0, cfg.dmg * 0.8, "orb", "enemy", 1, 5.0, 2.0, 0)
+			if not await _wait(0.6, my_id): return
 		"triple":
 			var rng2 := RandomNumberGenerator.new()
 			rng2.seed = seed
@@ -326,7 +382,7 @@ func _end_attack(my_id: int) -> void:
 		return
 	if state == "busy":
 		state = "chase"
-	cooldown = cfg.cd * (0.7 if phase == 2 else 1.0) * randf_range(0.8, 1.25)
+	cooldown = cfg.cd * (0.7 if phase >= 2 else 1.0) * (0.8 if phase >= 3 else 1.0) * cd_mult * randf_range(0.8, 1.25)
 	anim = "walk"
 
 func _slam_at(p: Vector2, r: float, dmg: float) -> void:
@@ -374,7 +430,7 @@ func _hit_arc(origin: Vector2, ang: float, rng: float, arc_deg: float, dmg: floa
 			continue
 		if abs(wrapf(to.angle() - ang, -PI, PI)) > deg_to_rad(arc_deg / 2.0) and to.length() > 10.0:
 			continue
-		p.take_hit(dmg, to.normalized(), idx)
+		p.take_hit(dmg * dmg_mult * world.event_mult(), to.normalized(), idx)
 		any = true
 	return any
 
@@ -383,7 +439,7 @@ func _hit_circle(center: Vector2, r: float, dmg: float, dir: Vector2) -> bool:
 	for p in world.local_players():
 		if p.is_alive() and p.global_position.distance_to(center) < r + 5.0:
 			var d = dir if dir != Vector2.ZERO else (p.global_position - center).normalized()
-			p.take_hit(dmg, d, idx)
+			p.take_hit(dmg * dmg_mult * world.event_mult(), d, idx)
 			any = true
 	return any
 
@@ -441,6 +497,19 @@ func on_parried() -> void:
 	else:
 		_start_stagger()
 
+func apply_shadow_look(l: Dictionary, feathers: int) -> void:
+	## La Sombra lleva tu aspecto, tu arma y tus hechizos
+	sprite.texture = Look.texture(l, feathers)
+	sprite.self_modulate = Color(0.32, 0.12, 0.5)
+	var el := PointLight2D.new()
+	el.texture = Fx.tex("light")
+	el.color = Color(0.6, 0.3, 1.0)
+	el.texture_scale = 0.9
+	el.energy = 0.8
+	el.position = Vector2(0, -10)
+	add_child(el)
+	set_meta("shadow", true)
+
 func die() -> void:
 	if state == "dead":
 		return
@@ -495,7 +564,7 @@ func _animate(delta: float) -> void:
 		sprite.modulate = Color(1.0, 0.85, 0.6)
 	else:
 		sprite.rotation = 0.0
-		sprite.modulate = Color.WHITE
+		sprite.modulate = Color(0.7, 0.9, 1.3) if slow_t > 0.0 else Color.WHITE
 	var fl: float = _flash_mat.get_shader_parameter("flash")
 	if fl > 0.0 and state != "busy":
 		_flash_mat.set_shader_parameter("flash", max(0.0, fl - delta * 7.0))

@@ -344,19 +344,23 @@ class TelegraphFx extends Node2D:
 
 	func _draw() -> void:
 		var p: float = clamp(t / duration, 0.0, 1.0)
+		var boost = G.tele_boost or (G.has_meta("lightwing") and G.get_meta("lightwing"))
 		var c := color
-		c.a = 0.18 + 0.12 * sin(t * 30.0)
+		c.a = (0.18 + 0.12 * sin(t * 30.0)) * (1.8 if boost else 1.0)
 		var edge := color
 		edge.a = 0.8
+		var ew := 3.0 if boost else 1.0
 		if radius > 0.0:
 			draw_circle(Vector2.ZERO, radius, c)
-			draw_arc(Vector2.ZERO, radius, 0, TAU, 40, edge, 1.0)
+			draw_arc(Vector2.ZERO, radius, 0, TAU, 40, edge, ew)
+			if boost:
+				draw_arc(Vector2.ZERO, radius + 3.0, 0, TAU, 40, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 20.0)), 1.0)
 			var fill := color
 			fill.a = 0.35
 			draw_circle(Vector2.ZERO, radius * p, fill)
 		else:
 			draw_rect(Rect2(0, -line_w / 2, line_len, line_w), c)
-			draw_rect(Rect2(0, -line_w / 2, line_len, line_w), edge, false, 1.0)
+			draw_rect(Rect2(0, -line_w / 2, line_len, line_w), edge, false, ew)
 			var fill2 := color
 			fill2.a = 0.35
 			draw_rect(Rect2(0, -line_w / 2, line_len * p, line_w), fill2)

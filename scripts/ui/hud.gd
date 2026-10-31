@@ -19,6 +19,9 @@ var big_layer: Control
 var sub_label: Label
 var progress: ProgressBar
 var _boss: Enemy
+var minimap: Minimap
+var combo_ui: ComboCounter
+var hurt_ui: HurtIndicator
 
 func _ready() -> void:
 	layer = 10
@@ -38,11 +41,22 @@ func _ready() -> void:
 	ecos_box.position = Vector2(520, 318)
 	root.add_child(ecos_box)
 	quest_box = VBoxContainer.new()
-	quest_box.position = Vector2(448, 8)
+	quest_box.position = Vector2(448, 82)
 	quest_box.custom_minimum_size = Vector2(186, 0)
 	quest_box.add_theme_constant_override("separation", 2)
 	quest_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(quest_box)
+	minimap = Minimap.new()
+	minimap.hud = self
+	minimap.position = Vector2(544, 6)
+	minimap.size = Vector2(90, 70)
+	root.add_child(minimap)
+	combo_ui = ComboCounter.new()
+	combo_ui.position = Vector2(560, 196)
+	root.add_child(combo_ui)
+	hurt_ui = HurtIndicator.new()
+	hurt_ui.size = Vector2(640, 360)
+	root.add_child(hurt_ui)
 	prompt = FloatingPrompt.new()
 	prompt.hud = self
 	root.add_child(prompt)
@@ -76,7 +90,7 @@ func _ready() -> void:
 	sub_label.modulate.a = 0.0
 	root.add_child(sub_label)
 	toast_box = VBoxContainer.new()
-	toast_box.position = Vector2(170, 40)
+	toast_box.position = Vector2(170, 84)
 	toast_box.custom_minimum_size = Vector2(300, 0)
 	toast_box.add_theme_constant_override("separation", 3)
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -101,10 +115,21 @@ func _ready() -> void:
 	status.position.x = -120
 	skills.position.y = 400
 	ecos_box.position.x = 700
+	minimap.position.y = -90
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(status, "position:x", 6.0, 0.6).set_delay(0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(skills, "position:y", 306.0, 0.6).set_delay(0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(ecos_box, "position:x", 520.0, 0.6).set_delay(0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(minimap, "position:y", 6.0, 0.6).set_delay(0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func combo_hit(n := 1) -> void:
+	combo_ui.hit(n)
+
+func combo_break() -> void:
+	combo_ui.reset()
+
+func hurt_from(dir: Vector2) -> void:
+	hurt_ui.add(dir)
 
 func _on_quest_updated(_id: String) -> void:
 	_refresh_quests()
@@ -128,7 +153,7 @@ func set_progress(v: float, text: String) -> void:
 func _refresh_quests() -> void:
 	for c in quest_box.get_children():
 		c.queue_free()
-	var order := ["main1", "feathers", "husks", "map", "jailer_hunt"]
+	var order := ["main1", "feathers", "husks", "map", "choir", "jailer_hunt"]
 	var shown := 0
 	for id in order:
 		if not Prog.quest_active(id) or shown >= 3:
@@ -155,6 +180,9 @@ func toast(text: String, color := Color(1, 0.9, 0.6)) -> void:
 		toast_box.get_child(0).free()
 
 func show_area(title: String, sub: String) -> void:
+	for old in big_layer.get_children():
+		if old is AreaTitle:
+			old.queue_free()
 	var a := AreaTitle.new()
 	a.small = title
 	a.big = sub
@@ -197,7 +225,7 @@ func letterbox(on: bool) -> void:
 	tw.tween_property(lb_bot, "position:y", 360.0 - h, 0.6).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_property(lb_bot, "size:y", h, 0.6).set_trans(Tween.TRANS_CUBIC)
 	var t2 := create_tween()
-	for n in [status, skills, ecos_box, quest_box, toast_box]:
+	for n in [status, skills, ecos_box, quest_box, toast_box, minimap, combo_ui]:
 		t2.parallel().tween_property(n, "modulate:a", 0.0 if on else 1.0, 0.4)
 
 func title_card(title: String, sub_pair: Array) -> void:
@@ -394,7 +422,7 @@ class StatusCluster extends Control:
 			draw_rect(Rect2(p - Vector2(1, 1), Vector2(3, 3)), col)
 		# medallón
 		UIKit.frame(self, Rect2(c - Vector2(17, 17), Vector2(34, 34)), UIKit.RED if not full else UIKit.GOLD, Color(0.16, 0.06, 0.2), 4.0)
-		var tex := Fx.tex("player_p%d" % lp.variant)
+		var tex: Texture2D = lp.sprite.texture
 		var bob := roundf(sin(_t * 3.0))
 		draw_texture_rect_region(tex, Rect2(c + Vector2(-16, -17 + bob), Vector2(32, 26)), Rect2(4, 0, 16, 13))
 		# etiqueta de nivel
@@ -419,6 +447,26 @@ class StatusCluster extends Control:
 			draw_rect(Rect2(Vector2(bx, 57), Vector2(16, 2)), UIKit.INK)
 			draw_rect(Rect2(Vector2(bx, 57), Vector2(16 * frac, 2)), UIKit.GOLD)
 			bx += 20
+		# plumas del ala: cada muerte arranca una
+		var wc := Look.color_of(G.look, "wing")
+		for i in Prog.WING_MAX:
+			var have := i < Prog.wing_feathers
+			var fp := Vector2(60 + i * 6, 65)
+			var fc := wc if have else Color(0.22, 0.14, 0.26)
+			var leaf := PackedVector2Array([fp + Vector2(1, -5), fp + Vector2(3, -1), fp + Vector2(1, 3), fp + Vector2(-1, -1)])
+			var big := PackedVector2Array([fp + Vector2(1, -7), fp + Vector2(4, -1), fp + Vector2(1, 5), fp + Vector2(-2, -1)])
+			draw_colored_polygon(big, UIKit.INK)
+			draw_colored_polygon(leaf, fc)
+			if have:
+				draw_line(fp + Vector2(1, 4), fp + Vector2(1, -4), fc.darkened(0.35), 1.0)
+				draw_rect(Rect2(fp + Vector2(1, -5), Vector2(1, 1)), Color.WHITE)
+		if Prog.is_desplumado():
+			var dt := G.T("desplumado_mode")
+			var dw := f.get_string_size(dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			var dp := Vector2(58 + Prog.WING_MAX * 6 + 6, 61)
+			UIKit.slash_band(self, Rect2(dp - Vector2(4, 0), Vector2(dw + 10, 10)), UIKit.RED.lerp(UIKit.PINK, 0.5 + 0.5 * sin(_t * 6.0)), 3.0)
+			f.draw_string_outline(get_canvas_item(), dp + Vector2(1, 8), dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+			f.draw_string(get_canvas_item(), dp + Vector2(1, 8), dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
 
 	func draw_over(ci: Control) -> void:
 		var lp: Player = hud.world.local_player() if hud.world else null
@@ -772,6 +820,21 @@ class BossPanel extends Control:
 		# alas a los lados
 		UIKit.wing(self, Vector2(4, 20), -1.0, 14.0, Color(1, 1, 1, 0.9), 0.8 + 0.1 * sin(_t * 4.0))
 		UIKit.wing(self, Vector2(size.x - 6, 20), 1.0, 14.0, Color(1, 1, 1, 0.9), 0.8 + 0.1 * sin(_t * 4.0))
+		# rango del Arconte (rombos) y Ascensión
+		var rk: int = Prog.BOSS_INFO.get(boss.type, {}).get("rank", 1)
+		for i in rk:
+			var dp := Vector2(x + tw + 20 + i * 9, 8)
+			UIKit.diamond(self, dp, 4.0, UIKit.INK)
+			UIKit.diamond(self, dp, 3.0, UIKit.GOLD)
+		if boss.asc > 0:
+			var at: String = G.T("ascension") + " " + ["I", "II", "III"][clampi(boss.asc - 1, 0, 2)]
+			var aw := f.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			UIKit.slash_band(self, Rect2(Vector2(x - aw - 34, 2), Vector2(aw + 14, 12)), UIKit.PINK, 4.0)
+			f.draw_string_outline(get_canvas_item(), Vector2(x - aw - 27, 12), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+			f.draw_string(get_canvas_item(), Vector2(x - aw - 27, 12), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+		if hud.world and (hud.world.diff().phase3 or boss.asc >= 1) and boss.type in ["seravel", "choir"]:
+			var nx3 := bar.position.x + bar.size.x * (0.25 if boss.type == "seravel" else 0.2)
+			draw_rect(Rect2(Vector2(nx3 - 1, bar.position.y - 3), Vector2(2, bar.size.y + 6)), UIKit.PINK)
 		# postura
 		var pr: float = clamp(boss.poise / boss.max_poise, 0.0, 1.0)
 		var pw := bar.size.x * 0.6
@@ -797,6 +860,13 @@ class FloatingPrompt extends Control:
 		if lp and lp.is_alive() and not w.is_menu_open() and not lp.cutscene:
 			it = w.nearest_interactable(lp)
 		var want := 0.0
+		var sp: Enemy = w._spare_target if w and is_instance_valid(w._spare_target) else null
+		if sp and lp and lp.is_alive():
+			_text = G.T("spare") + " - " + G.T(sp.cfg.get("title", "boss_carcelero"))
+			var vt0 := get_viewport().get_canvas_transform()
+			_pos = (vt0 * (sp.global_position + Vector2(0, sp.cfg.off * 2.0 - 16.0))).round()
+			want = 1.0
+			it = null
 		if it:
 			var txt := it.prompt()
 			if txt != "":
@@ -831,3 +901,166 @@ class FloatingPrompt extends Control:
 		f.draw_string_outline(get_canvas_item(), lr.position + Vector2(4, 9), _text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
 		f.draw_string(get_canvas_item(), lr.position + Vector2(4, 9), _text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, _a))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+class Minimap extends Control:
+	## Minimapa: silueta real del Estrato alrededor del jugador, iconos y zona actual.
+	var hud: Node
+	var t := 0.0
+	const PX := 2.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		clip_contents = true
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var w = hud.world
+		if w == null or w.grid.is_empty():
+			return
+		var view := Rect2(Vector2(2, 2), Vector2(size.x - 4, 52))
+		UIKit.frame(self, Rect2(Vector2.ZERO, Vector2(size.x, 56)), UIKit.RED_DARK, Color(0.05, 0.02, 0.07, 0.85), 3.0, -1.0)
+		var lp: Player = w.local_player()
+		var center: Vector2 = lp.global_position / 16.0 if lp else Vector2(49, 86)
+		var tiles := view.size / PX
+		var src := Rect2(center - tiles / 2.0, tiles)
+		var tex: ImageTexture = w.map_texture()
+		draw_texture_rect_region(tex, view, src)
+		for m in w.map_markers():
+			var mp: Vector2 = view.position + (m[1] - src.position) * PX
+			if not view.grow(-2).has_point(mp):
+				if m[0] == "boss":
+					var cl := Vector2(clamp(mp.x, view.position.x + 3, view.end.x - 3), clamp(mp.y, view.position.y + 3, view.end.y - 3))
+					UIKit.diamond(self, cl, 2.0 + absf(sin(t * 4.0)), UIKit.RED)
+				continue
+			mp = mp.round()
+			match m[0]:
+				"brasa":
+					draw_rect(Rect2(mp - Vector2(1, 2), Vector2(3, 4)), m[2])
+				"npc":
+					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(3, 3)), UIKit.CYAN)
+				"boss":
+					UIKit.diamond(self, mp, 3.0, UIKit.RED)
+				"chest":
+					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(3, 2)), UIKit.GOLD)
+				"ecos":
+					UIKit.diamond(self, mp, 2.0 + absf(sin(t * 5.0)), Color(0.5, 0.85, 1.0))
+				"ally":
+					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(3, 3)), m[2])
+		if lp:
+			var c := (view.position + view.size / 2.0).round()
+			var fd: Vector2 = lp.aim.normalized() if lp.aim.length() > 0.1 else Vector2.DOWN
+			draw_colored_polygon(PackedVector2Array([c + fd * 5.0, c + fd.orthogonal() * 2.5, c - fd.orthogonal() * 2.5]), UIKit.WHITE)
+			draw_rect(Rect2(c - Vector2(1, 1), Vector2(3, 3)), UIKit.PINK if int(t * 3.0) % 2 == 0 else UIKit.WHITE)
+		# zona y dificultad
+		var f := UIKit.font("title")
+		var a: String = w.current_area()
+		var nm := G.T(a).to_upper() if a != "" else ""
+		var fs := 10
+		while fs > 6 and f.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 2:
+			fs -= 1
+		var tw := f.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var ac: Color = w.AREA_COLORS.get(a, UIKit.WHITE)
+		f.draw_string_outline(get_canvas_item(), Vector2(size.x - tw - 1, 66), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), Vector2(size.x - tw - 1, 66), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ac)
+		var d: Dictionary = w.diff()
+		for i in int(d.skulls):
+			var sp := view.position + Vector2(5 + i * 6, 5)
+			draw_rect(Rect2(sp - Vector2(3, 3), Vector2(5, 5)), UIKit.INK)
+			draw_rect(Rect2(sp - Vector2(2, 2), Vector2(3, 3)), d.color)
+		if w.event != "":
+			var ec := Color(1, 0.55, 0.3) if w.event == "ash" else Color(0.7, 0.45, 1.0)
+			draw_rect(Rect2(view.position + Vector2(2, view.size.y - 5), Vector2((view.size.x - 4) * clampf(w.event_t / 75.0, 0.0, 1.0), 3)), ec)
+		draw_rect(Rect2(view.position + Vector2(view.size.x - 9, 3), Vector2(6, 1)), Color(1, 1, 1, 0.5))
+		f.draw_string_outline(get_canvas_item(), view.position + Vector2(view.size.x - 10, 12), "M", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), view.position + Vector2(view.size.x - 10, 12), "M", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+
+class ComboCounter extends Control:
+	## Contador de golpes estilo arcade: número gordo que salta, rango y barra de tiempo.
+	var count := 0
+	var timer := 0.0
+	var pop := 0.0
+	var t := 0.0
+	var best_flash := 0.0
+	const KEEP := 2.4
+	const RANKS := [[5, ["BIEN", "NICE"]], [12, ["FEROZ", "FIERCE"]], [25, ["BRUTAL", "BRUTAL"]], [45, ["SERÁFICO", "SERAPHIC"]], [80, ["ARCONTE", "ARCHON"]]]
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func hit(n: int) -> void:
+		var old := _rank()
+		count += n
+		timer = KEEP
+		pop = 1.0
+		if _rank() != old and _rank() != "":
+			best_flash = 1.0
+			Audio.sfx("ui_ok", -6.0, 0.0)
+	func reset() -> void:
+		if count >= 5:
+			best_flash = 0.0
+		count = 0
+		timer = 0.0
+	func _rank() -> String:
+		var r := ""
+		for k in RANKS:
+			if count >= k[0]:
+				r = G.L(k[1])
+		return r
+	func _process(delta: float) -> void:
+		t += delta
+		timer = max(0.0, timer - delta)
+		if timer <= 0.0:
+			count = 0
+		pop = max(0.0, pop - delta * 6.0)
+		best_flash = max(0.0, best_flash - delta * 1.5)
+		queue_redraw()
+	func _draw() -> void:
+		if count < 2:
+			return
+		var f := UIKit.font("logo")
+		var txt := str(count)
+		var fs := 34 + int(pop * 10.0)
+		var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var p := Vector2(64 - w, 30 - pop * 3.0).round()
+		var col := UIKit.WHITE.lerp(UIKit.GOLD, clamp(count / 40.0, 0.0, 1.0))
+		f.draw_string_outline(get_canvas_item(), p + Vector2(2, 3), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, UIKit.RED_DARK)
+		f.draw_string_outline(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, UIKit.INK)
+		f.draw_string(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col.lerp(UIKit.RED, pop * 0.6))
+		var h := UIKit.font("head")
+		h.draw_string_outline(get_canvas_item(), Vector2(18, 42), G.T("combo_hits"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		h.draw_string(get_canvas_item(), Vector2(18, 42), G.T("combo_hits"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.PINK)
+		# barra de tiempo
+		var k := timer / KEEP
+		draw_rect(Rect2(Vector2(10, 46), Vector2(56, 4)), UIKit.INK)
+		draw_rect(Rect2(Vector2(11, 47), Vector2(54 * k, 2)), UIKit.RED if k < 0.3 and int(t * 10.0) % 2 == 0 else UIKit.PINK)
+		var r := _rank()
+		if r != "":
+			var rw := h.get_string_size(r, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			var rp := Vector2(66 - rw, 62 + roundf(sin(t * 6.0)))
+			UIKit.slash_band(self, Rect2(rp - Vector2(6, 10), Vector2(rw + 12, 13)), Color(UIKit.RED, 0.9).lerp(UIKit.GOLD, best_flash), 4.0)
+			h.draw_string_outline(get_canvas_item(), rp, r, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+			h.draw_string(get_canvas_item(), rp, r, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+
+class HurtIndicator extends Control:
+	## Marca roja en el borde de la pantalla que señala de dónde viene el golpe.
+	var marks := []
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func add(dir: Vector2) -> void:
+		if dir.length() < 0.1:
+			return
+		marks.append([dir.normalized(), 1.0])
+	func _process(delta: float) -> void:
+		for m in marks:
+			m[1] -= delta * 1.6
+		marks = marks.filter(func(m): return m[1] > 0.0)
+		queue_redraw()
+	func _draw() -> void:
+		var c := Vector2(320, 172)
+		for m in marks:
+			var d: Vector2 = m[0]
+			var a: float = m[1]
+			var p := c + Vector2(d.x * 150.0, d.y * 110.0)
+			var o := d.orthogonal()
+			for i in 3:
+				var pp := p + d * (i * 7.0)
+				draw_colored_polygon(PackedVector2Array([pp + d * 8.0, pp + o * (10.0 - i * 2.0), pp - o * (10.0 - i * 2.0)]), Color(1, 0.15, 0.2, a * (0.9 - i * 0.25)))

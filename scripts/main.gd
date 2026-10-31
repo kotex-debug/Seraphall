@@ -20,6 +20,39 @@ func _ready() -> void:
 			start_game("new")
 		"join":
 			Net.join_ip("127.0.0.1")
+		"newgame":
+			var sd := OS.get_environment("SERAPHALL_SHOTS")
+			_build_title()
+			await get_tree().create_timer(0.5).timeout
+			title._skip_intro()
+			await get_tree().create_timer(1.0).timeout
+			_on_title_action("new", "")
+			await get_tree().create_timer(0.8).timeout
+			await _shot(sd + "/n01_dificultad.png")
+			var ng: Control = title_layer.get_child(title_layer.get_child_count() - 1)
+			ng.diff_sel = 0
+			await get_tree().create_timer(0.5).timeout
+			await _shot(sd + "/n02_ala_ligera.png")
+			ng.diff_sel = 2
+			ng._confirm_diff()
+			await get_tree().create_timer(0.8).timeout
+			await _shot(sd + "/n03_creador_chica.png")
+			ng.look = Look.sane({"body": "f", "hair": 1, "hair_col": 3, "skin": 2, "eye": 3, "cloak": 2, "armor": 3, "wing": 3, "halo": 4})
+			ng._refresh_preview()
+			ng.row_sel = 2
+			await get_tree().create_timer(1.6).timeout
+			await _shot(sd + "/n04_creador_chica2.png")
+			ng.look = Look.sane({"body": "m", "hair": 1, "hair_col": 1, "skin": 4, "eye": 1, "cloak": 1, "armor": 1, "wing": 1, "halo": 1, "name": "Kael"})
+			ng._name_edit.text = "Kael"
+			ng._refresh_preview()
+			ng._anim_t = 3.2
+			await get_tree().create_timer(0.9).timeout
+			await _shot(sd + "/n05_creador_chico.png")
+			ng._finish()
+			await get_tree().create_timer(4.0).timeout
+			await _shot(sd + "/n06_inicio.png")
+			print("NEWGAME look=", G.look, " diff=", Prog.difficulty)
+			get_tree().quit()
 		"title":
 			_build_title()
 			await get_tree().create_timer(1.2).timeout
@@ -61,9 +94,8 @@ func _on_title_action(act: String, arg: String) -> void:
 			Net.close()
 			_transition_to_game("continue")
 		"new":
-			Prog.reset()
 			Net.close()
-			_transition_to_game("new")
+			_open_new_game("new")
 		"host":
 			if Net.host() != OK:
 				title.toast(G.T("conn_failed"))
@@ -72,9 +104,9 @@ func _on_title_action(act: String, arg: String) -> void:
 		"host_start":
 			if Prog.has_save():
 				Prog.load_game()
+				_transition_to_game("continue")
 			else:
-				Prog.reset()
-			_transition_to_game("continue" if Prog.has_save() else "new")
+				_open_new_game("host")
 		"copy":
 			var c := Net.online_code()
 			if c == "":
@@ -93,6 +125,29 @@ func _on_title_action(act: String, arg: String) -> void:
 			title.show_main_menu()
 		"quit":
 			get_tree().quit()
+
+func _open_new_game(mode: String) -> void:
+	var ng := preload("res://scripts/ui/new_game.gd").new()
+	ng.finished.connect(_on_new_game_done.bind(mode))
+	ng.cancelled.connect(_on_new_game_cancel.bind(mode))
+	if title and is_instance_valid(title):
+		title._clear_menu()
+	title_layer.add_child(ng)
+
+func _on_new_game_done(difficulty: int, look: Dictionary, mode: String) -> void:
+	G.look = look
+	G.save_settings()
+	Prog.reset()
+	Prog.difficulty = difficulty
+	if mode == "new":
+		Net.close()
+	_transition_to_game("new")
+
+func _on_new_game_cancel(mode: String) -> void:
+	if mode == "host":
+		Net.close()
+	if title and is_instance_valid(title):
+		title.show_main_menu()
 
 func _transition_to_game(mode: String) -> void:
 	var fade := ColorRect.new()
@@ -145,6 +200,11 @@ func back_to_title(msg: String) -> void:
 	_build_title()
 	if msg != "":
 		_toast_title(msg)
+
+func reload_continue() -> void:
+	await back_to_title("")
+	Prog.load_game()
+	_transition_to_game("continue")
 
 # ====================================================================== pruebas automáticas
 ## --autotest=shots   capturas de pantalla de varias situaciones
@@ -289,6 +349,115 @@ func _run_autotest() -> void:
 				await _shot(out + "/s10_menu_%s.png" % tb)
 				w.menu.close()
 			print("AUTOTEST_SHOTS2_OK")
+			get_tree().quit()
+		"cine":
+			var cine := preload("res://scripts/ui/boss_cinematic.gd").new()
+			cine.setup("choir", 1)
+			w.add_child(cine)
+			for k in 18:
+				await get_tree().create_timer(0.5, true, false, true).timeout
+				if is_instance_valid(cine) and cine.singers.size() > 0:
+					print("t=", k * 0.5, " s0=", cine.singers[0].position, " vis=", cine.singers[0].visible, " giant=", cine.giant.visible, " done=", cine._done)
+			get_tree().quit()
+		"v3":
+			var lp: Player = w.local_player()
+			Prog.ecos = 5000
+			Prog.add_item("iron", 3, true); Prog.add_item("tear", 6, true)
+			for rid in ["sanct", "hall1", "chains", "hall2", "east", "gallery", "yard", "nim_link", "nimbo", "mirador", "mir_link", "choir_link", "choir", "gatehall", "alcove", "alc_link"]:
+				Prog.flags["seen_" + rid] = true
+			Prog.add_item("map_carto", 1, true)
+			Prog.spark = true
+			# Sala del Nimbo
+			lp.respawn_at(w.tile_pos(66, 89))
+			await get_tree().create_timer(2.0).timeout
+			await _shot(out + "/v01_nimbo.png")
+			for npc in ["ozias", "ilse", "nyx", "velaria"]:
+				w.menu.open("service", {"npc": npc})
+				await get_tree().create_timer(0.7).timeout
+				await _shot(out + "/v02_servicio_%s.png" % npc)
+				w.menu.close()
+			Prog.engrave("sword", "brasa")
+			Prog.flags["carcelero_dead"] = true; w.wflags["carcelero_dead"] = true
+			Prog.flags["choir_dead"] = true; w.wflags["choir_dead"] = true
+			w.menu.open("service", {"npc": "velaria"})
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/v03_velaria_jefes.png")
+			w.menu.close()
+			w.menu.open("map", {})
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/v04_mapa.png")
+			w.menu.close()
+			# combate con grabado de brasa + combo
+			lp.respawn_at(w.tile_pos(44, 63))
+			await get_tree().create_timer(1.2).timeout
+			for i in 7:
+				lp.aim = (w.enemies[1].global_position - lp.global_position).normalized()
+				lp.state = "move"
+				lp._start_attack()
+				await get_tree().create_timer(0.18).timeout
+			await _shot(out + "/v05_combo.png")
+			# muerte: pluma arrancada, segunda muerte -> sombra
+			lp.take_hit(9999.0, Vector2.RIGHT, -1)
+			await get_tree().create_timer(4.5).timeout
+			Prog.ecos = 900
+			lp.respawn_at(w.tile_pos(46, 66))
+			await get_tree().create_timer(0.3).timeout
+			lp.take_hit(9999.0, Vector2.RIGHT, -1)
+			await get_tree().create_timer(5.0).timeout
+			print("V3 deaths=", Prog.deaths, " feathers=", Prog.wing_feathers, " shadow=", Prog.shadow, " dropped=", Prog.dropped_ecos)
+			var sh: Enemy = null
+			for e in w.enemies:
+				if e.type == "sombra":
+					sh = e
+			if sh:
+				lp.respawn_at(sh.global_position + Vector2(-40, 0))
+				await get_tree().create_timer(1.0).timeout
+				await _shot(out + "/v06_sombra.png")
+			# desplumado
+			Prog.wing_feathers = 2
+			w.send_look()
+			lp.respawn_at(w.tile_pos(49, 86))
+			await get_tree().create_timer(1.0).timeout
+			await _shot(out + "/v07_desplumado.png")
+			# evento del mundo
+			w._world_event("eclipse", 30.0)
+			lp.respawn_at(w.tile_pos(46, 64))
+			await get_tree().create_timer(2.0).timeout
+			await _shot(out + "/v08_eclipse.png")
+			w._world_event_end()
+			# cinemática del Coro
+			var cine := preload("res://scripts/ui/boss_cinematic.gd").new()
+			cine.setup("choir", 1)
+			w.add_child(cine)
+			lp.cutscene = true
+			for k in [1.5, 4.6, 8.2]:
+				await get_tree().create_timer(k - (0.0 if k == 1.5 else (1.5 if k == 4.6 else 4.6)), true, false, true).timeout
+				await _shot(out + "/v09_cine_coro_%d.png" % int(k))
+			await cine.finished
+			lp.cutscene = false
+			# Ascensión del Carcelero (arena decorada)
+			w.start_ascension("carcelero", 2)
+			await get_tree().create_timer(4.0).timeout
+			await _shot(out + "/v10_ascension.png")
+			var cb: Enemy = w.active_boss
+			if cb:
+				cb.poise = cb.max_poise * 2.0
+				cb._start_stagger()
+				cb.hp = cb.max_hp * 0.1
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/v11_boss_bar.png")
+			# arena del Coro
+			lp.respawn_at(w.tile_pos(82, 41))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/v12_nave_coro.png")
+			lp.respawn_at(w.tile_pos(49, 18))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/v13_circulo.png")
+			w.menu.open("options", {})
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v14_opciones.png")
+			w.menu.close()
+			print("AUTOTEST_V3_OK")
 			get_tree().quit()
 		"menus":
 			Prog.ecos = 2400

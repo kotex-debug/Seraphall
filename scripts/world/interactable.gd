@@ -133,6 +133,8 @@ func set_opened() -> void:
 func prompt() -> String:
 	match kind:
 		"brasa":
+			if not used and id != "sanct":
+				return G.T("interact") % (G.T("offer_feather") + " (%d)" % Prog.wing_feathers)
 			return G.T("interact") % (G.T("rest") if used else G.T("light_brasa"))
 		"npc":
 			return G.T("interact") % (G.T("talk") + " - " + G.L(data.get("name", ["", ""])))

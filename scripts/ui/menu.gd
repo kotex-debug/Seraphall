@@ -52,9 +52,11 @@ func _ready() -> void:
 	G.language_changed.connect(_on_changed)
 
 func get_tabs() -> Array:
-	return TABS
+	return ["service"] if tab == "service" else TABS
 
 func tab_key(t: String) -> String:
+	if t == "service":
+		return "svc_" + str(ctx.get("npc", "nyx"))
 	return TAB_KEYS[t]
 
 func sigil_c() -> Vector2:
@@ -104,6 +106,8 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu") or event.is_action_pressed("pause"):
 		get_viewport().set_input_as_handled()
 		close()
+	elif tab == "service":
+		return
 	elif event.is_action_pressed("spell1"):
 		get_viewport().set_input_as_handled()
 		switch_tab(TABS[(TABS.find(tab) - 1 + TABS.size()) % TABS.size()])
@@ -132,6 +136,7 @@ func _rebuild(animate := true) -> void:
 		"quests": _build_quests()
 		"map": _build_map()
 		"options": _build_options()
+		"service": _build_service()
 	if animate:
 		content.position.x = 20 + 40 * _anim_dir
 		content.modulate.a = 0.0
@@ -178,8 +183,9 @@ func _build_char() -> void:
 	var por := Portrait.new()
 	por.position = Vector2(75, 112)
 	por.variant = world.local_player().variant if world and world.local_player() else 1
+	por.world = world
 	content.add_child(por)
-	var name_pt := UIKit.pixel_text(G.L(["DESPLUMADO", "FEATHERLESS"]), 8, "head", UIKit.GOLD)
+	var name_pt := UIKit.pixel_text(Look.display_name(G.look).to_upper(), 8, "head", UIKit.GOLD)
 	name_pt.align = 1
 	name_pt.size = Vector2(150, 10)
 	name_pt.position = Vector2(0, 10)
@@ -562,6 +568,262 @@ func _grade(v: float, n: String) -> String:
 	elif v >= 0.25: g = "D"
 	return n + ":" + g
 
+# ------------------------------------------------------------------ servicios de la Sala del Nimbo
+var _svc_weapon := ""
+
+func _build_service() -> void:
+	var npc: String = ctx.get("npc", "nyx")
+	var por := NpcBust.new()
+	por.sheet = "npc_" + npc
+	por.position = Vector2(0, 0)
+	por.size = Vector2(150, 296)
+	por.col = {"ozias": UIKit.CYAN, "ilse": Color(0.6, 0.75, 1.0), "nyx": UIKit.GOLD, "velaria": UIKit.RED}[npc]
+	content.add_child(por)
+	var quotes := {
+		"ozias": ["Elige el grabado. El acero aprende rápido; olvida despacio.", "Choose the engraving. Steel learns fast; it forgets slowly."],
+		"ilse": ["Cada Lágrima fue alguien. Cada pluma, también.", "Every Tear was someone. Every feather, too."],
+		"nyx": ["No hago preguntas. Tampoco descuentos.", "I ask no questions. I give no discounts."],
+		"velaria": ["Los ecos de los Arcontes duermen mal. Despiértalos.", "The Archons' echoes sleep poorly. Wake them."]}
+	if npc == "ilse" and Prog.deaths >= 5:
+		quotes.ilse = ["%d muertes, criatura. Tus alas se ven más ligeras... y más tristes." % Prog.deaths, "%d deaths, child. Your wings look lighter... and sadder." % Prog.deaths]
+	_lbl(G.L(quotes[npc]), Vector2(10, 226), 15, UIKit.WHITE, 132)
+	_panel(Rect2(160, 0, 440, 296), por.col)
+	# recursos arriba a la derecha
+	var res := "%s %d   %s %d   %s %d" % [G.T("ecos"), Prog.ecos, G.L(Prog.ITEMS.iron.name), Prog.item_count("iron"), G.L(Prog.ITEMS.tear.name), Prog.item_count("tear")]
+	var rl := _lbl(res, Vector2(300, 8), 10, UIKit.CYAN, 0.0, "title")
+	rl.size = Vector2(290, 12)
+	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	match npc:
+		"ozias": _svc_ozias()
+		"ilse": _svc_ilse()
+		"nyx": _svc_nyx()
+		"velaria": _svc_velaria()
+
+func _svc_ozias() -> void:
+	if _svc_weapon == "" or not Prog.weapons.has(_svc_weapon):
+		_svc_weapon = Prog.equipped
+	_lbl(G.L(["GRABADOS RÚNICOS", "RUNIC ENGRAVINGS"]), Vector2(172, 10), 8, UIKit.CYAN, 0.0, "head")
+	var y := 26.0
+	for id in Prog.WEAPONS:
+		if not Prog.weapons.has(id):
+			continue
+		var card := WeaponCard.new()
+		card.id = id
+		card.selected = id == _svc_weapon
+		card.position = Vector2(170, y)
+		card.size = Vector2(200, 34)
+		card.pressed.connect(_on_svc_weapon.bind(id))
+		content.add_child(card)
+		var inf := Prog.infusion(id)
+		if inf != "":
+			var sw := ColorRect.new()
+			sw.color = Prog.INFUSIONS[inf].color
+			sw.position = Vector2(362, y + 4)
+			sw.size = Vector2(5, 26)
+			content.add_child(sw)
+		y += 36.0
+	var cur := Prog.infusion(_svc_weapon)
+	var yy := 26.0
+	for inf2 in Prog.INFUSIONS:
+		if inf2 == "":
+			continue
+		var d: Dictionary = Prog.INFUSIONS[inf2]
+		var row := ColorRect.new()
+		row.color = Color(d.color, 0.16 if inf2 == cur else 0.06)
+		row.position = Vector2(380, yy)
+		row.size = Vector2(212, 54)
+		content.add_child(row)
+		var bar := ColorRect.new()
+		bar.color = d.color
+		bar.position = Vector2(380, yy)
+		bar.size = Vector2(3, 54)
+		content.add_child(bar)
+		_lbl(G.L(d.name).to_upper(), Vector2(388, yy + 3), 8, d.color, 0.0, "head")
+		_lbl(G.L(d.desc), Vector2(388, yy + 14), 10, UIKit.WHITE, 200, "title")
+		if inf2 == cur:
+			_lbl(G.L(["GRABADO", "ENGRAVED"]), Vector2(530, yy + 38), 8, UIKit.GOLD, 0.0, "head")
+		else:
+			var can := Prog.ecos >= 400 and Prog.item_count("iron") >= 1
+			_btn(G.T("engrave") + " (400)", Vector2(470, yy + 34), _on_engrave.bind(inf2), can, 118)
+		yy += 60.0
+	_lbl(G.L(["Coste: 400 Ecos y 1 Esquirla de Nimbo. Un arma solo guarda un grabado.", "Cost: 400 Echoes and 1 Nimbus Shard. A weapon holds a single engraving."]), Vector2(172, 254), 10, UIKit.TEXT_DIM, 200, "title")
+
+func _on_svc_weapon(id: String) -> void:
+	_svc_weapon = id
+	Audio.sfx("ui_move")
+	_rebuild(false)
+
+func _on_engrave(inf: String) -> void:
+	if Prog.engrave(_svc_weapon, inf):
+		Audio.sfx("hit_heavy")
+		Audio.sfx("levelup", -6.0)
+		G.flash(Color(Prog.INFUSIONS[inf].color, 0.35), 0.25)
+		var burst := UnlockBurst.new()
+		burst.position = content.position + Vector2(270, 60)
+		burst.col = Prog.INFUSIONS[inf].color
+		burst.big = true
+		root.add_child(burst)
+		Prog.changed.emit()
+	else:
+		G.toast(G.T("not_enough"), UIKit.PINK)
+
+func _svc_ilse() -> void:
+	_lbl(G.L(["LÁGRIMAS Y PLUMAS", "TEARS AND FEATHERS"]), Vector2(172, 10), 8, Color(0.6, 0.75, 1.0), 0.0, "head")
+	var rows := [
+		[G.L(["Aclarar las Lágrimas", "Clear the Tears"]), G.L(["Cada trago cura más. Nivel %d/5 (%d%% de vida).", "Each sip heals more. Level %d/5 (%d%% health)."]) % [Prog.flask_level, int(Prog.heal_ratio() * 100)],
+			"%d %s" % [Prog.flask_upgrade_cost(), G.L(Prog.ITEMS.tear.name)], Prog.flask_level < 5 and Prog.item_count("tear") >= Prog.flask_upgrade_cost(), _on_ilse_potency],
+		[G.L(["Otra Lágrima", "Another Tear"]), G.L(["Una carga más de curación. Tienes %d/8.", "One more healing charge. You have %d/8."]) % Prog.flasks_max,
+			"2 " + G.L(Prog.ITEMS.tear.name), Prog.flasks_max < 8 and Prog.item_count("tear") >= 2, _on_ilse_charge],
+		[G.L(["Coser una pluma", "Sew a feather"]), G.L(["Devuelve una pluma a tus alas. Te quedan %d/%d.", "Returns a feather to your wings. You have %d/%d."]) % [Prog.wing_feathers, Prog.WING_MAX],
+			"1 " + G.L(Prog.ITEMS.tear.name), Prog.wing_feathers < Prog.WING_MAX and Prog.item_count("tear") >= 1, _on_ilse_feather],
+	]
+	var y := 30.0
+	for r in rows:
+		var bg := ColorRect.new()
+		bg.color = Color(0.4, 0.55, 1.0, 0.07)
+		bg.position = Vector2(172, y)
+		bg.size = Vector2(416, 62)
+		content.add_child(bg)
+		_lbl(str(r[0]).to_upper(), Vector2(182, y + 6), 8, UIKit.WHITE, 0.0, "head")
+		_lbl(r[1], Vector2(182, y + 20), 15, UIKit.TEXT_DIM, 260)
+		_lbl(r[2], Vector2(470, y + 8), 10, UIKit.GOLD, 0.0, "title")
+		_btn(G.L(["ACEPTAR", "ACCEPT"]), Vector2(470, y + 30), r[4], r[3], 104)
+		y += 70.0
+	var wi := WingMeter.new()
+	wi.position = Vector2(380, 248)
+	content.add_child(wi)
+
+func _on_ilse_potency() -> void:
+	if Prog.upgrade_flask_potency():
+		Audio.sfx("heal")
+		G.flash(Color(0.5, 0.7, 1.0, 0.3), 0.3)
+		Prog.changed.emit()
+
+func _on_ilse_charge() -> void:
+	if Prog.buy_flask_charge():
+		Audio.sfx("heal")
+		var lp: Player = world.local_player()
+		if lp:
+			lp.flasks = Prog.flask_count()
+		Prog.changed.emit()
+
+func _on_ilse_feather() -> void:
+	if Prog.item_count("tear") >= 1 and Prog.regrow_wing_feather():
+		Prog.remove_item("tear", 1)
+		Audio.sfx("levelup", -4.0)
+		G.flash(Color(1, 1, 1, 0.35), 0.3)
+		world.send_look()
+		Prog.changed.emit()
+
+func _svc_nyx() -> void:
+	_lbl(G.L(["MERCANCÍA DE NYX", "NYX'S WARES"]), Vector2(172, 10), 8, UIKit.GOLD, 0.0, "head")
+	var i := 0
+	for e in Prog.SHOP:
+		var id: String = e[0]
+		var lim: int = e[1]
+		var x := 172.0 + (i % 2) * 210.0
+		var y := 28.0 + (i / 2) * 76.0
+		var it: Dictionary = {"name": [G.T("feathers"), G.T("feathers")], "icon": "feather", "rarity": 1, "desc": ["", ""]} if id == "_feather" else Prog.ITEMS[id]
+		var bg := ColorRect.new()
+		bg.color = Color(Prog.RARITY_COLORS[it.rarity], 0.08)
+		bg.position = Vector2(x, y)
+		bg.size = Vector2(202, 70)
+		content.add_child(bg)
+		var ic := TextureRect.new()
+		ic.texture = Fx.tex("icon_" + it.icon)
+		ic.position = Vector2(x + 6, y + 8)
+		ic.scale = Vector2(2, 2)
+		content.add_child(ic)
+		_lbl(G.L(it.name).to_upper(), Vector2(x + 44, y + 6), 8, Prog.RARITY_COLORS[it.rarity], 154, "head")
+		var left := Prog.shop_left(id, lim)
+		_lbl("%d %s" % [Prog.shop_price(id), G.T("ecos")], Vector2(x + 44, y + 28), 10, UIKit.CYAN, 0.0, "title")
+		_lbl((G.T("stock") % left) if lim < 50 else "", Vector2(x + 130, y + 28), 10, UIKit.TEXT_DIM, 0.0, "title")
+		if left > 0:
+			_btn(G.T("buy"), Vector2(x + 44, y + 44), _on_nyx_buy.bind(id, lim), Prog.ecos >= Prog.shop_price(id), 80)
+		else:
+			_lbl(G.T("sold_out"), Vector2(x + 44, y + 48), 8, UIKit.PINK, 0.0, "head")
+		i += 1
+
+func _on_nyx_buy(id: String, lim: int) -> void:
+	if Prog.buy(id, lim):
+		Audio.sfx("pickup")
+		Prog.changed.emit()
+	else:
+		G.toast(G.T("not_enough"), UIKit.PINK)
+
+func _svc_velaria() -> void:
+	_lbl(G.L(["ALTAR DE ASCENSIÓN", "ASCENSION ALTAR"]), Vector2(172, 10), 8, UIKit.RED, 0.0, "head")
+	var y := 26.0
+	var any := false
+	for b in Prog.BOSS_INFO:
+		var info: Dictionary = Prog.BOSS_INFO[b]
+		var dead: bool = Prog.flags.get(info.flag, false)
+		var bg := ColorRect.new()
+		bg.color = Color(1, 0.2, 0.3, 0.07 if dead else 0.03)
+		bg.position = Vector2(172, y)
+		bg.size = Vector2(416, 52)
+		content.add_child(bg)
+		if not dead:
+			_lbl("???  -  " + G.L(["Aún no has vencido a este Arconte.", "You have not yet defeated this Archon."]), Vector2(182, y + 18), 10, UIKit.TEXT_DIM, 0.0, "title")
+			y += 58.0
+			continue
+		any = true
+		var lv := int(Prog.ascension.get(b, 0))
+		_lbl(G.T(info.title).to_upper(), Vector2(182, y + 5), 8, UIKit.WHITE, 0.0, "head")
+		var pips := ""
+		for k in 3:
+			pips += ("I" if k == 0 else ("II" if k == 1 else "III")) + ("+ " if k < lv else "  ")
+		_lbl(G.T("rank") + " %d   " % info.rank + G.T("ascension") + ": " + pips, Vector2(182, y + 18), 10, UIKit.PINK, 0.0, "title")
+		if Prog.spared.has(b):
+			_lbl(G.L(["Perdonado", "Spared"]), Vector2(182, y + 32), 10, Color(0.6, 1, 0.7), 0.0, "title")
+		if lv < 3:
+			var r: Dictionary = Prog.ASCENSION_REWARDS[lv + 1]
+			_lbl(G.T("reward") + ": %d %s" % [r.ecos, G.T("ecos")], Vector2(300, y + 32), 10, UIKit.GOLD, 0.0, "title")
+			_btn(G.L(["DESPERTAR ", "AWAKEN "]) + ["I", "II", "III"][lv], Vector2(486, y + 6), _on_velaria_asc.bind(b, lv + 1), true, 96)
+		# juramento
+		var od: Dictionary = Prog.OATHS[b]
+		if Prog.oath == b:
+			_lbl(G.L(["JURADO", "SWORN"]), Vector2(500, y + 34), 8, od.color, 0.0, "head")
+		else:
+			var ob := _btn(G.L(["JURAR", "SWEAR"]), Vector2(486, y + 28), _on_oath.bind(b), true, 96)
+			ob.tooltip_text = G.L(od.name) + ": " + G.L(od.desc)
+		y += 58.0
+	if Prog.flags.get("seravel_dead", false):
+		var can_ng := not Net.is_online() or multiplayer.is_server()
+		_btn(G.T("ng_plus") + " (NG+%d)" % (Prog.ng + 1), Vector2(172, 244), _on_ng, can_ng, 200)
+		_lbl(G.L(["Conservas nivel, armas y objetos. El Estrato renace más cruel.", "Keep level, weapons and items. The Stratum is reborn crueler."]), Vector2(380, 242), 10, UIKit.TEXT_DIM, 210, "title")
+	if Prog.oath != "":
+		var cur: Dictionary = Prog.OATHS[Prog.oath]
+		_lbl(G.L(cur.name).to_upper() + ": " + G.L(cur.desc), Vector2(172, 210), 10, cur.color, 416, "title")
+	elif any:
+		var oy := 200.0
+		for b2 in Prog.OATHS:
+			if Prog.flags.get(Prog.BOSS_INFO[b2].flag, false):
+				_lbl(G.L(Prog.OATHS[b2].name).to_upper() + ": " + G.L(Prog.OATHS[b2].desc), Vector2(172, oy), 10, Prog.OATHS[b2].color, 416, "title")
+				oy += 14.0
+
+func _on_velaria_asc(b: String, lvl: int) -> void:
+	close()
+	if multiplayer.is_server():
+		world.start_ascension(b, lvl)
+	else:
+		world._rpc_start_ascension.rpc_id(1, b, lvl)
+
+func _on_ng() -> void:
+	Prog.start_ng()
+	close()
+	world.main.reload_continue()
+
+func _on_oath(b: String) -> void:
+	Prog.oath = b
+	Audio.sfx("roar", -10.0)
+	G.flash(Color(Prog.OATHS[b].color, 0.35), 0.4)
+	G.toast(G.L(Prog.OATHS[b].name).to_upper(), Prog.OATHS[b].color)
+	var lp: Player = world.local_player()
+	if lp:
+		lp.refresh_stats(false)
+	Prog.changed.emit()
+
 # ------------------------------------------------------------------ misiones
 func _build_quests() -> void:
 	_panel(Rect2(0, 0, 390, 296), UIKit.RED)
@@ -624,6 +886,41 @@ func _build_options() -> void:
 		_lbl(G.T("code_lan") + ": " + Net.lan_code(), Vector2(160, 152), 15, UIKit.CYAN)
 	_lbl(G.T("controls"), Vector2(160, 176), 10, UIKit.TEXT_DIM, 280, "title")
 	_btn(G.T("save_quit").to_upper(), Vector2(200, 262), _on_save_quit, true, 200)
+	# accesibilidad
+	_panel(Rect2(470, 0, 130, 296), UIKit.CYAN)
+	_lbl(G.T("access").to_upper(), Vector2(480, 10), 8, UIKit.CYAN, 0.0, "head")
+	_lbl(G.T("shake_opt"), Vector2(480, 30), 10, UIKit.WHITE, 110, "title")
+	var sh := HSlider.new()
+	sh.position = Vector2(480, 46); sh.size = Vector2(110, 14)
+	sh.min_value = 0.0; sh.max_value = 1.0; sh.step = 0.1; sh.value = G.shake_mult
+	sh.value_changed.connect(_on_access.bind("shake"))
+	content.add_child(sh)
+	_lbl(G.T("flash_opt"), Vector2(480, 68), 10, UIKit.WHITE, 110, "title")
+	var fl := HSlider.new()
+	fl.position = Vector2(480, 84); fl.size = Vector2(110, 14)
+	fl.min_value = 0.0; fl.max_value = 1.0; fl.step = 0.1; fl.value = G.flash_mult
+	fl.value_changed.connect(_on_access.bind("flash"))
+	content.add_child(fl)
+	_lbl(G.T("tele_opt"), Vector2(480, 106), 10, UIKit.WHITE, 110, "title")
+	_btn(G.T("on") if G.tele_boost else G.T("off"), Vector2(480, 124), _on_tele, true, 60)
+	_lbl(G.L(["[P] Modo foto\n[M] Mapa", "[P] Photo mode\n[M] Map"]), Vector2(480, 160), 10, UIKit.TEXT_DIM, 110, "title")
+	var dd: Dictionary = world.diff() if world else Prog.diff()
+	_lbl(G.T("difficulty").to_upper(), Vector2(480, 214), 8, UIKit.WHITE, 0.0, "head")
+	_lbl(G.L(dd.name).to_upper() + (("  NG+%d" % Prog.ng) if Prog.ng > 0 else ""), Vector2(480, 228), 10, dd.color, 110, "title")
+	if Prog.oath != "":
+		_lbl(G.L(Prog.OATHS[Prog.oath].name), Vector2(480, 252), 10, Prog.OATHS[Prog.oath].color, 110, "title")
+
+func _on_access(v: float, which: String) -> void:
+	if which == "shake":
+		G.shake_mult = v
+	else:
+		G.flash_mult = v
+	G.save_settings()
+
+func _on_tele() -> void:
+	G.tele_boost = not G.tele_boost
+	G.save_settings()
+	_rebuild(false)
 
 func _on_music(v: float) -> void:
 	G.music_volume = v
@@ -640,6 +937,56 @@ func _on_save_quit() -> void:
 	world.main.back_to_title("")
 
 # ====================================================================== piezas
+class NpcBust extends Control:
+	## Retrato grande animado del PNJ del servicio
+	var sheet := "npc_nyx"
+	var col := Color.WHITE
+	var t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), col, Color(0.08, 0.03, 0.1, 0.92), 4.0, t)
+		var c := Vector2(size.x / 2.0, 110)
+		for i in 10:
+			var a := TAU * i / 10.0 + t * 0.4
+			var d := Vector2.from_angle(a)
+			draw_colored_polygon(PackedVector2Array([c + d * 26.0 + d.orthogonal() * 4.0, c + d * 72.0, c + d * 26.0 - d.orthogonal() * 4.0]), Color(col, 0.1))
+		var fr := int(t * 4.0) % 4
+		var bob := roundf(sin(t * 2.0) * 2.0)
+		draw_texture_rect_region(Fx.tex(sheet), Rect2(c + Vector2(-60, -70 + bob), Vector2(120, 130)), Rect2(fr * 24, 0, 24, 26))
+		for i in 6:
+			var p := Vector2(fmod(i * 37.0 + t * 12.0, size.x - 10) + 5, 200.0 - fmod(t * 20.0 + i * 31.0, 160.0))
+			draw_rect(Rect2(p.round(), Vector2(2, 2)), Color(col, 0.6))
+
+class WingMeter extends Control:
+	## Las plumas de tus alas: cada muerte arranca una
+	var t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var wc := Look.color_of(G.look, "wing")
+		for i in Prog.WING_MAX:
+			var side := -1 if i % 2 == 0 else 1
+			var k := i / 2
+			var p := Vector2(100 + side * (14 + k * 14), 18 - k * 3)
+			var have := i < Prog.wing_feathers
+			var c := wc if have else Color(0.25, 0.18, 0.3)
+			var tip := p + Vector2(side * 8, -12 + k * 2)
+			draw_line(p, tip, UIKit.INK, 5.0)
+			draw_line(p, tip, c, 3.0)
+			if not have:
+				draw_line(p + Vector2(-3, -3), p + Vector2(3, 3), UIKit.RED_DARK, 1.0)
+		var f := UIKit.font("head")
+		var txt := "%d/%d" % [Prog.wing_feathers, Prog.WING_MAX]
+		f.draw_string_outline(get_canvas_item(), Vector2(88, 38), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), Vector2(88, 38), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.PINK if Prog.is_desplumado() else UIKit.WHITE)
+
 class MenuDeco extends Control:
 	## Franjas diagonales en movimiento y marco general
 	var t := 0.0
@@ -713,6 +1060,7 @@ class PanelBox extends Control:
 
 class Portrait extends Control:
 	var variant := 1
+	var world: Node
 	var t := 0.0
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -730,7 +1078,8 @@ class Portrait extends Control:
 			var p := (Vector2(cos(a2) * 34.0, sin(a2) * 7.0 - 58.0)).round()
 			draw_rect(Rect2(p, Vector2(3, 3)), UIKit.GOLD if i % 2 == 0 else UIKit.GOLD_DARK)
 		var frame := int(t * 6.0) % 4
-		var tex := Fx.tex("player_p%d" % variant)
+		var lp: Player = world.local_player() if world else null
+		var tex: Texture2D = lp.sprite.texture if lp else Look.texture(G.look, Prog.wing_feathers)
 		var bob := roundf(sin(t * 3.0) * 2.0)
 		draw_texture_rect_region(tex, Rect2(Vector2(-48, -60 + bob), Vector2(96, 104)), Rect2(frame * 24, 0, 24, 26))
 
@@ -1098,86 +1447,173 @@ class QuestCard extends Control:
 			draw_rect(Rect2(Vector2(251, 23), Vector2(108 * p, 4)), col)
 
 class MapView extends Control:
-	## Mapa del Estrato con niebla: solo se ven las zonas exploradas.
+	## Mapa del Estrato: silueta real de las salas exploradas, iconos, rótulos de zona y leyenda.
 	var world: Node
 	var t := 0.0
+	const SC := 3.0
+	const OFF := Vector2(150, -4)
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _process(delta: float) -> void:
 		t += delta
 		queue_redraw()
+	func _str(p: Vector2, txt: String, col: Color, sz := 8, kind := "head") -> void:
+		var f := UIKit.font(kind)
+		f.draw_string_outline(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
 	func _draw() -> void:
-		var sc := 3.0
-		var off := Vector2(150, -6)
-		# rejilla de fondo
-		for gx in range(0, int(size.x), 16):
-			draw_rect(Rect2(Vector2(gx, 0), Vector2(1, size.y)), Color(1, 1, 1, 0.03))
-		for gy in range(0, int(size.y), 16):
-			draw_rect(Rect2(Vector2(0, gy), Vector2(size.x, 1)), Color(1, 1, 1, 0.03))
-		var colors := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
-			"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0)}
+		# fondo: pergamino oscuro con rejilla y viñeta
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.02, 0.07, 0.6))
+		for gx in range(0, int(size.x), 12):
+			draw_rect(Rect2(Vector2(gx, 0), Vector2(1, size.y)), Color(1, 1, 1, 0.025))
+		for gy in range(0, int(size.y), 12):
+			draw_rect(Rect2(Vector2(0, gy), Vector2(size.x, 1)), Color(1, 1, 1, 0.025))
+		var cur: String = world.current_area()
+		var tex: ImageTexture = world.map_texture()
+		# sombra y mapa
+		draw_texture_rect(tex, Rect2(OFF + Vector2(2, 2), Vector2(96, 96) * SC), false, Color(0, 0, 0, 0.6))
+		draw_texture_rect(tex, Rect2(OFF, Vector2(96, 96) * SC), false)
+		# borde punteado de salas vecinas sin explorar
 		for r in world.ROOMS:
+			if Prog.flags.get("seen_" + r.id, false):
+				continue
 			var rect: Rect2i = world._rect_of(r)
-			var seen: bool = Prog.flags.get("seen_" + r.id, false)
+			var adj := false
+			for r2 in world.ROOMS:
+				if Prog.flags.get("seen_" + r2.id, false) and world._rect_of(r2).grow(1).intersects(rect):
+					adj = true
+			if adj:
+				var rr := Rect2(OFF + Vector2(rect.position) * SC, Vector2(rect.size) * SC)
+				var dash := int(t * 4.0) % 2
+				for k in range(0, int(rr.size.x), 6):
+					if (k / 6) % 2 == dash:
+						draw_rect(Rect2(rr.position + Vector2(k, 0), Vector2(3, 1)), Color(1, 1, 1, 0.25))
+						draw_rect(Rect2(rr.position + Vector2(k, rr.size.y), Vector2(3, 1)), Color(1, 1, 1, 0.25))
+				for k2 in range(0, int(rr.size.y), 6):
+					if (k2 / 6) % 2 == dash:
+						draw_rect(Rect2(rr.position + Vector2(0, k2), Vector2(1, 3)), Color(1, 1, 1, 0.25))
+						draw_rect(Rect2(rr.position + Vector2(rr.size.x, k2), Vector2(1, 3)), Color(1, 1, 1, 0.25))
+				_str(rr.get_center() - Vector2(4, -4), "?", Color(1, 1, 1, 0.35 + 0.2 * sin(t * 3.0)), 8)
+		# rótulos de zona (centro de las salas vistas)
+		var centers := {}
+		for r in world.ROOMS:
+			if not Prog.flags.get("seen_" + r.id, false):
+				continue
 			var a: String = world.AREAS.get(r.id, "")
-			var c: Color = colors.get(a, Color.WHITE)
-			var rr := Rect2(off + Vector2(rect.position) * sc, Vector2(rect.size) * sc)
-			if seen:
-				if r.has("c"):
-					draw_circle(rr.get_center(), rr.size.x / 2.0 + 2, UIKit.INK)
-					draw_circle(rr.get_center(), rr.size.x / 2.0, Color(c, 0.35))
-					draw_arc(rr.get_center(), rr.size.x / 2.0, 0, TAU, 40, c, 1.0)
-				else:
-					draw_rect(rr.grow(2), UIKit.INK)
-					draw_rect(rr, Color(c, 0.35))
-					draw_rect(rr, c, false, 1.0)
-			else:
-				var adj := false
-				for r2 in world.ROOMS:
-					if Prog.flags.get("seen_" + r2.id, false) and world._rect_of(r2).grow(1).intersects(rect):
-						adj = true
-				if adj:
-					var dash := int(t * 4.0) % 2
-					for k in range(0, int(rr.size.x), 6):
-						if (k / 6) % 2 == dash:
-							draw_rect(Rect2(rr.position + Vector2(k, 0), Vector2(3, 1)), Color(1, 1, 1, 0.25))
-							draw_rect(Rect2(rr.position + Vector2(k, rr.size.y), Vector2(3, 1)), Color(1, 1, 1, 0.25))
-		# brasas, jefes
-		for id in ["sanct", "gate"]:
-			var it: Interactable = world.interactables.get(id)
-			if it and Prog.flags.get("seen_" + world.room_at(it.position), false):
-				var p: Vector2 = off + it.position / 16.0 * sc
-				draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), UIKit.INK)
-				draw_rect(Rect2(p - Vector2(2, 2), Vector2(4, 4)), UIKit.GOLD if it.used else Color(0.5, 0.4, 0.3))
-		for e in world.enemies:
-			if e.is_boss and e.is_alive() and Prog.flags.get("seen_" + world.room_at(e.spawn_pos), false):
-				var bp: Vector2 = off + e.spawn_pos / 16.0 * sc
-				UIKit.diamond(self, bp, 5.0, UIKit.INK)
-				UIKit.diamond(self, bp, 4.0, UIKit.RED)
-		# jugador
+			if a == "":
+				continue
+			var rc: Rect2i = world._rect_of(r)
+			if not centers.has(a):
+				centers[a] = [Vector2.ZERO, 0.0]
+			var wgt := float(rc.size.x * rc.size.y)
+			centers[a][0] += Vector2(rc.get_center()) * wgt
+			centers[a][1] += wgt
+		var lf := UIKit.font("title")
+		var placed: Array[Rect2] = []
+		var lp0: Player = world.local_player()
+		if lp0:
+			var pp0: Vector2 = (OFF + lp0.global_position / 16.0 * SC).round()
+			placed.append(Rect2(pp0 - Vector2(40, 22), Vector2(80, 30)))
+		var order: Array = centers.keys()
+		order.sort_custom(func(x, y): return (1 if x == cur else 0) * 100000 + centers[x][1] > (1 if y == cur else 0) * 100000 + centers[y][1])
+		for a in order:
+			var cp: Vector2 = OFF + centers[a][0] / centers[a][1] * SC
+			var nm: String = G.T(a).to_upper()
+			var w := lf.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var lr := Rect2(cp - Vector2(w / 2.0 + 2, 8), Vector2(w + 4, 12))
+			var clash := false
+			for q in placed:
+				if q.intersects(lr):
+					clash = true
+			if clash:
+				continue
+			placed.append(lr)
+			var col: Color = world.AREA_COLORS.get(a, Color.WHITE)
+			if a == cur:
+				col = col.lerp(Color.WHITE, 0.4 + 0.3 * sin(t * 4.0))
+			_str((cp - Vector2(w / 2.0, -3)).round(), nm, col, 10, "title")
+		# marcadores
+		var npc_labels := []
+		for m in world.map_markers():
+			var mp: Vector2 = (OFF + m[1] * SC).round()
+			var mc: Color = m[2]
+			match m[0]:
+				"brasa":
+					draw_rect(Rect2(mp - Vector2(3, 4), Vector2(7, 8)), UIKit.INK)
+					draw_colored_polygon(PackedVector2Array([mp + Vector2(0, -4), mp + Vector2(3, 2), mp + Vector2(-3, 2)]), mc)
+					if mc == UIKit.GOLD:
+						draw_rect(Rect2(mp + Vector2(-1, -1 - roundf(sin(t * 8.0))), Vector2(2, 2)), Color.WHITE)
+				"npc":
+					draw_circle(mp, 4.0, UIKit.INK)
+					draw_circle(mp, 3.0, mc)
+					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(2, 2)), UIKit.INK)
+				"chest":
+					draw_rect(Rect2(mp - Vector2(3, 2), Vector2(7, 5)), UIKit.INK)
+					draw_rect(Rect2(mp - Vector2(2, 1), Vector2(5, 3)), mc)
+				"ecos":
+					var pr := 3.0 + absf(sin(t * 5.0)) * 2.0
+					UIKit.diamond(self, mp, pr + 1.0, UIKit.INK)
+					UIKit.diamond(self, mp, pr, mc)
+				"bench":
+					draw_rect(Rect2(mp - Vector2(3, 1), Vector2(7, 3)), UIKit.INK)
+					draw_rect(Rect2(mp - Vector2(2, 0), Vector2(5, 1)), mc)
+				"boss", "boss_dead":
+					var dead: bool = m[0] == "boss_dead"
+					var bc := Color(0.45, 0.35, 0.4) if dead else mc
+					var bp := 5.0 + (0.0 if dead else absf(sin(t * 3.0)))
+					UIKit.diamond(self, mp, bp + 1.0, UIKit.INK)
+					UIKit.diamond(self, mp, bp, bc)
+					if dead:
+						draw_line(mp + Vector2(-3, -3), mp + Vector2(3, 3), UIKit.INK, 2.0)
+						draw_line(mp + Vector2(3, -3), mp + Vector2(-3, 3), UIKit.INK, 2.0)
+					else:
+						draw_arc(mp, 9.0 + fmod(t * 8.0, 6.0), 0, TAU, 16, Color(mc, 0.6 - fmod(t * 8.0, 6.0) / 10.0), 1.0)
+				"ally":
+					draw_rect(Rect2(mp - Vector2(3, 3), Vector2(6, 6)), UIKit.INK)
+					draw_rect(Rect2(mp - Vector2(2, 2), Vector2(4, 4)), mc)
+					_str(mp + Vector2(6, 3), m[3], mc, 8)
+		for nl in npc_labels:
+			_str(nl[0] + Vector2(6, 3), nl[1], UIKit.CYAN, 10, "title")
+		# jugador local con flecha de orientación
 		var lp: Player = world.local_player()
 		if lp:
-			var pp: Vector2 = (off + lp.global_position / 16.0 * sc).round()
+			var pp: Vector2 = (OFF + lp.global_position / 16.0 * SC).round()
 			var pulse := 3.0 + 2.0 * absf(sin(t * 5.0))
-			draw_arc(pp, pulse + 3, 0, TAU, 16, Color(1, 1, 1, 0.5), 1.0)
+			draw_arc(pp, pulse + 4, 0, TAU, 16, Color(1, 1, 1, 0.5), 1.0)
+			var fd: Vector2 = lp.aim if lp.aim.length() > 0.1 else Vector2.DOWN
+			var tip := pp + fd.normalized() * 7.0
+			draw_colored_polygon(PackedVector2Array([tip, pp + fd.orthogonal() * 3.0, pp - fd.orthogonal() * 3.0]), UIKit.WHITE)
 			draw_rect(Rect2(pp - Vector2(3, 3), Vector2(6, 6)), UIKit.INK)
 			draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), UIKit.WHITE)
-			var f := UIKit.font("title")
-			f.draw_string_outline(get_canvas_item(), pp + Vector2(8, 4), G.T("you_are_here"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
-			f.draw_string(get_canvas_item(), pp + Vector2(8, 4), G.T("you_are_here"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.WHITE)
-		# leyenda
-		var hf := UIKit.font("head")
-		var ly := 16.0
-		for a in colors:
-			var seen_any := false
-			for r in world.ROOMS:
-				if world.AREAS.get(r.id, "") == a and Prog.flags.get("seen_" + r.id, false):
-					seen_any = true
-			var name := G.T(a) if seen_any else "???"
-			draw_rect(Rect2(Vector2(10, ly - 6), Vector2(6, 6)), colors[a] if seen_any else Color(0.3, 0.3, 0.3))
-			hf.draw_string_outline(get_canvas_item(), Vector2(22, ly), name.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
-			hf.draw_string(get_canvas_item(), Vector2(22, ly), name.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE if seen_any else UIKit.TEXT_DIM)
-			ly += 16.0
-		var title := G.T("stratum1")
-		hf.draw_string_outline(get_canvas_item(), Vector2(10, size.y - 8), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
-		hf.draw_string(get_canvas_item(), Vector2(10, size.y - 8), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
+			var yt := G.T("you_are_here")
+			var yw := UIKit.font("title").get_string_size(yt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			UIKit.slash_band(self, Rect2(pp + Vector2(-yw / 2.0 - 6, -24), Vector2(yw + 12, 12)), UIKit.RED, 3.0)
+			_str(pp + Vector2(-yw / 2.0, -15), yt, UIKit.WHITE, 10, "title")
+		# panel de leyenda (izquierda)
+		UIKit.frame(self, Rect2(4, 4, 136, size.y - 8), UIKit.RED_DARK, Color(0.08, 0.03, 0.1, 0.85), 3.0, -1.0)
+		_str(Vector2(12, 18), G.T("stratum1"), UIKit.GOLD, 8)
+		var ly := 34.0
+		for a in world.AREA_COLORS:
+			var seen_any := centers.has(a)
+			var nm2 := G.T(a).to_upper() if seen_any else "???"
+			var ac: Color = world.AREA_COLORS[a] if seen_any else Color(0.3, 0.3, 0.3)
+			if a == cur:
+				UIKit.slash_band(self, Rect2(8, ly - 9, 128, 12), Color(UIKit.RED, 0.6), 3.0)
+			draw_rect(Rect2(Vector2(12, ly - 6), Vector2(6, 6)), UIKit.INK)
+			draw_rect(Rect2(Vector2(13, ly - 5), Vector2(4, 4)), ac)
+			_str(Vector2(22, ly), nm2, UIKit.WHITE if seen_any else UIKit.TEXT_DIM, 10, "title")
+			ly += 15.0
+		ly += 6.0
+		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos perdidos", "Lost echoes"])]]
+		for lg in legend:
+			var lp2 := Vector2(15, ly - 3)
+			match lg[0]:
+				"brasa": draw_colored_polygon(PackedVector2Array([lp2 + Vector2(0, -4), lp2 + Vector2(3, 2), lp2 + Vector2(-3, 2)]), UIKit.GOLD)
+				"npc": draw_circle(lp2, 3.0, UIKit.CYAN)
+				"boss": UIKit.diamond(self, lp2, 4.0, UIKit.RED)
+				"chest": draw_rect(Rect2(lp2 - Vector2(2, 1), Vector2(5, 3)), UIKit.GOLD)
+				"ecos": UIKit.diamond(self, lp2, 3.0, Color(0.5, 0.85, 1.0))
+			_str(Vector2(24, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
+			ly += 13.0
+		if Prog.item_count("map_carto") == 0:
+			_str(Vector2(10, size.y - 12), G.L(["Sin cartografía: cofres ocultos", "No cartography: chests hidden"]), UIKit.PINK, 10, "title")

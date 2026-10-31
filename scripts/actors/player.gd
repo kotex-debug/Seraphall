@@ -66,6 +66,18 @@ var _net_hp_ratio := 1.0
 var _step_t := 0.0
 var name_label: Label
 
+var look := {}
+var feathers_shown := 10
+
+func set_look(l: Dictionary, feathers: int) -> void:
+	look = Look.sane(l)
+	feathers_shown = feathers
+	if sprite:
+		sprite.texture = Look.texture(look, feathers_shown)
+
+func refresh_look() -> void:
+	set_look(G.look if peer_id == Net.my_id() else look, Prog.wing_feathers if peer_id == Net.my_id() else feathers_shown)
+
 func setup(p_peer: int, p_variant: int, p_world: Node) -> void:
 	peer_id = p_peer
 	variant = p_variant
@@ -96,7 +108,16 @@ func _ready() -> void:
 	sh.z_index = -1
 	add_child(sh)
 	sprite = Sprite2D.new()
-	sprite.texture = Fx.tex("player_p%d" % variant)
+	if look.is_empty():
+		if peer_id == Net.my_id():
+			if G.look.is_empty():
+				G.look = Look.defaults_p2() if variant == 2 else Look.sane({})
+			look = Look.sane(G.look)
+		else:
+			look = Look.defaults_p2() if variant == 2 else Look.sane({})
+	if peer_id == Net.my_id():
+		feathers_shown = Prog.wing_feathers
+	sprite.texture = Look.texture(look, feathers_shown)
 	sprite.region_enabled = true
 	sprite.region_rect = Rect2(0, 0, FW, FH)
 	sprite.offset = Vector2(0, -11)
@@ -271,7 +292,7 @@ func _local_update(delta: float) -> void:
 				Fx.afterimage(sprite, sprite.global_position, Color(1, 0.85, 0.5, 0.6) if variant == 1 else Color(0.5, 0.9, 1, 0.6))
 			if Prog.has_skill("a4"):
 				_dash_damage()
-			if Prog.has_skill("a6"):
+			if Prog.has_skill("a6") or Prog.synergy("ash_wing"):
 				fire_trail_t -= delta
 				if fire_trail_t <= 0.0:
 					fire_trail_t = 0.05
@@ -295,7 +316,7 @@ func _local_update(delta: float) -> void:
 			heal_t -= delta
 			velocity = velocity.lerp(input * Prog.move_speed() * 0.3, 0.2)
 			if heal_t <= 0.0:
-				hp = min(Prog.max_hp(), hp + Prog.max_hp() * 0.45)
+				hp = min(Prog.max_hp(), hp + Prog.max_hp() * Prog.heal_ratio())
 				Audio.sfx("heal")
 				Fx.burst(global_position + Vector2(0, -8), Color(1, 0.6, 0.45), 18, 60.0, 0.8, "fx_soft", 180.0, Vector2.UP, 0.4)
 				Fx.light_flash(global_position, Color(1, 0.6, 0.4), 1.2, 1.0, 0.5)
@@ -409,6 +430,9 @@ func _start_attack() -> void:
 	var col := Color(1, 0.95, 0.85, 0.85) if variant == 1 else Color(0.7, 0.95, 1, 0.85)
 	if w.sprite == "seravel":
 		col = Color(1, 0.6, 0.65, 0.9)
+	var inf := Prog.infusion()
+	if inf != "":
+		col = Color(Prog.INFUSIONS[inf].color, 0.92)
 	var thrust: bool = w.sprite == "spear"
 	if thrust:
 		_thrust_fx(rng, col)
@@ -420,6 +444,9 @@ func _start_attack() -> void:
 	get_tree().create_timer(0.06 / w.speed).timeout.connect(_hit_check.bind(dmg, rng, arc, w.poise * (1.0 if not final else 1.8), final))
 	if final and w.get("wave", false):
 		world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 12, aim * 260.0, Prog.spell_damage(16.0), "wave", "player", Net.my_id(), 12.0, 0.7, 4])
+	if final and w.get("notes", false):
+		for a in [-0.35, 0.0, 0.35]:
+			world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 10, aim.rotated(a) * 230.0, Prog.spell_damage(9.0), "note", "player", Net.my_id(), 6.0, 0.9, 3])
 
 func _thrust_fx(rng: float, col: Color) -> void:
 	var p := global_position + Vector2(0, -8)
@@ -442,13 +469,20 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 			continue
 		hits += 1
 		var crit := crit_next or randf() < Prog.crit_chance()
-		var d := dmg * (1.8 if crit else 1.0)
+		var d := dmg * (1.8 if crit else 1.0) * Prog.weapon_memory_mult(e.type)
+		if crit and _hawk:
+			d *= 1.45
+		if crit and Prog.synergy("eye_choir"):
+			light = min(Prog.max_light(), light + 4.0)
 		if e.is_staggered():
 			d *= 1.6 if Prog.has_skill("f5") else 1.3
 			crit = true
-		world.request_damage_enemy(e, d, to.normalized(), poise, crit)
+		var inf := Prog.infusion()
+		world.request_damage_enemy(e, d, to.normalized(), poise * (1.4 if inf == "escarcha" else 1.0) * (1.4 if Prog.oath == "carcelero" else 1.0), crit)
 		_on_hit_landed(d, final or crit)
 		var hp_pos: Vector2 = e.global_position + Vector2(0, -8)
+		if inf != "":
+			_infusion_hit(e, d, inf, hp_pos)
 		Fx.impact(hp_pos, Color(1, 0.85, 0.5) if not crit else Color(1, 0.4, 0.3), 14.0 if not (final or crit) else 22.0)
 		Fx.sparks(hp_pos, to.normalized(), Color(1, 0.8, 0.4), 6 if not final else 12, 170.0, 80.0)
 		if Prog.has_amulet("amulet_ash") and randf() < 0.25:
@@ -459,11 +493,39 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 			world.request_damage_enemy(e, d * 0.4, to.normalized(), 0.0, false)
 	if hits > 0:
 		crit_next = false
+		_hawk = false
+		if world.hud and world.hud.has_method("combo_hit"):
+			world.hud.combo_hit(hits)
 		G.hitstop(0.075 if final else 0.045)
 		G.shake(3.0 if final else 1.6, 0.12)
 		if final:
 			G.punch(0.035)
 			G.chroma(0.6, 0.2)
+
+var _blood_n := 0
+var _hawk := false
+
+func _infusion_hit(e: Enemy, d: float, inf: String, pos: Vector2) -> void:
+	var c: Color = Prog.INFUSIONS[inf].color
+	match inf:
+		"brasa":
+			world.request_damage_enemy(e, d * 0.2 + 2.0, Vector2.ZERO, 0.0, false)
+			Fx.burst(pos, c, 10, 70.0, 0.55, "fx_soft", 160.0, Vector2.UP, 0.35)
+			Fx.scorch(e.global_position, 9.0)
+		"escarcha":
+			world.request_status(e, "slow", 1.8)
+			Fx.sparks(pos, Vector2.UP, c, 8, 120.0, 40.0)
+		"nimbo":
+			light = min(Prog.max_light(), light + 3.5)
+			Fx.souls(pos, self, 2)
+		"sangre":
+			_blood_n += 1
+			if _blood_n % 3 == 0:
+				var extra: float = min(e.max_hp * 0.06, 35.0 + Prog.weapon_damage() * 0.8)
+				world.request_damage_enemy(e, extra, Vector2.ZERO, 0.0, true)
+				Fx.burst(pos, c, 18, 110.0, 0.6, "fx_px", 180.0, Vector2.UP, 0.5)
+				Fx.text(pos + Vector2(0, -10), G.L(["SANGRÍA", "BLOODLETTING"]), c, 8)
+				Audio.sfx("hit_heavy", -4.0)
 
 func _on_hit_landed(d: float, big: bool) -> void:
 	wrath = min(100.0, wrath + d * 0.45 * (1.4 if Prog.has_skill("f6") else 1.0))
@@ -514,6 +576,7 @@ func _start_dash(input: Vector2) -> void:
 	dash_start_ms = Time.get_ticks_msec()
 	_dash_hit.clear()
 	Audio.sfx("dash")
+	world.note_dash(peer_id, global_position, dash_dir)
 	_squash(Vector2(1.3, 0.75))
 	Fx.burst(global_position, Color(0.8, 0.8, 0.9, 0.7), 8, 60.0, 0.4, "fx_soft", 40.0, -dash_dir, 0.35, false)
 	Fx.burst(global_position + Vector2(0, -10), Color(1, 1, 1), 4, 70.0, 0.6, "fx_feather", 90.0, -dash_dir, 1.0, false, Vector2(0, 40))
@@ -539,9 +602,10 @@ func _start_parry() -> void:
 		world.peer_rpc(self, "_net_fx", ["parry", []])
 
 func _cast_lance() -> void:
-	if light < 15.0 or state != "move":
+	var lc := 15.0 * Prog.spell_cost_mult()
+	if light < lc or state != "move":
 		return
-	light -= 15.0
+	light -= lc
 	var dmg := Prog.spell_damage(22.0)
 	var dirs := [0.0]
 	if Prog.has_skill("l4"):
@@ -555,9 +619,10 @@ func _cast_lance() -> void:
 	velocity = -aim * 40.0
 
 func _cast_nova() -> void:
-	if not Prog.has_skill("l2") or light < 28.0 or state != "move":
+	var nc := 28.0 * Prog.spell_cost_mult()
+	if not Prog.has_skill("l2") or light < nc or state != "move":
 		return
-	light -= 28.0
+	light -= nc
 	var big := Prog.has_skill("l6")
 	var r := 80.0 if big else 54.0
 	world.bcast("cast_nova", [global_position, r, Prog.spell_damage(30.0 if not big else 38.0), Net.my_id(), big])
@@ -592,6 +657,9 @@ func take_hit(dmg: float, dir: Vector2, enemy_idx: int) -> String:
 		stamina -= 15.0
 	dmg *= Prog.damage_taken_mult()
 	hp -= dmg
+	if world.hud and world.hud.has_method("hurt_from"):
+		world.hud.hurt_from(-dir)
+		world.hud.combo_break()
 	Audio.sfx("hurt")
 	G.chroma(0.8, 0.25)
 	G.shake(4.0, 0.2)
@@ -619,10 +687,13 @@ func take_hit(dmg: float, dir: Vector2, enemy_idx: int) -> String:
 func _perfect_dodge() -> void:
 	G.chroma(1.0, 0.5)
 	Fx.text(global_position, G.T("perfect"), Color(0.6, 0.9, 1.0), 9)
-	G.slowmo("instant", 0.3, 0.55 if Prog.has_skill("a3") else 0.4)
+	var oath_g := Prog.oath == "seravel"
+	G.slowmo("instant", 0.3, (0.55 if Prog.has_skill("a3") else 0.4) * (2.0 if oath_g else 1.0))
 	G.flash(Color(0.4, 0.7, 1.0, 0.18), 0.3)
-	wrath = min(100.0, wrath + 15.0)
+	wrath = min(100.0, wrath + (30.0 if oath_g else 15.0))
 	crit_next = true
+	if Prog.synergy("wing_eye"):
+		_hawk = true
 	Audio.sfx("parry", -8.0)
 
 func _parry_success(enemy_idx: int) -> void:
@@ -821,6 +892,7 @@ func _net_fx(kind: String, args: Array) -> void:
 			Fx.slash(global_position + Vector2(0, -8), args[0], args[1] * 0.85, args[2], Color(1, 0.8, 0.45, 0.95), 16.0, 0.28, true)
 			Audio.sfx("swing_heavy", -6.0)
 		"dash":
+			world.note_dash(peer_id, global_position, args[0])
 			Fx.burst(global_position, Color(0.8, 0.8, 0.9, 0.7), 8, 60.0, 0.4, "fx_soft", 40.0, -args[0], 0.35, false)
 			for i in 5:
 				get_tree().create_timer(i * 0.03).timeout.connect(_remote_afterimage.bind(Color(col.r, col.g, col.b, 0.5)))

@@ -864,3 +864,202 @@ carcelero_cine()
 player_back(P1, "player_back_p1")
 player_back(P2, "player_back_p2")
 print("Cinemáticas generadas")
+
+# ================================================================ v0.3: objetos únicos, PNJ, jefes y salas
+def unique_icon(kind):
+    img = canvas(16, 16); d = ImageDraw.Draw(img)
+    if kind == "bomb":  # Nudo de Brasa: plumas negras anudadas con brasa dentro
+        d.polygon([(8, 2), (13, 7), (11, 13), (5, 13), (3, 7)], fill=C("2a1a2a"))
+        d.line([(4, 5), (12, 11)], fill=C("4a3048")); d.line([(12, 5), (4, 11)], fill=C("4a3048"))
+        ell(d, 8, 9, 2.5, 2.5, C("ff6020")); d.point((8, 8), fill=C("fff0a0"))
+        d.line([(8, 2), (10, 0)], fill=C("ffb040"))
+    elif kind == "incense":  # Himno Embotellado: vial con notas de luz
+        d.rectangle([6, 1, 9, 3], fill=C("c8a060")); d.polygon([(5, 4), (10, 4), (12, 9), (10, 14), (5, 14), (3, 9)], fill=C("6a5aa0"))
+        d.polygon([(5, 9), (10, 9), (10, 13), (5, 13)], fill=C("ffd860"))
+        d.point((6, 6), fill=C("fff8e0")); d.point((9, 11), fill=C("ffffff")); d.point((7, 12), fill=C("ffffff"))
+    elif kind == "ointment":  # Escama de Querubín
+        d.polygon([(8, 1), (14, 6), (12, 13), (8, 15), (4, 13), (2, 6)], fill=C("6ad8d0"))
+        d.polygon([(8, 3), (12, 7), (8, 12), (4, 7)], fill=C("c8fff8")); d.line([(8, 3), (8, 13)], fill=C("3a9a98"))
+    elif kind == "phoenix":  # Plumón de Aurora
+        d.polygon([(3, 14), (9, 3), (13, 2), (12, 6), (6, 14)], fill=C("ff9ad0")); d.polygon([(5, 12), (10, 4), (11, 5), (7, 12)], fill=C("ffe0a0"))
+        d.line([(2, 15), (12, 3)], fill=C("ffffff")); d.point((13, 1), fill=C("a0e0ff"))
+    elif kind == "amulet_wing":  # Vértebra de Serafín
+        d.line([(4, 1), (8, 4), (12, 1)], fill=C("c8a060"))
+        for i, y in enumerate((5, 8, 11)):
+            d.rectangle([6, y, 10, y + 2], fill=C("f0e8dc")); d.point((5, y + 1), fill=C("d0c8bc")); d.point((11, y + 1), fill=C("d0c8bc"))
+        d.point((8, 14), fill=C("a0d0ff"))
+    elif kind == "amulet_ash":  # Corazón de Rescoldo
+        d.line([(4, 1), (8, 4), (12, 1)], fill=C("c8a060"))
+        d.polygon([(8, 14), (3, 9), (3, 6), (5, 4), (8, 6), (11, 4), (13, 6), (13, 9)], fill=C("4a2a2a"))
+        d.polygon([(8, 12), (5, 9), (6, 7), (8, 8), (10, 7), (11, 9)], fill=C("ff5a20")); d.point((8, 9), fill=C("ffe080"))
+    elif kind == "amulet_eye":  # Ojo de la Guardiana
+        d.line([(4, 1), (8, 4), (12, 1)], fill=C("c8a060")); ell(d, 8, 10, 5, 3, C("f8e8f0")); ell(d, 8, 10, 2, 2, C("ff3050")); d.point((8, 10), fill=C("200810"))
+        d.ellipse([3, 4, 13, 7], outline=C("ffd060"))
+    elif kind == "key":  # Llave de Hueso Cantor
+        d.rectangle([3, 6, 12, 8], fill=C("e8dcc8")); ell(d, 3, 7, 2.5, 3, C("e8dcc8")); d.point((3, 7), fill=C("402030"))
+        d.rectangle([10, 9, 11, 11], fill=C("e8dcc8")); d.rectangle([12, 9, 13, 12], fill=C("e8dcc8"))
+        d.point((6, 5), fill=C("80d0ff")); d.point((8, 4), fill=C("80d0ff"))
+    elif kind == "iron":  # Esquirla de Nimbo
+        d.polygon([(8, 1), (12, 7), (9, 15), (5, 10), (5, 5)], fill=C("ffe27a")); d.polygon([(8, 1), (10, 6), (8, 12), (6, 6)], fill=C("fff8d0"))
+    elif kind == "tear":  # Lágrima Cristalizada
+        d.polygon([(8, 1), (12, 8), (11, 12), (8, 14), (5, 12), (4, 8)], fill=C("60a8ff")); d.polygon([(8, 4), (10, 9), (8, 12), (6, 9)], fill=C("d8f0ff"))
+    elif kind == "choir_heart":  # Garganta de Cristal (amuleto del Coro)
+        d.line([(4, 1), (8, 4), (12, 1)], fill=C("c8a060")); d.polygon([(8, 5), (12, 9), (8, 14), (4, 9)], fill=C("b090ff"))
+        for i in range(3):
+            d.arc([6 - i * 2, 7 - i * 2, 10 + i * 2, 11 + i * 2], 300, 60, fill=C("f0e0ff"))
+    return outline(img)
+
+for k in ("bomb", "incense", "ointment", "phoenix", "amulet_wing", "amulet_ash", "amulet_eye", "key", "iron", "tear", "choir_heart"):
+    unique_icon(k).save(f"{OUT}/icon_{k}.png")
+
+# ---------------------------------------------------------------- PNJ de la Sala del Nimbo
+def npc_extra(pal, acc):
+    rows = [humanoid(24, 26, pal, {"bob": [0, 0, 1, 1][i], "arm": [0, 0, 1, 0][i] if acc == "hammer" else 0}, wings=acc == "wings", halo=False) for i in range(4)]
+    out = []
+    for i, f in enumerate(rows):
+        d = ImageDraw.Draw(f)
+        if acc == "hood":       # capucha con runas
+            d.polygon([(7, 3), (17, 3), (18, 9), (6, 9)], fill=pal["cloak"]); d.point((12, 2), fill=C("80f0ff")); d.point((9, 15 + (i % 2)), fill=C("80f0ff"))
+        elif acc == "veil":     # velo blanco
+            d.polygon([(7, 2), (17, 2), (19, 14), (5, 14)], fill=C("f0f0ff")); d.point((13, 7), fill=C("6080c0"))
+        elif acc == "mask":     # máscara de pico y plumas negras
+            d.polygon([(13, 5), (19, 7), (13, 8)], fill=C("e8dcc8")); d.line([(6, 10), (3, 6)], fill=C("201828")); d.line([(18, 10), (21, 6)], fill=C("201828"))
+        elif acc == "censer":   # incensario rojo (hábito carmesí)
+            sx = 18 + (i % 2)
+            d.line([(17, 12), (sx, 18)], fill=C("c8a060")); ell(d, sx, 19, 1.5, 1.5, C("ffb040"))
+        out.append(f)
+    return sheet([out])
+
+OZIAS = dict(skin=C("8a7a90"), hair=C("2a2a40"), eye=C("80f0ff"), armor=C("2a3a5a"), legs=C("1a2030"), accent=C("80f0ff"), cloak=C("1e2a48"), wing=C("707a90"), halo=C("ffffff"))
+ILSE = dict(skin=C("e8d8d0"), hair=C("e8e8f8"), eye=C("6080c0"), armor=C("c8d8f0"), legs=C("8090b0"), accent=C("60a8ff"), cloak=C("a0b8e0"), wing=C("f0f0ff"), halo=C("ffffff"))
+NYX = dict(skin=C("a08070"), hair=C("181020"), eye=C("ffd060"), armor=C("2a2030"), legs=C("181018"), accent=C("ffd060"), cloak=C("201828"), wing=C("2a2030"), halo=C("ffffff"))
+VELARIA = dict(skin=C("e0c0b0"), hair=C("801020"), eye=C("ff6080"), armor=C("801828"), legs=C("401018"), accent=C("ffd060"), cloak=C("601020"), wing=C("c0a0a0"), halo=C("ffffff"))
+npc_extra(OZIAS, "hood").save(f"{OUT}/npc_ozias.png")
+npc_extra(ILSE, "veil").save(f"{OUT}/npc_ilse.png")
+npc_extra(NYX, "mask").save(f"{OUT}/npc_nyx.png")
+npc_extra(VELARIA, "censer").save(f"{OUT}/npc_velaria.png")
+
+# ---------------------------------------------------------------- decoración de salas de combate
+def cage():
+    img = canvas(18, 30); d = ImageDraw.Draw(img)
+    d.line([(9, 0), (9, 6)], fill=C("8a8690"))
+    d.arc([1, 4, 17, 14], 180, 360, fill=C("6a6670"), width=2)
+    for x in range(2, 17, 3):
+        d.line([(x, 9), (x, 28)], fill=C("6a6670"))
+    d.rectangle([1, 27, 17, 29], fill=C("4a4650")); d.line([(1, 18), (17, 18)], fill=C("6a6670"))
+    d.point((7, 22), fill=C("e8dcc8")); d.point((8, 23), fill=C("e8dcc8")); d.point((10, 23), fill=C("e8dcc8"))
+    return outline(img)
+
+def brazier(i):
+    img = canvas(16, 24); d = ImageDraw.Draw(img)
+    d.polygon([(2, 12), (14, 12), (11, 17), (5, 17)], fill=C("5a5462")); d.rectangle([7, 17, 9, 22], fill=C("4a4456")); d.rectangle([4, 22, 12, 23], fill=C("4a4456"))
+    img = outline(img); d = ImageDraw.Draw(img)
+    rr = random.Random(i * 7)
+    for k in range(9):
+        x = 8 + rr.randint(-4, 4); y = 11 - rr.randint(0, 7 + i % 2)
+        d.point((x, y), fill=[C("fff0a0"), C("ffb040"), C("ff5020")][min(2, (11 - y) // 3)])
+    return img
+
+def organ():
+    img = canvas(40, 48); d = ImageDraw.Draw(img)
+    for k, h in enumerate((30, 38, 44, 46, 44, 38, 30)):
+        x = 3 + k * 5
+        d.rectangle([x, 47 - h, x + 3, 47], fill=C("8a7a9a") if k % 2 else C("6a5a7a"))
+        d.rectangle([x, 47 - h, x + 3, 48 - h], fill=C("c8b8d8")); d.point((x + 1, 47 - h + 6), fill=C("201828"))
+    d.rectangle([0, 40, 39, 47], fill=C("3a2a48"))
+    return outline(img)
+
+def bones(i):
+    img = canvas(16, 10); d = ImageDraw.Draw(img); rr = random.Random(i)
+    for k in range(3):
+        x, y = rr.randint(2, 12), rr.randint(3, 7)
+        d.line([(x - 3, y), (x + 3, y + rr.randint(-1, 1))], fill=C("d8ccb8"))
+        d.point((x - 3, y - 1), fill=C("d8ccb8")); d.point((x + 3, y + 1), fill=C("d8ccb8"))
+    if i == 1:
+        ell(d, 8, 4, 2.5, 2, C("e0d4c0")); d.point((7, 4), fill=C("201820")); d.point((9, 4), fill=C("201820"))
+    return outline(img)
+
+def banner(col):
+    img = canvas(14, 30); d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, 13, 1], fill=C("8a7a5a"))
+    d.polygon([(1, 2), (12, 2), (12, 24), (6, 29), (1, 24)], fill=col)
+    d.ellipse([3, 8, 10, 12], outline=C("ffd060")); d.line([(6, 13), (6, 20)], fill=C("ffd060"))
+    return outline(img)
+
+strip([cage(), cage()]).save(f"{OUT}/cage.png")
+strip([brazier(i) for i in range(4)]).save(f"{OUT}/brazier.png")
+organ().save(f"{OUT}/organ.png")
+strip([bones(i) for i in range(3)]).save(f"{OUT}/bones.png")
+strip([banner(C("8a1828")), banner(C("3a2a68"))]).save(f"{OUT}/banner.png")
+
+# ---------------------------------------------------------------- El Coro Hueco (jefe opcional)
+def singer(frame, tint):
+    W, H = 26, 36
+    img = canvas(W, H); d = ImageDraw.Draw(img)
+    cx = 13; bob = [0, -1, -2, -1][frame % 4]
+    robe = tint; dark = shade(tint, 0.6)
+    # túnica flotante con jirones
+    pts = [(cx - 5, 12 + bob), (cx + 5, 12 + bob), (cx + 8, 30 + bob)]
+    for k in range(5):
+        pts.append((cx + 8 - k * 4, (35 if k % 2 == 0 else 31) + bob + (frame % 2)))
+    pts += [(cx - 8, 30 + bob)]
+    d.polygon(pts, fill=robe)
+    d.line([(cx, 13 + bob), (cx, 31 + bob)], fill=dark)
+    # capucha
+    ell(d, cx, 9 + bob, 6, 7, robe)
+    ell(d, cx, 10 + bob, 3.5, 4.5, C("0c0610"))
+    # boca que canta (brilla)
+    mo = 1 + (frame % 2)
+    d.ellipse([cx - 1, 11 + bob, cx + 1, 11 + bob + mo + 1], fill=C("f0d8ff"))
+    d.point((cx - 2, 8 + bob), fill=C("c0a0ff")); d.point((cx + 2, 8 + bob), fill=C("c0a0ff"))
+    # cintas
+    for s in (-1, 1):
+        d.line([(cx + 5 * s, 16 + bob), (cx + 11 * s, 20 + bob + (frame % 3)), (cx + 9 * s, 27 + bob)], fill=C("ffd060"))
+    return outline(img)
+
+sheet([[singer(i, C("4a3a7a")) for i in range(4)], [singer(i, C("7a3a6a")) for i in range(4)], [singer(i, C("3a5a7a")) for i in range(4)]]).save(f"{OUT}/boss_singer.png")
+
+def choir_giant(frame, enraged=False):
+    W, H = 72, 92
+    img = canvas(W, H); d = ImageDraw.Draw(img)
+    cx = 36; bob = [0, -1, -2, -1][frame % 4]
+    robe = C("4a2a6a") if not enraged else C("6a1a3a"); dark = shade(robe, 0.6)
+    pts = [(cx - 14, 26 + bob), (cx + 14, 26 + bob), (cx + 26, 80 + bob)]
+    for k in range(7):
+        pts.append((cx + 26 - k * 8.6, (91 if k % 2 == 0 else 84) + bob))
+    pts += [(cx - 26, 80 + bob)]
+    d.polygon(pts, fill=robe)
+    for k in range(-2, 3):
+        d.line([(cx + k * 4, 28 + bob), (cx + k * 9, 84 + bob)], fill=dark)
+    # tres capuchas fusionadas
+    for i, ox in enumerate((-13, 0, 13)):
+        oy = 0 if ox == 0 else 6
+        ell(d, cx + ox, 16 + oy + bob, 9, 11, robe)
+        ell(d, cx + ox, 18 + oy + bob, 5, 7, C("0c0610"))
+        glow = C("f0d8ff") if not enraged else C("ff8080")
+        d.ellipse([cx + ox - 2, 20 + oy + bob, cx + ox + 2, 22 + oy + bob + (frame % 2) * 2], fill=glow)
+        d.point((cx + ox - 2, 15 + oy + bob), fill=glow); d.point((cx + ox + 2, 15 + oy + bob), fill=glow)
+    # coro de cintas doradas y corona de diapasones
+    for s in (-1, 1):
+        for k in range(3):
+            d.line([(cx + 12 * s, 34 + k * 6 + bob), (cx + (26 + k * 3) * s, 30 + k * 10 + bob + (frame % 2))], fill=C("ffd060"))
+    for k in range(5):
+        x = cx - 16 + k * 8
+        d.line([(x, 4 + bob), (x, 0 + bob)], fill=C("ffd060")); d.point((x - 1, 0 + bob), fill=C("ffd060")); d.point((x + 1, 0 + bob), fill=C("ffd060"))
+    return outline(img)
+
+sheet([[choir_giant(i) for i in range(4)], [choir_giant(i, True) for i in range(4)]]).save(f"{OUT}/boss_choir_giant.png")
+
+def weapon_choir():
+    img = canvas(32, 12); d = ImageDraw.Draw(img); y = 6
+    d.rectangle([1, y - 1, 5, y], fill=C("6a4a8a")); d.rectangle([5, y - 3, 6, y + 2], fill=C("ffd060"))
+    d.rectangle([7, y - 3, 26, y - 2], fill=C("e0d8ff")); d.rectangle([7, y + 1, 26, y + 2], fill=C("e0d8ff"))
+    d.point((27, y - 2), fill=C("ffffff")); d.point((27, y + 1), fill=C("ffffff"))
+    for x in range(9, 26, 4):
+        d.point((x, y - 1), fill=C("b090ff"))
+    return outline(img)
+weapon_choir().save(f"{OUT}/weapon_choir.png")
+proj = canvas(10, 10); dp = ImageDraw.Draw(proj)
+dp.ellipse([1, 1, 8, 8], fill=C("c0a0ff")); dp.rectangle([5, 0, 6, 5], fill=C("ffffff")); dp.ellipse([3, 5, 6, 8], fill=C("ffffff"))
+proj.save(f"{OUT}/proj_note.png")
+print("v0.3: objetos, PNJ, salas y Coro generados")

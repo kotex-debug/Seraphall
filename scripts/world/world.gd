@@ -19,10 +19,15 @@ const ROOMS := [
 	{"id": "sanct", "rect": Rect2i(40, 80, 18, 13)},
 	{"id": "mir_link", "rect": Rect2i(38, 85, 3, 3)},
 	{"id": "mirador", "rect": Rect2i(29, 82, 10, 8)},
+	{"id": "nim_link", "rect": Rect2i(57, 85, 3, 3)},
+	{"id": "nimbo", "c": Vector2i(66, 86), "r": 7},
+	{"id": "choir_link", "rect": Rect2i(81, 45, 3, 4)},
+	{"id": "choir", "c": Vector2i(82, 37), "r": 8},
 ]
 const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
-	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "gatehall": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct"}
-const PEACE_AREAS := ["area_sanct", "area_mirador"]
+	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "gatehall": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
+	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_gallery"}
+const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo"]
 
 var main: Node
 var grid := PackedByteArray()
@@ -54,6 +59,8 @@ var _cam_focus: Variant = null
 var _boss_started := false
 var _interact_hold := 0.0
 var _game_mode := "new"
+var world_difficulty := 2
+var asc_fight := {}
 
 # ====================================================================== construcción
 func setup(p_main: Node, mode: String) -> void:
@@ -100,6 +107,10 @@ func _ready() -> void:
 	Net.peer_joined.connect(_on_peer_joined_net)
 	if multiplayer.is_server():
 		wflags = Prog.flags
+		world_difficulty = Prog.difficulty
+		G.set_meta("lightwing", world_difficulty == 0)
+		for e in enemies:
+			e.reset_state()
 		_spawn_player(Net.my_id(), 1)
 		_apply_world_flags(true)
 		Audio.play_music("explore")
@@ -110,6 +121,9 @@ func _ready() -> void:
 			_after_load()
 	else:
 		_req_join.rpc_id(1, Prog.equipped)
+
+func diff() -> Dictionary:
+	return Prog.DIFFICULTIES[clampi(world_difficulty, 0, Prog.DIFFICULTIES.size() - 1)]
 
 func _rect_of(r: Dictionary) -> Rect2i:
 	if r.has("rect"):
@@ -230,6 +244,76 @@ func is_wall_at(p: Vector2) -> bool:
 		return true
 	return grid[y * MAPW + x] != 1
 
+# ====================================================================== cartografía (mapa y minimapa)
+const AREA_COLORS := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
+	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
+	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0)}
+var _map_tex: ImageTexture
+var _map_seen := -1
+
+func current_area() -> String:
+	return _area
+
+func map_texture() -> ImageTexture:
+	var n := 0
+	for r in ROOMS:
+		if Prog.flags.get("seen_" + r.id, false):
+			n += 1
+	if _map_tex and n == _map_seen:
+		return _map_tex
+	_map_seen = n
+	var img := Image.create(MAPW, MAPH, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in MAPH:
+		for x in MAPW:
+			var i := y * MAPW + x
+			if grid[i] != 1 or room_of[i] < 0:
+				continue
+			var rid: String = ROOMS[room_of[i]].id
+			if not Prog.flags.get("seen_" + rid, false):
+				continue
+			var c: Color = AREA_COLORS.get(AREAS.get(rid, ""), Color.WHITE)
+			var edge := false
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx < 0 or ny < 0 or nx >= MAPW or ny >= MAPH or grid[ny * MAPW + nx] != 1:
+					edge = true
+			var checker := 0.06 if (x + y) % 2 == 0 else 0.0
+			img.set_pixel(x, y, c.lightened(0.3) if edge else Color(c.darkened(0.55 - checker), 0.92))
+	_map_tex = ImageTexture.create_from_image(img)
+	return _map_tex
+
+func map_markers() -> Array:
+	## [tipo, posición en casillas, color, etiqueta]
+	var out := []
+	for id in interactables:
+		var it: Interactable = interactables[id]
+		if not is_instance_valid(it) or not Prog.flags.get("seen_" + room_at(it.position), false):
+			continue
+		var tp: Vector2 = it.position / TS
+		match it.kind:
+			"brasa":
+				out.append(["brasa", tp, UIKit.GOLD if it.used else Color(0.5, 0.4, 0.3), ""])
+			"npc":
+				out.append(["npc", tp, UIKit.CYAN, G.L(it.data.get("name", ["", ""])).get_slice(",", 0)])
+			"chest":
+				if not it.used and Prog.item_count("map_carto") > 0:
+					out.append(["chest", tp, UIKit.GOLD, ""])
+			"ecos":
+				out.append(["ecos", tp, Color(0.5, 0.85, 1.0), ""])
+			"bench":
+				out.append(["bench", tp, Color(0.7, 0.9, 1.0), ""])
+	for e in enemies:
+		if e.is_boss and Prog.flags.get("seen_" + room_at(e.spawn_pos), false):
+			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false)
+			out.append(["boss_dead" if dead else "boss", e.spawn_pos / TS, UIKit.RED, G.T(e.cfg.get("title", "boss_carcelero"))])
+	for pid in players:
+		var q: Player = players[pid]
+		if pid != Net.my_id():
+			out.append(["ally", q.global_position / TS, Color(0.5, 0.8, 1.0) if q.variant == 2 else UIKit.PINK, "P%d" % q.variant])
+	return out
+
 func room_at(p: Vector2) -> String:
 	var x := int(p.x / TS)
 	var y := int(p.y / TS)
@@ -325,8 +409,68 @@ func _build_props() -> void:
 		f.count = fp[1]
 		f.petal = fp[2]
 		entities.add_child(f)
-	for zone in [Rect2(29 * TS, 82 * TS, 10 * TS, 8 * TS), Rect2(29 * TS, 36 * TS, 8 * TS, 7 * TS), Rect2(40 * TS, 80 * TS, 18 * TS, 13 * TS)]:
+	for zone in [Rect2(29 * TS, 82 * TS, 10 * TS, 8 * TS), Rect2(29 * TS, 36 * TS, 8 * TS, 7 * TS), Rect2(40 * TS, 80 * TS, 18 * TS, 13 * TS), Rect2(59 * TS, 79 * TS, 14 * TS, 14 * TS)]:
 		_fireflies(zone)
+	_build_arena_decor()
+
+var arena_lights: Array[PointLight2D] = []
+
+func _build_arena_decor() -> void:
+	# --- Sala del Nimbo (centro: mesa redonda)
+	var table := RoundTable.new()
+	table.position = tile_pos(66, 86)
+	entities.add_child(table)
+	for b in [Vector2(61.5, 80.5), Vector2(70.5, 80.5)]:
+		var bn := _prop("banner", tile_pos(b.x, b.y), 2, 1)
+		bn.z_index = 0
+	for b2 in [Vector2(60, 86), Vector2(72, 86)]:
+		var br := _prop("brazier", tile_pos(b2.x, b2.y), 4, int(b2.x) % 4, 4.0, Color(1, 0.6, 0.3), 1.6)
+		br.set_meta("anim", 4)
+	# --- Patio del Carcelero: jaulas colgantes, braseros, huesos
+	for c in [Vector2(42, 34.5), Vector2(46, 34.2), Vector2(53, 34.6), Vector2(57, 34.3)]:
+		var cg := _prop("cage", tile_pos(c.x, c.y), 2, 0)
+		cg.set_meta("sway", randf() * TAU)
+	for b3 in [Vector2(41, 39), Vector2(57, 39), Vector2(41, 43), Vector2(57, 43)]:
+		var br2 := _prop("brazier", tile_pos(b3.x, b3.y), 4, int(b3.y) % 4, 4.0, Color(1, 0.45, 0.2), 1.8)
+		br2.set_meta("anim", 4)
+		arena_lights.append(br2.get_meta("flicker"))
+	for k in 6:
+		_prop("bones", tile_pos(40 + k * 3.3, 36 + (k % 3) * 3.0), 3, k % 3)
+	# --- Círculo de la Guardiana: pilares rotos en anillo, estandartes, haces de luz
+	for i in 10:
+		var a := TAU * i / 10.0 + 0.3
+		var p := tile_pos(49, 14) + Vector2(cos(a) * 176.0, sin(a) * 150.0)
+		if p.y > tile_pos(49, 24).y:
+			continue
+		_prop("pillar", p, 2, 1 if i % 3 == 0 else 0, 5.0)
+	for bp in [Vector2(43, 3.5), Vector2(55, 3.5)]:
+		_prop("banner", tile_pos(bp.x, bp.y), 2, 0)
+	var shafts := LightShafts.new()
+	shafts.position = tile_pos(49, 14)
+	shafts.col = Color(1, 0.85, 0.55)
+	add_child(shafts)
+	# --- Nave del Coro: órganos, velas azules, vitrales
+	for o in [Vector2(78, 31), Vector2(86, 31)]:
+		_prop("organ", tile_pos(o.x, o.y), 1, 0, 8.0)
+	for cv in [Vector2(76, 34), Vector2(88, 34), Vector2(76, 41), Vector2(88, 41), Vector2(82, 30.5)]:
+		_prop("candle", tile_pos(cv.x, cv.y), 4, int(cv.x) % 4, 0.0, Color(0.6, 0.5, 1.0), 1.5)
+	for bc in [Vector2(80, 30), Vector2(84, 30)]:
+		_prop("banner", tile_pos(bc.x, bc.y), 2, 1)
+	var glass := LightShafts.new()
+	glass.position = tile_pos(82, 37)
+	glass.col = Color(0.75, 0.55, 1.0)
+	glass.stained = true
+	add_child(glass)
+
+func arena_fx(kind: String) -> void:
+	match kind:
+		"seravel_p3":
+			create_tween().tween_property(canvas_mod, "color", Color(0.75, 0.62, 0.55), 1.5)
+		"carcelero_p2":
+			for l in arena_lights:
+				if is_instance_valid(l):
+					l.color = Color(1, 0.25, 0.1)
+					l.texture_scale = 2.4
 
 func _fireflies(r: Rect2) -> void:
 	var p := CPUParticles2D.new()
@@ -514,6 +658,7 @@ func _spawn_enemies() -> void:
 		["acolito", 78, 52], ["acolito", 87, 56], ["acolito", 82, 67],
 		["bestia", 76, 60], ["bestia", 88, 64], ["hueco", 84, 70], ["hueco", 74, 55],
 		["carcelero", 49, 38],
+		["choir", 82, 35],
 		["seravel", 49, 10],
 	]
 	for e in list:
@@ -521,10 +666,15 @@ func _spawn_enemies() -> void:
 
 func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 	var e: Enemy
-	if type == "seravel":
-		e = preload("res://scripts/actors/boss_seravel.gd").new()
-	else:
-		e = Enemy.new()
+	match type:
+		"seravel":
+			e = preload("res://scripts/actors/boss_seravel.gd").new()
+		"carcelero":
+			e = preload("res://scripts/actors/boss_carcelero.gd").new()
+		"choir":
+			e = preload("res://scripts/actors/boss_choir.gd").new()
+		_:
+			e = Enemy.new()
 	e.setup(enemies.size(), type, pos, self)
 	e.set_meta("extra", extra)
 	if extra:
@@ -536,6 +686,7 @@ func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 func _spawn_interactables() -> void:
 	_add_inter("brasa", "sanct", tile_pos(49, 86))
 	_add_inter("brasa", "gate", tile_pos(32, 39))
+	_add_inter("brasa", "nimbo", tile_pos(66, 91.6))
 	_add_inter("npc", "brenna", tile_pos(43.5, 84), {"sheet": "npc_brenna", "name": ["Brenna, la herrera", "Brenna, the smith"], "light": Color(1, 0.5, 0.25)})
 	_add_inter("npc", "carto", tile_pos(55, 84), {"sheet": "npc_carto", "name": ["El Cartógrafo Ciego", "The Blind Cartographer"], "flip": true, "light": Color(0.6, 0.7, 1.0)})
 	_add_inter("chest", "chest_chains", tile_pos(61, 55), {"feathers": 2, "ecos": 120, "items": {"bomb": 2}})
@@ -543,6 +694,11 @@ func _spawn_interactables() -> void:
 	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250, "items": {"iron": 1, "incense": 1}})
 	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150})
 	_add_inter("bench", "bench_mirador", tile_pos(34, 85.5), {"memory": "m1"})
+	_add_inter("npc", "ozias", tile_pos(62.5, 83), {"sheet": "npc_ozias", "name": ["Ozias, el Grabador", "Ozias, the Engraver"], "light": Color(0.4, 0.9, 1.0)})
+	_add_inter("npc", "ilse", tile_pos(69.5, 83), {"sheet": "npc_ilse", "name": ["Madre Ilse", "Mother Ilse"], "flip": true, "light": Color(0.6, 0.75, 1.0)})
+	_add_inter("npc", "nyx", tile_pos(62.5, 89.5), {"sheet": "npc_nyx", "name": ["Nyx, de Plumas Negras", "Nyx of the Black Feathers"], "light": Color(1, 0.8, 0.4)})
+	_add_inter("npc", "velaria", tile_pos(69.5, 89.5), {"sheet": "npc_velaria", "name": ["Sor Velaria", "Sister Velaria"], "flip": true, "light": Color(1, 0.4, 0.4)})
+	_add_inter("chest", "chest_choir", tile_pos(82, 30.8), {"ecos": 400, "items": {"iron": 1}})
 	_add_inter("pickup", "f1", tile_pos(36, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f2", tile_pos(62, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f3", tile_pos(74, 70), {"icon": "feather", "feathers": 1})
@@ -568,6 +724,8 @@ func _apply_world_flags(instant: bool) -> void:
 			e.die(); e.visible = false
 		if e.type == "seravel" and wflags.get("seravel_dead", false):
 			e.die(); e.visible = false
+		if e.type == "choir" and wflags.get("choir_dead", false):
+			e.die(); e.visible = false
 	if Prog.dropped_ecos.has("amount") and Prog.dropped_ecos.amount > 0:
 		_spawn_ecos_drop()
 
@@ -583,6 +741,10 @@ func _after_load() -> void:
 	if p:
 		p.respawn_at(_brasa_spawn(Prog.last_brasa))
 	hud.show_area(G.T("stratum1"), G.T("area_sanct"))
+	if not Prog.shadow.is_empty():
+		get_tree().create_timer(1.0).timeout.connect(_request_shadow)
+	if Prog.ng > 0:
+		get_tree().create_timer(2.5).timeout.connect(hud.big_message.bind(G.T("ng_plus") + " " + str(Prog.ng), Color(1, 0.4, 0.5), 3.0, false))
 
 # ====================================================================== jugadores
 func _spawn_player(peer: int, variant: int) -> Player:
@@ -634,6 +796,10 @@ func is_menu_open() -> bool:
 func _process(delta: float) -> void:
 	_update_post(delta)
 	var lp := local_player()
+	if G.photo_mode:
+		_photo_tick()
+		return
+	_v04_tick(delta, lp)
 	if lp:
 		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
 		if active_boss and active_boss.is_alive() and active_boss.active:
@@ -651,7 +817,13 @@ func _process(delta: float) -> void:
 		camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake * (_shake_t / max(0.01, _shake_t + 0.05))
 	else:
 		camera.offset = camera.offset.lerp(Vector2.ZERO, 0.3)
+	var now := Time.get_ticks_msec() * 0.001
 	for c in entities.get_children():
+		if c.has_meta("sway"):
+			c.rotation = sin(now * 1.3 + float(c.get_meta("sway"))) * 0.06
+		if c.has_meta("anim"):
+			var fr: int = int(now * 10.0 + c.position.x) % 4
+			c.region_rect.position.x = fr * c.region_rect.size.x
 		if c.has_meta("flicker"):
 			var l: PointLight2D = c.get_meta("flicker")
 			l.energy = 0.85 + 0.12 * sin(Time.get_ticks_msec() * 0.011 + c.position.x) + 0.05 * sin(Time.get_ticks_msec() * 0.031)
@@ -667,7 +839,21 @@ func _process(delta: float) -> void:
 				_esync.rpc_id(pid, arr)
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("menu") and not dialog.is_open():
+	if event.is_action_pressed("photo") and not menu.visible and not dialog.is_open():
+		_toggle_photo()
+		return
+	if G.photo_mode:
+		if event.is_action_pressed("pause"):
+			_toggle_photo()
+		elif event.is_action_pressed("shot"):
+			_screenshot()
+		return
+	if event.is_action_pressed("map") and not dialog.is_open():
+		if menu.visible and menu.tab == "map":
+			menu.close()
+		elif not menu.visible:
+			menu.open("map", {})
+	elif event.is_action_pressed("menu") and not dialog.is_open():
 		menu.toggle("char")
 	elif event.is_action_pressed("pause") and not dialog.is_open():
 		if menu.visible:
@@ -694,6 +880,10 @@ func _check_area(lp: Player) -> void:
 		var target := Color(0.42, 0.45, 0.6) if a == "area_gallery" else (Color(0.55, 0.45, 0.5) if a == "area_circle" else Color(0.5, 0.46, 0.58))
 		if a == "area_mirador":
 			target = Color(0.62, 0.62, 0.75)
+		elif a == "area_nimbo":
+			target = Color(0.64, 0.56, 0.56)
+		elif a == "area_choir":
+			target = Color(0.46, 0.42, 0.64)
 		create_tween().tween_property(canvas_mod, "color", target, 1.5)
 		var peaceful := a in PEACE_AREAS
 		create_tween().tween_property(self, "_calm", 1.0 if peaceful else 0.0, 2.0)
@@ -704,7 +894,12 @@ func _check_area(lp: Player) -> void:
 			_server_start_carcelero()
 		else:
 			_request_carcelero.rpc_id(1)
-	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive():
+	if r == "choir" and not wflags.get("choir_intro", false) and not wflags.get("choir_dead", false) and lp.is_alive() and asc_fight.is_empty():
+		if multiplayer.is_server():
+			_server_start_choir()
+		else:
+			_request_choir.rpc_id(1)
+	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive() and asc_fight.is_empty():
 		if multiplayer.is_server():
 			_server_start_boss()
 		else:
@@ -744,12 +939,23 @@ func nearest_interactable(p: Player) -> Interactable:
 	return best
 
 func try_interact(p: Player) -> void:
+	if _spare_target and is_instance_valid(_spare_target) and _spare_target.is_alive():
+		bcast("_spare_boss", [_spare_target.idx])
+		_spare_target = null
+		return
 	var it := nearest_interactable(p)
 	if it == null:
 		return
 	match it.kind:
 		"brasa":
 			if not it.used:
+				if it.id != "sanct":
+					if Prog.wing_feathers <= 0:
+						G.toast(G.T("no_feathers"), UIKit.PINK)
+						return
+					Prog.lose_wing_feather()
+					send_look()
+					Fx.burst(p.global_position + Vector2(0, -12), Look.color_of(G.look, "wing"), 10, 60.0, 1.0, "fx_feather", 60.0, (it.global_position - p.global_position).normalized(), 1.0, false, Vector2(0, 10))
 				bcast("_light_brasa", [it.id])
 			else:
 				_rest_at(it.id)
@@ -771,6 +977,7 @@ func _physics_process(_delta: float) -> void:
 			if it.kind == "ecos":
 				Prog.ecos += int(it.data.amount)
 				Prog.dropped_ecos = {}
+				Prog.unrecovered = 0
 				Prog.changed.emit()
 				Audio.sfx("levelup", -6.0)
 				Fx.burst(it.global_position, Color(0.6, 0.85, 1), 24, 80.0, 0.8, "fx_soft", 180.0, Vector2.UP, 0.4)
@@ -807,13 +1014,16 @@ func _req_join(_weapon: String) -> void:
 	var estates := []
 	for e in enemies:
 		estates.append([e.type, e.position, e.hp, e.is_alive(), e.get_meta("extra", false)])
-	_welcome.rpc_id(sender, wflags, estates, local_player().position)
+	_welcome.rpc_id(sender, wflags, estates, local_player().position, world_difficulty)
+	_player_look.rpc_id(sender, Net.my_id(), G.look, Prog.wing_feathers)
 	G.toast(G.T("partner_joined"), Color(0.6, 1, 0.8))
 	Audio.sfx("quest")
 
 @rpc("authority", "call_remote", "reliable")
-func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2) -> void:
+func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2, host_diff: int) -> void:
 	wflags = flags
+	world_difficulty = host_diff
+	G.set_meta("lightwing", world_difficulty == 0)
 	joined_peers = [1]
 	for i in estates.size():
 		var s: Array = estates[i]
@@ -833,10 +1043,23 @@ func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2) -> void:
 	host.position = host_pos
 	var me := _spawn_player(Net.my_id(), 2)
 	me.position = host_pos + Vector2(20, 6)
+	send_look()
 	Audio.play_music("explore")
 	hud.show_area(G.T("stratum1"), G.T("area_sanct"))
 	if not Prog.quest_active("main1") and not Prog.quest_done("main1"):
 		Prog.start_quest("main1")
+
+func send_look() -> void:
+	var lp := local_player()
+	if lp:
+		lp.refresh_look()
+	for pid in joined_peers:
+		_player_look.rpc_id(pid, Net.my_id(), G.look, Prog.wing_feathers)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _player_look(peer: int, l: Dictionary, feathers: int) -> void:
+	if players.has(peer):
+		players[peer].set_look(l, feathers)
 
 func _on_peer_joined_net(_id: int) -> void:
 	pass  # el jugador se crea al recibir _req_join
@@ -932,28 +1155,52 @@ func _enemy_die(idx: int) -> void:
 	if not e.is_alive():
 		return
 	e.die()
+	var lpk := local_player()
+	if lpk and lpk.is_alive() and lpk.global_position.distance_to(e.global_position) < 280.0:
+		Prog.record_kill(e.type)
+	if e.type == "sombra":
+		if int(e.get_meta("owner", -1)) == Net.my_id():
+			Prog.ecos += int(e.get_meta("amount", 0))
+			Prog.shadow = {}
+			Prog.unrecovered = 0
+			Prog.changed.emit()
+			hud.big_message(G.L(["SOMBRA DISIPADA", "SHADOW DISPELLED"]), Color(0.75, 0.55, 1.0), 2.5)
+			Fx.souls(e.global_position + Vector2(0, -8), lpk, 16)
+		return
+	if e.is_boss and asc_fight.is_empty() and not wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false):
+		var back := 0
+		for k in 2:
+			if Prog.regrow_wing_feather():
+				back += 1
+		if back > 0:
+			get_tree().create_timer(2.5).timeout.connect(_feathers_back.bind(back))
 	Prog.add_ecos(e.cfg.ecos)
 	Fx.text(e.global_position + Vector2(0, 26), "+%d %s" % [int(e.cfg.ecos * Prog.ecos_mult()), G.T("ecos")], Color(0.6, 0.85, 1.0), 8)
-	_drop_loot(e)
 	Fx.souls(e.global_position + Vector2(0, -8), local_player(), 5 if not e.is_boss else 24)
+	if e.is_boss and not asc_fight.is_empty() and asc_fight.boss == e.type:
+		_end_ascension(true)
+		return
+	_drop_loot(e)
 	match e.type:
 		"hueco":
 			Prog.quest_progress("husks")
 		"carcelero":
 			_on_carcelero_dead(e)
+		"choir":
+			_on_choir_dead(e)
 		"seravel":
 			_on_seravel_dead(e)
 
 const LOOT := {"hueco": [["bomb", 0.14], ["incense", 0.05]], "acolito": [["incense", 0.14], ["bomb", 0.08]],
 	"bestia": [["ointment", 0.16], ["bomb", 0.1]], "carcelero": [["key_vestibule", 1.0], ["amulet_ash", 1.0], ["iron", 1.0]],
-	"seravel": [["phoenix", 1.0], ["iron", 1.0]]}
+	"seravel": [["phoenix", 1.0], ["iron", 1.0], ["tear", 1.0]], "choir": [["choir_heart", 1.0], ["tear", 1.0]]}
 
 func _drop_loot(e: Enemy) -> void:
 	## Cada jugador tira su propio botín (determinista por enemigo para no duplicar en red)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(str(e.idx) + str(Prog.playtime).substr(0, 3) + str(Net.my_id()))
 	for l in LOOT.get(e.type, []):
-		if rng.randf() < l[1]:
+		if rng.randf() < l[1] * (1.6 if event != "" else 1.0):
 			if l[0] == "key_vestibule" and Prog.item_count("key_vestibule") > 0:
 				continue
 			var it := _add_inter("pickup", "loot_%d_%s_%d" % [e.idx, l[0], Time.get_ticks_msec()], e.global_position + Vector2(rng.randf_range(-10, 10), rng.randf_range(-6, 6)),
@@ -1104,6 +1351,9 @@ func _light_brasa(id: String) -> void:
 	Prog.last_brasa = id
 	if id == "sanct":
 		Prog.quest_step("main1", "brasa")
+	if not Prog.spark:
+		Prog.spark = true
+		get_tree().create_timer(2.4).timeout.connect(_spark_joins)
 	var lp := local_player()
 	if lp:
 		lp.refresh_stats(true)
@@ -1113,6 +1363,9 @@ func _light_brasa(id: String) -> void:
 func _rest_at(id: String) -> void:
 	var lp := local_player()
 	Prog.last_brasa = id
+	if diff().get("regrow", false) and Prog.regrow_wing_feather():
+		G.toast(G.L(["La Brasa te devuelve una pluma.", "The Ember returns a feather."]), Color(1, 0.9, 0.7))
+		send_look()
 	lp.refresh_stats(true)
 	Audio.sfx("heal")
 	Fx.burst(lp.global_position + Vector2(0, -8), Color(1, 0.7, 0.4), 20, 60.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.4)
@@ -1133,9 +1386,12 @@ func _reset_enemies() -> void:
 			continue
 		if e.type == "seravel" and wflags.get("seravel_dead", false):
 			continue
+		if e.type == "choir" and wflags.get("choir_dead", false):
+			continue
+		e.asc = 0
 		e.reset_state()
 		if e.is_boss:
-			e.active = e.type == "carcelero" and wflags.get("carcelero_intro", false)
+			e.active = (e.type == "carcelero" and wflags.get("carcelero_intro", false)) or (e.type == "choir" and wflags.get("choir_intro", false))
 	for i in enemies.size():
 		enemies[i].idx = i
 	if active_boss and active_boss.type == "seravel" and not wflags.get("seravel_dead", false):
@@ -1144,6 +1400,8 @@ func _reset_enemies() -> void:
 	active_boss = null
 	hud.hide_boss()
 	Audio.play_music("explore")
+	if not Prog.shadow.is_empty():
+		get_tree().create_timer(0.3).timeout.connect(_request_shadow)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _open_chest(id: String) -> void:
@@ -1210,9 +1468,41 @@ func _talk(id: String) -> void:
 			else:
 				Prog.quest_step("main1", "talk_brenna")
 				var opts := [["Brenna", ["Acércame esa hoja. A ver qué puedo hacer.", "Hand me that blade. Let's see what I can do."]]]
+				if Prog.is_desplumado():
+					opts = [["Brenna", ["Por la Brasa... ¿dónde has dejado las plumas? Pareces un pollo de feria. Uno muy peligroso, eso sí.", "By the Ember... where did you leave your feathers? You look like a fairground chicken. A very dangerous one, mind."]]]
+				elif Prog.deaths >= 3:
+					opts = [["Brenna", ["%d veces has vuelto de la muerte. A este ritmo te voy a cobrar las reparaciones." % Prog.deaths, "%d times you've come back from death. At this rate I'll start charging for repairs." % Prog.deaths]]]
 				if wflags.get("seravel_dead", false):
 					opts = [["Brenna", ["Seravel... Yo forjé su primera espada, ¿sabes? Antes de que todo esto empezara.", "Seravel... I forged her first sword, you know. Before all this began."]]]
 				dialog.play(opts, _open_forge)
+		"ozias":
+			var l1 := [["Ozias", ["Las runas no mienten. El acero sí. Déjame enseñarle a tu arma a recordar el fuego... o el frío.", "Runes do not lie. Steel does. Let me teach your weapon to remember fire... or frost."]]]
+			if Prog.flags.get("met_ozias", false):
+				l1 = [["Ozias", ["Tráeme Esquirlas de Nimbo. Cada una guarda un eco de la aureola rota.", "Bring me Nimbus Shards. Each one holds an echo of the broken halo."]]]
+			Prog.flags["met_ozias"] = true
+			dialog.play(l1, _open_service.bind("ozias"))
+		"ilse":
+			var l2 := [["Madre Ilse", ["Siéntate, criatura. Tus Lágrimas están turbias. Puedo aclararlas... si me traes las de otros.", "Sit, child. Your Tears are cloudy. I can clear them... if you bring me the tears of others."]]]
+			if Prog.flags.get("met_ilse", false):
+				l2 = [["Madre Ilse", ["Cada Lágrima Cristalizada fue alguien. Úsalas bien.", "Every Crystallized Tear was someone. Use them well."]]]
+			Prog.flags["met_ilse"] = true
+			dialog.play(l2, _open_service.bind("ilse"))
+		"nyx":
+			var l3 := [["Nyx", ["¿Ecos? Los acepto. Lo que vendo no pregunta de dónde vienes, y yo tampoco.", "Echoes? I'll take them. What I sell doesn't ask where you come from, and neither do I."]]]
+			if Prog.is_desplumado():
+				l3 = [["Nyx", ["Vaya, vaya. Si sigues soltando plumas te compro el resto para un cojín.", "Well, well. Keep shedding feathers and I'll buy the rest for a cushion."]]]
+			elif not Prog.shadow.is_empty():
+				l3 = [["Nyx", ["Tu sombra anda suelta por ahí con tus Ecos. Yo de ti iría a por ella antes de que aprenda a regatear.", "Your shadow's loose out there with your Echoes. I'd fetch it before it learns to haggle."]]]
+			dialog.play(l3, _open_service.bind("nyx"))
+		"velaria":
+			var l4 := [["Sor Velaria", ["Los Arcontes caídos dejan ecos. Puedo despertarlos, más fuertes, más crueles. Si sobrevives, el Nimbo te recompensará.", "Fallen Archons leave echoes. I can awaken them, stronger, crueler. Survive, and the Nimbus will reward you."]]]
+			if not Prog.quests.has("choir"):
+				l4.append(["Sor Velaria", ["Y escucha: en la Galería Rota alguien sigue cantando. Haz que calle.", "And listen: in the Broken Gallery someone is still singing. Make it stop."]])
+			var cb := func():
+				if not Prog.quests.has("choir"):
+					Prog.start_quest("choir")
+				_open_service("velaria")
+			dialog.play(l4, cb)
 		"carto":
 			if not Prog.quests.has("husks"):
 				lines = [
@@ -1232,6 +1522,101 @@ func _talk(id: String) -> void:
 				]
 				var pick: Array = lore[int(Prog.playtime) % lore.size()]
 				dialog.play([["El Cartógrafo", pick[0]]], Callable())
+
+func _open_service(npc: String) -> void:
+	menu.open("service", {"npc": npc})
+
+func request_status(e: Enemy, status: String, dur: float) -> void:
+	if multiplayer.is_server():
+		bcast("_status", [e.idx, status, dur])
+	else:
+		_rpc_status.rpc_id(1, e.idx, status, dur)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_status(idx: int, status: String, dur: float) -> void:
+	if multiplayer.is_server():
+		bcast("_status", [idx, status, dur])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _status(idx: int, status: String, dur: float) -> void:
+	if idx < enemies.size() and status == "slow":
+		enemies[idx].slow_t = dur
+		Fx.burst(enemies[idx].global_position + Vector2(0, -10), Color(0.6, 0.9, 1.0), 8, 50.0, 0.6, "fx_px", 180.0)
+
+# ====================================================================== Ascensión (revanchas de jefes)
+func start_ascension(boss_type: String, level: int) -> void:
+	if not multiplayer.is_server():
+		return
+	bcast("_ascension_start", [boss_type, level])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _ascension_start(boss_type: String, level: int) -> void:
+	var e: Enemy = null
+	for en in enemies:
+		if en.type == boss_type:
+			e = en
+	if e == null:
+		return
+	asc_fight = {"boss": boss_type, "lvl": level}
+	var spots := {"carcelero": tile_pos(49, 43), "choir": tile_pos(82, 43), "seravel": tile_pos(49, 22)}
+	var lp := local_player()
+	hud.fade_to(1.0, 0.4)
+	await get_tree().create_timer(0.45).timeout
+	if lp:
+		lp.respawn_at(spots[boss_type] + Vector2(16 * (lp.variant - 1), 0))
+	e.asc = level
+	e.reset_state()
+	e.visible = true
+	e.active = false
+	if boss_type == "seravel":
+		set_gate(false, true)
+	if lp:
+		lp.cutscene = true
+	hud.fade_to(0.0, 0.4)
+	hud.big_message(G.T("ascension") + " " + ["I", "II", "III"][level - 1], Color(1, 0.4, 0.5), 1.6, true)
+	Audio.sfx("roar")
+	await get_tree().create_timer(2.2).timeout
+	if lp:
+		lp.cutscene = false
+	e.active = true
+	e.state = "chase"
+	e.cooldown = 0.8
+	active_boss = e
+	hud.show_boss(e)
+	Audio.play_music("boss1" if level < 3 else "boss2", 0.3)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_start_ascension(b: String, lvl: int) -> void:
+	if multiplayer.is_server():
+		start_ascension(b, lvl)
+
+func _end_ascension(won: bool) -> void:
+	var info := asc_fight.duplicate()
+	asc_fight = {}
+	hud.hide_boss()
+	active_boss = null
+	if won:
+		Prog.grant_ascension(info.boss, info.lvl)
+		hud.big_message(G.T("asc_won"), Color(1, 0.85, 0.4), 3.0)
+		Audio.play_music("victory", 0.2)
+		G.slowmo("kill", 0.25, 0.8)
+	else:
+		hud.big_message(G.T("asc_failed"), Color(0.8, 0.2, 0.25), 2.5, true)
+		for e in enemies:
+			if e.type == info.boss and e.is_alive():
+				e.die()
+	await get_tree().create_timer(4.0).timeout
+	if info.boss == "seravel":
+		set_gate(true)
+	var lp := local_player()
+	if lp and lp.is_alive():
+		hud.fade_to(1.0, 0.4)
+		await get_tree().create_timer(0.45).timeout
+		lp.respawn_at(tile_pos(66, 88))
+		hud.fade_to(0.0, 0.5)
+	Audio.play_music("peace", 2.0)
+	if multiplayer.is_server():
+		Prog.save_game()
 
 func _open_forge() -> void:
 	menu.open("weapons", {"forge": true})
@@ -1300,6 +1685,55 @@ func _carcelero_intro(idx: int) -> void:
 	Audio.play_music("boss1", 0.3)
 
 @rpc("any_peer", "call_remote", "reliable")
+func _request_choir() -> void:
+	if multiplayer.is_server():
+		_server_start_choir()
+
+func _server_start_choir() -> void:
+	if wflags.get("choir_intro", false) or wflags.get("choir_dead", false):
+		return
+	for e in enemies:
+		if e.type == "choir" and e.is_alive():
+			bcast("_choir_intro", [e.idx])
+			return
+
+@rpc("any_peer", "call_remote", "reliable")
+func _choir_intro(idx: int) -> void:
+	if wflags.get("choir_intro", false):
+		return
+	wflags["choir_intro"] = true
+	var e: Enemy = enemies[idx]
+	var lp := local_player()
+	if lp:
+		lp.cutscene = true
+	await _play_cinematic("choir")
+	if lp:
+		lp.cutscene = false
+	e.active = true
+	e.state = "chase"
+	e.cooldown = 1.0
+	active_boss = e
+	hud.show_boss(e)
+	Audio.play_music("boss1", 0.3)
+	if not Prog.quests.has("choir"):
+		Prog.start_quest("choir")
+
+func _on_choir_dead(e: Enemy) -> void:
+	wflags["choir_dead"] = true
+	Prog.flags["choir_dead"] = true
+	Prog.quest_progress("choir")
+	Prog.add_weapon("choir")
+	hud.hide_boss()
+	active_boss = null
+	hud.big_message(G.L(["CORO SILENCIADO", "CHOIR SILENCED"]), Color(0.8, 0.6, 1.0), 3.0)
+	Audio.play_music("victory", 0.2)
+	G.slowmo("kill", 0.25, 0.8)
+	await get_tree().create_timer(5.0).timeout
+	Audio.play_music("explore", 3.0)
+	if multiplayer.is_server():
+		Prog.save_game()
+
+@rpc("any_peer", "call_remote", "reliable")
 func _request_carcelero() -> void:
 	if multiplayer.is_server():
 		_server_start_carcelero()
@@ -1363,6 +1797,12 @@ func _on_seravel_dead(e: Enemy) -> void:
 		["Seravel", ["Busca a Azrahel... en el fondo. Él recuerda... lo que nos quitaron.", "Find Azrahel... at the bottom. He remembers... what they took from us."]],
 		["", ["Un recuerdo regresa: un cielo abierto, sin cadenas. Y una voz que no era la de la Voz.", "A memory returns: an open sky, without chains. And a voice that was not the Voice's."]],
 	]
+	if e.get_meta("spared", false):
+		lines = [
+			["Seravel", ["¿Bajas la espada? Nadie... en mil años... me había perdonado.", "You lower your blade? No one... in a thousand years... has ever spared me."]],
+			["Seravel", ["Entonces escucha: Él no es Dios. Busca a Azrahel en el fondo... y no confíes en la Voz.", "Then listen: He is not God. Find Azrahel at the bottom... and do not trust the Voice."]],
+			["Seravel", ["Te esperaré en las Puertas. Esta vez... del mismo lado.", "I will wait for you at the Gates. This time... on the same side."]],
+		]
 	var done := func():
 		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body"))
 		Audio.play_music("theme", 2.0)
@@ -1372,13 +1812,48 @@ func _on_seravel_dead(e: Enemy) -> void:
 
 # ====================================================================== muerte
 func on_local_player_died(p: Player) -> void:
+	if not asc_fight.is_empty():
+		var any_alive := false
+		for q in players.values():
+			if q != p and q.is_alive():
+				any_alive = true
+		if not any_alive:
+			_end_ascension(false)
 	Audio.sfx("die")
 	hud.big_message(G.T("you_died"), Color(0.85, 0.15, 0.15), 3.0, true)
 	G.slowmo("death", 0.3, 1.2)
+	Prog.deaths += 1
+	if active_boss and is_instance_valid(active_boss):
+		Prog.boss_deaths[active_boss.type] = int(Prog.boss_deaths.get(active_boss.type, 0)) + 1
+	# la muerte arranca una pluma (y se ve en tus alas)
+	var wc := Look.color_of(G.look, "wing")
+	Fx.burst(p.global_position + Vector2(0, -12), wc, 28, 160.0, 1.8, "fx_feather", 180.0, Vector2.UP, 1.3, false, Vector2(0, 45))
+	var had := Prog.wing_feathers
+	Prog.lose_wing_feather()
+	if had > 0:
+		get_tree().create_timer(1.5).timeout.connect(_feather_torn_msg)
+	# Ecos: si ya había Ecos sin recuperar, se convierten en tu Sombra
+	var shadow_new := false
+	if Prog.dropped_ecos.has("amount") and int(Prog.dropped_ecos.amount) > 0:
+		if Prog.shadow.is_empty():
+			Prog.shadow = {"amount": int(Prog.dropped_ecos.amount), "pos": Prog.dropped_ecos.pos}
+		else:
+			Prog.shadow.amount = int(Prog.shadow.amount) + int(Prog.dropped_ecos.amount)
+		Prog.dropped_ecos = {}
+		Prog.shadow["new"] = true
+		shadow_new = true
+		if interactables.has("ecosdrop"):
+			interactables["ecosdrop"].queue_free()
+			interactables.erase("ecosdrop")
 	if Prog.ecos > 0:
-		Prog.dropped_ecos = {"amount": Prog.ecos, "pos": [p.global_position.x, p.global_position.y]}
-		Prog.ecos = 0
-		Prog.changed.emit()
+		var keep := int(Prog.ecos * diff().keep)
+		if Prog.ecos - keep > 0:
+			Prog.dropped_ecos = {"amount": Prog.ecos - keep, "pos": [p.global_position.x, p.global_position.y]}
+			Prog.unrecovered += 1
+		Prog.ecos = keep
+	Prog.changed.emit()
+	if Prog.deaths == 1 and G.autotest == "":
+		get_tree().create_timer(2.6).timeout.connect(_first_death_scene)
 	await get_tree().create_timer(3.2).timeout
 	if not is_inside_tree():
 		return
@@ -1387,8 +1862,11 @@ func on_local_player_died(p: Player) -> void:
 		if q != p and q.is_alive():
 			any_alive = true
 	p.respawn_at(_brasa_spawn(Prog.last_brasa))
+	send_look()
 	if Prog.dropped_ecos.has("amount"):
 		_spawn_ecos_drop()
+	if shadow_new and any_alive:
+		_request_shadow(true)
 	if not any_alive:
 		if multiplayer.is_server():
 			bcast("_reset_enemies", [])
@@ -1416,7 +1894,8 @@ func _play_intro() -> void:
 		["???", ["Despierta, Desplumado.", "Wake, Featherless one."]],
 		["???", ["Cayeron mil alas. Mil voces se apagaron en la Espiral.", "A thousand wings fell. A thousand voices went silent in the Spiral."]],
 		["???", ["Tú aún ardes. Desciende los cien círculos...", "You still burn. Descend the hundred circles..."]],
-		["???", ["...y mata al Rey del Abismo. Esa es tu penitencia. Tu única salida.", "...and slay the King of the Abyss. That is your penance. Your only way out."]],
+		["???", ["...y mata al Rey del Abismo. Esa es tu penitencia. Tu única salida.", "...and slay the King of the Abyss. That is your penance. Your only way out."],
+			["...y LIBÉRAME. Esa es tu condena. No hay salida.", "...and FREE ME. That is your sentence. There is no way out."]],
 	]
 	if G.autotest != "":
 		lines = []
@@ -1455,6 +1934,23 @@ func _contemplate(it: Interactable) -> void:
 	for l in mem.lines:
 		lines.append(G.L(l))
 	await hud.memory_sequence(G.L(mem.title), lines)
+	var partner: Player = null
+	for q in players.values():
+		if q != lp and q.global_position.distance_to(lp.global_position) < 90.0:
+			partner = q
+	if partner:
+		var me := Look.display_name(G.look)
+		var other := Look.display_name(partner.look)
+		var duo := [[other, ["¿Tú también lo recuerdas? El jardín...", "Do you remember it too? The garden..."]],
+			[me, ["A veces creo que lo soñé. Que nunca tuvimos alas.", "Sometimes I think I dreamed it. That we never had wings."]],
+			[other, ["Las tuvimos. Y si caímos juntos... subiremos juntos.", "We had them. And if we fell together... we'll rise together."]],
+			[me, ["Entonces no me sueltes en el Abismo.", "Then don't let go of me in the Abyss."]]]
+		var w8 := [false]
+		var dd := func(): w8[0] = true
+		dialog.play(duo, dd, true)
+		while not w8[0] and is_inside_tree():
+			await get_tree().process_frame
+		Prog.flags["duo_bench"] = true
 	if Prog.unlock_memory(mem_id):
 		hud.big_message(G.T("memory_got"), Color(0.75, 0.9, 1.0), 2.5)
 		Audio.sfx("levelup", -6.0)
@@ -1467,6 +1963,75 @@ func _contemplate(it: Interactable) -> void:
 	lp.cutscene = false
 	_contemplating = false
 	Audio.play_music("peace", 3.0)
+
+class RoundTable extends Node2D:
+	## Mesa redonda de piedra con velas y el emblema del Nimbo roto
+	var t := 0.0
+	func _ready() -> void:
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = Color(1, 0.75, 0.45)
+		l.texture_scale = 2.2
+		l.energy = 0.45
+		l.position = Vector2(0, -6)
+		add_child(l)
+		var b := StaticBody2D.new()
+		var cs := CollisionShape2D.new()
+		var sh := CircleShape2D.new()
+		sh.radius = 26.0
+		cs.shape = sh
+		b.add_child(cs)
+		add_child(b)
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var stone := Color(0.26, 0.23, 0.3)
+		# pie de la mesa
+		draw_rect(Rect2(Vector2(-30, -2), Vector2(60, 12)), Color(0.12, 0.09, 0.14))
+		draw_rect(Rect2(Vector2(-28, 0), Vector2(56, 9)), stone.darkened(0.3))
+		draw_set_transform(Vector2(0, -4), 0.0, Vector2(1.0, 0.6))
+		draw_circle(Vector2(0, 14), 42.0, Color(0, 0, 0, 0.35))
+		draw_circle(Vector2.ZERO, 38.0, Color(0.08, 0.05, 0.1))
+		draw_circle(Vector2.ZERO, 36.0, stone)
+		draw_circle(Vector2.ZERO, 31.0, stone.darkened(0.12))
+		draw_arc(Vector2.ZERO, 36.0, PI, TAU, 40, stone.lightened(0.25), 2.0)
+		draw_arc(Vector2.ZERO, 22.0, 0, TAU, 40, Color(0.5, 0.42, 0.3, 0.6), 1.0)
+		# emblema: aureola rota
+		for i in 24:
+			var a := TAU * i / 24.0 + t * 0.2
+			if i % 6 == 0:
+				continue
+			draw_rect(Rect2(Vector2(cos(a), sin(a)) * 16.0 - Vector2(1.5, 1.5), Vector2(3, 3)), Color(1, 0.8, 0.35, 0.8))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# velas sobre la mesa
+		for i in 8:
+			var a2 := TAU * i / 8.0
+			var p := Vector2(cos(a2) * 30.0, sin(a2) * 18.0 - 4.0).round()
+			draw_rect(Rect2(p - Vector2(1, 4), Vector2(2, 4)), Color(0.9, 0.86, 0.75))
+			var fl := 1.0 + sin(t * 9.0 + i) * 0.5
+			draw_rect(Rect2(p - Vector2(1, 6 + fl), Vector2(2, 2)), Color(1, 0.75, 0.3))
+
+class LightShafts extends Node2D:
+	## Haces de luz que caen sobre las arenas (vitrales en la nave del Coro)
+	var col := Color(1, 0.85, 0.55)
+	var stained := false
+	var t := 0.0
+	func _ready() -> void:
+		material = Fx.add_material()
+		z_index = 4
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		for i in 5:
+			var x := -100.0 + i * 50.0 + sin(t * 0.4 + i) * 8.0
+			var w := 14.0 + (i % 2) * 8.0
+			var c := col
+			if stained:
+				c = [Color(0.8, 0.4, 1.0), Color(0.4, 0.6, 1.0), Color(1.0, 0.5, 0.7), Color(0.5, 0.9, 1.0), Color(1, 0.8, 0.4)][i]
+			c.a = 0.07 + 0.03 * sin(t * 1.3 + i * 2.0)
+			draw_colored_polygon(PackedVector2Array([Vector2(x, -170), Vector2(x + w, -170), Vector2(x + w * 2.6 + 30, 90), Vector2(x + 30, 90)]), c)
 
 class EdgeRim extends Node2D:
 	## Bordes iluminados del suelo que da al vacío
@@ -1567,3 +2132,384 @@ class FirePatch extends Node2D:
 				if not _hit.has(e) and e.global_position.distance_to(position) < e.body_radius + 8.0:
 					_hit[e] = true
 					world.request_damage_enemy(e, Prog.spell_damage(6.0), Vector2.ZERO, 2.0, false)
+
+
+# ====================================================================== v0.4: plumas, sombra, eventos, perdón, cooperativo
+var event := ""
+var event_t := 0.0
+var _event_cd := 360.0
+var _event_fx: Node2D
+var _spare_target: Enemy = null
+var _dashes := {}
+var _cross_cd := 0
+var _spark: Node2D
+var _photo_lbl: Control
+
+func event_mult() -> float:
+	return 1.25 if event != "" else 1.0
+
+func _v04_tick(delta: float, lp: Player) -> void:
+	# eventos del mundo (los decide el anfitrión)
+	if multiplayer.is_server() and G.autotest == "":
+		if event == "":
+			if active_boss == null and asc_fight.is_empty() and not (_area in PEACE_AREAS) and _area != "":
+				_event_cd -= delta
+				if _event_cd <= 0.0:
+					_event_cd = randf_range(420.0, 600.0)
+					bcast("_world_event", [["ash", "eclipse"][randi() % 2], 75.0])
+		else:
+			event_t -= delta
+			if event_t <= 0.0:
+				bcast("_world_event_end", [])
+	# perdonar a un Arconte con la postura rota al borde de la muerte
+	_spare_target = null
+	if lp and lp.is_alive() and active_boss and is_instance_valid(active_boss) and active_boss.is_alive() and asc_fight.is_empty():
+		var b := active_boss
+		if b.type in ["carcelero", "choir", "seravel"] and b.is_staggered() and b.hp / b.max_hp < 0.2 and lp.global_position.distance_to(b.global_position) < 80.0:
+			_spare_target = b
+	# plumas de reanimación
+	for q in players.values():
+		if q.state == "downed" and not q.has_meta("rfeather"):
+			var f := ReviveFeather.new()
+			f.world = self
+			f.owner_p = q
+			q.set_meta("rfeather", true)
+			fx_layer.add_child(f)
+	# Chispa
+	if Prog.spark and (_spark == null or not is_instance_valid(_spark)) and lp:
+		_spark = Spark.new()
+		_spark.world = self
+		_spark.position = lp.global_position + Vector2(-14, -24)
+		entities.add_child(_spark)
+
+func _spark_joins() -> void:
+	hud.big_message(G.L(["CHISPA SE UNE A TI", "SPARK JOINS YOU"]), Color(1, 0.75, 0.35), 2.2)
+	G.toast(G.L(["Una brasa viva te seguirá: ilumina y presiente secretos.", "A living ember follows you: it lights the way and senses secrets."]), Color(1, 0.8, 0.5))
+
+func _feather_torn_msg() -> void:
+	G.toast(G.T("feather_torn") + "  %d/%d" % [Prog.wing_feathers, Prog.WING_MAX], Look.color_of(G.look, "wing"))
+	if Prog.is_desplumado():
+		G.toast(G.T("desplumado_mode") + ": " + G.L(["más daño y velocidad, menos vida.", "more damage and speed, less health."]), UIKit.PINK)
+
+func _feathers_back(n: int) -> void:
+	G.toast(G.L(["El Arconte te devuelve %d plumas.", "The Archon returns %d feathers."]) % n, Color(1, 0.95, 0.8))
+	send_look()
+
+func _first_death_scene() -> void:
+	## La primera muerte enseña el gancho: te arrancan una pluma... y la Voz miente.
+	var lines := [["???", ["Una pluma menos. Es el precio de cada caída.", "One feather less. That is the price of every fall."]],
+		["???", ["Levántate. Cada pluma perdida te acerca a la redención.", "Rise. Every lost feather brings you closer to redemption."],
+			["Cada pluma perdida te acerca a MÍ.", "Every lost feather brings you closer to ME."]]]
+	dialog.play(lines, Callable(), true)
+
+# ---------------------------------------------------------------------- sombra
+func _request_shadow(announce := false) -> void:
+	if Prog.shadow.is_empty() or not Prog.shadow.has("pos"):
+		return
+	var sp: Array = Prog.shadow.pos
+	var args := [Net.my_id(), Vector2(sp[0], sp[1]), int(Prog.shadow.amount), G.look, Prog.wing_feathers, announce or bool(Prog.shadow.get("new", false))]
+	Prog.shadow.erase("new")
+	if multiplayer.is_server():
+		bcast("_spawn_shadow", args)
+	else:
+		_rpc_shadow.rpc_id(1, args)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_shadow(args: Array) -> void:
+	if multiplayer.is_server():
+		bcast("_spawn_shadow", args)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _spawn_shadow(owner: int, pos: Vector2, amount: int, l: Dictionary, feathers: int, announce: bool) -> void:
+	for e0 in enemies:
+		if e0.type == "sombra" and e0.is_alive() and int(e0.get_meta("owner", -1)) == owner:
+			e0.set_meta("amount", amount)
+			return
+	var e := _add_enemy("sombra", pos, true)
+	e.set_meta("owner", owner)
+	e.set_meta("amount", amount)
+	e.apply_shadow_look(l, feathers)
+	e.state = "idle"
+	Fx.burst(pos + Vector2(0, -10), Color(0.5, 0.25, 0.8), 30, 90.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.6)
+	if owner == Net.my_id() and announce:
+		hud.big_message(G.T("shadow_rises"), Color(0.7, 0.45, 1.0), 2.5, true)
+
+# ---------------------------------------------------------------------- eventos del mundo
+@rpc("any_peer", "call_remote", "reliable")
+func _world_event(kind: String, dur: float) -> void:
+	event = kind
+	event_t = dur
+	Prog.event_ecos = 1.5 if kind == "ash" else 2.0
+	var col := Color(1, 0.55, 0.3) if kind == "ash" else Color(0.7, 0.45, 1.0)
+	hud.big_message(G.T("ev_" + kind), col, 3.0, true)
+	G.toast(G.T("ev_" + kind + "_d"), col)
+	Audio.sfx("roar", -8.0)
+	G.chroma(1.0, 0.6)
+	if _event_fx:
+		_event_fx.queue_free()
+	_event_fx = EventFx.new()
+	_event_fx.kind = kind
+	camera.add_child(_event_fx)
+	create_tween().tween_property(canvas_mod, "color", Color(0.62, 0.42, 0.38) if kind == "ash" else Color(0.32, 0.26, 0.48), 2.0)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _world_event_end() -> void:
+	if event == "":
+		return
+	event = ""
+	Prog.event_ecos = 1.0
+	G.toast(G.T("ev_end"), Color(0.8, 0.85, 0.95))
+	if _event_fx:
+		_event_fx.fade()
+		_event_fx = null
+	_area = ""
+
+# ---------------------------------------------------------------------- perdón
+@rpc("any_peer", "call_remote", "reliable")
+func _spare_boss(idx: int) -> void:
+	if idx >= enemies.size() or not enemies[idx].is_alive():
+		return
+	var e: Enemy = enemies[idx]
+	e.set_meta("spared", true)
+	Prog.spared[e.type] = true
+	Prog.skill_points += 1
+	G.flash(Color(1, 0.95, 0.75, 0.7), 0.6)
+	G.slowmo("spare", 0.3, 1.0)
+	Fx.ring(e.global_position + Vector2(0, -16), 8.0, 160.0, Color(1, 0.9, 0.6), 1.0, 6.0)
+	Fx.burst(e.global_position + Vector2(0, -16), Color(1, 0.95, 0.8), 50, 140.0, 1.6, "fx_feather", 180.0, Vector2.UP, 1.2, false, Vector2(0, -20))
+	hud.big_message(G.T("spared"), Color(1, 0.95, 0.75), 3.0, true)
+	G.toast(G.L(["+1 Punto de Habilidad. El Arconte recordará tu piedad.", "+1 Skill Point. The Archon will remember your mercy."]), UIKit.GOLD)
+	_enemy_die(idx)
+
+# ---------------------------------------------------------------------- Alas Cruzadas
+func note_dash(peer: int, pos: Vector2, dir: Vector2) -> void:
+	var now := Time.get_ticks_msec()
+	_dashes[peer] = [now, pos, dir]
+	if not Net.is_online() or peer != Net.my_id() or now < _cross_cd:
+		return
+	for pid in _dashes:
+		if pid == peer:
+			continue
+		var d: Array = _dashes[pid]
+		var dp: Vector2 = d[1]
+		var dd: Vector2 = d[2]
+		if now - int(d[0]) < 420 and dp.distance_to(pos) < 72.0 and absf(dd.normalized().dot(dir.normalized())) < 0.75:
+			_cross_cd = now + 1500
+			bcast("_cross_slash", [(pos + dp) / 2.0, Net.my_id()])
+			return
+
+@rpc("any_peer", "call_remote", "reliable")
+func _cross_slash(mid: Vector2, by: int) -> void:
+	_cross_cd = Time.get_ticks_msec() + 1500
+	var c := mid + Vector2(0, -8)
+	Fx.slash(c, PI * 0.25, 46.0, 70.0, Color(1, 0.9, 0.55, 0.95), 18.0, 0.35, true)
+	Fx.slash(c, -PI * 0.25, 46.0, 70.0, Color(0.6, 0.9, 1, 0.95), 18.0, 0.35, false)
+	Fx.slash(c, PI * 1.25, 46.0, 70.0, Color(1, 0.9, 0.55, 0.95), 18.0, 0.35, true)
+	Fx.slash(c, PI * 0.75, 46.0, 70.0, Color(0.6, 0.9, 1, 0.95), 18.0, 0.35, false)
+	Fx.ring(c, 8.0, 90.0, Color(1, 1, 1), 0.5, 6.0)
+	Fx.impact(c, Color(1, 0.95, 0.8), 40.0, 10)
+	Fx.text(c + Vector2(0, -18), G.T("cross_wings"), Color(1, 0.9, 0.6), 12)
+	G.shockwave(c, 1.6, 0.5)
+	G.chroma(1.4, 0.4)
+	G.shake(5.0, 0.25)
+	G.flash(Color(1, 1, 1, 0.3), 0.12)
+	Audio.sfx("hit_heavy")
+	Audio.sfx("parry", -4.0)
+	if by == Net.my_id():
+		for e in enemies_alive():
+			if e.global_position.distance_to(mid) < 86.0 + e.body_radius:
+				request_damage_enemy(e, Prog.weapon_damage() * 3.2, (e.global_position - mid).normalized(), 60.0, true)
+
+# ---------------------------------------------------------------------- modo foto
+func _toggle_photo() -> void:
+	G.photo_mode = not G.photo_mode
+	hud.visible = not G.photo_mode
+	if G.photo_mode:
+		if not Net.is_online():
+			Engine.time_scale = 0.0
+		_photo_lbl = UIKit.label(G.T("photo") + "   [WASD] " + G.L(["mover", "move"]) + "   [Q/E] zoom   [F12] " + G.L(["captura", "capture"]) + "   [P/Esc] " + G.L(["salir", "exit"]), 8, UIKit.WHITE, "head", 3)
+		_photo_lbl.position = Vector2(10, 346)
+		var cl := CanvasLayer.new()
+		cl.layer = 30
+		cl.add_child(_photo_lbl)
+		add_child(cl)
+		_photo_lbl.set_meta("layer", cl)
+	else:
+		Engine.time_scale = 1.0
+		if _photo_lbl:
+			_photo_lbl.get_meta("layer").queue_free()
+			_photo_lbl = null
+		camera.zoom = Vector2.ONE
+
+var _photo_last := 0
+
+func _photo_tick() -> void:
+	var now := Time.get_ticks_usec()
+	var dt := clampf((now - _photo_last) / 1000000.0, 0.0, 0.05) if _photo_last > 0 else 0.016
+	_photo_last = now
+	var mv := Input.get_vector("left", "right", "up", "down")
+	camera.position += mv * 220.0 * dt / camera.zoom.x
+	if Input.is_action_pressed("spell1"):
+		camera.zoom = (camera.zoom * (1.0 - dt)).clamp(Vector2(0.5, 0.5), Vector2(3, 3))
+	if Input.is_action_pressed("spell2"):
+		camera.zoom = (camera.zoom * (1.0 + dt)).clamp(Vector2(0.5, 0.5), Vector2(3, 3))
+
+func _screenshot() -> void:
+	DirAccess.make_dir_recursive_absolute("user://capturas")
+	var img := get_viewport().get_texture().get_image()
+	var path := "user://capturas/seraphall_%d.png" % Time.get_unix_time_from_system()
+	img.save_png(path)
+	if _photo_lbl:
+		_photo_lbl.text = G.L(["Captura guardada: ", "Screenshot saved: "]) + ProjectSettings.globalize_path(path)
+
+# ---------------------------------------------------------------------- piezas
+class ReviveFeather extends Node2D:
+	## Al caer en cooperativo, sale volando una pluma: tu compañero debe atraparla antes de que se apague.
+	var world: Node
+	var owner_p: Player
+	var t := 0.0
+	var life := 12.0
+	var origin := Vector2.ZERO
+	func _ready() -> void:
+		origin = owner_p.global_position + Vector2(0, -14)
+		material = Fx.add_material()
+		z_index = 30
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = Look.color_of(owner_p.look, "wing")
+		l.texture_scale = 0.8
+		l.energy = 1.0
+		add_child(l)
+	func _process(delta: float) -> void:
+		t += delta
+		if not is_instance_valid(owner_p) or owner_p.state != "downed":
+			if is_instance_valid(owner_p):
+				owner_p.remove_meta("rfeather")
+			queue_free()
+			return
+		var k := minf(t / 1.2, 1.0)
+		var path := Vector2(sin(t * 1.3) * 54.0, sin(t * 2.1) * 26.0 - 10.0)
+		position = origin + path * k
+		if t > life:
+			# se apaga y renace al poco: siempre queda una oportunidad
+			t = 0.0
+			Fx.burst(position, Color(0.6, 0.6, 0.7), 8, 30.0, 0.5, "fx_px", 180.0)
+		var lp: Player = world.local_player()
+		if lp and lp != owner_p and lp.is_alive() and lp.global_position.distance_to(position + Vector2(0, 12)) < 18.0:
+			Fx.burst(position, Color(1, 0.95, 0.8), 24, 100.0, 0.8, "fx_feather", 180.0, Vector2.UP, 1.0)
+			Fx.text(position + Vector2(0, -10), G.L(["¡ATRAPADA!", "CAUGHT!"]), Color(1, 0.95, 0.7), 10)
+			Audio.sfx("levelup", -4.0)
+			owner_p._net_revive.rpc_id(owner_p.peer_id)
+			owner_p.remove_meta("rfeather")
+			queue_free()
+			return
+		modulate.a = 1.0 if t < life - 3.0 else (0.4 + 0.6 * absf(sin(t * 10.0)))
+		queue_redraw()
+	func _draw() -> void:
+		var c := Look.color_of(owner_p.look, "wing")
+		var a := sin(t * 3.0) * 0.5
+		draw_set_transform(Vector2.ZERO, a, Vector2.ONE)
+		draw_line(Vector2(0, 6), Vector2(0, -6), UIKit.INK, 4.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(0, -7), Vector2(3, -2), Vector2(2, 5), Vector2(0, 6), Vector2(-2, 5), Vector2(-3, -2)]), c)
+		draw_line(Vector2(0, 7), Vector2(0, -5), Color(1, 1, 1, 0.8), 1.0)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var lp: Player = world.local_player()
+		if lp and lp != owner_p:
+			var f := UIKit.font("title")
+			f.draw_string_outline(get_canvas_item(), Vector2(-30, -12), G.T("catch_feather"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
+			f.draw_string(get_canvas_item(), Vector2(-30, -12), G.T("catch_feather"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.WHITE)
+
+class Spark extends Node2D:
+	## Chispa: una brasa viva que te sigue, ilumina y presiente cofres, Ecos perdidos y sombras.
+	var world: Node
+	var t := 0.0
+	var light: PointLight2D
+	var target := Vector2.ZERO
+	var _chime := 0.0
+	var _sense := 0.0
+	func _ready() -> void:
+		z_index = 20
+		light = PointLight2D.new()
+		light.texture = Fx.tex("light")
+		light.color = Color(1, 0.7, 0.35)
+		light.texture_scale = 1.3
+		light.energy = 0.9
+		add_child(light)
+		material = Fx.add_material()
+	func _process(delta: float) -> void:
+		t += delta
+		var lp: Player = world.local_player()
+		if lp == null:
+			return
+		var home := lp.global_position + Vector2(-14 * lp.facing, -24 + sin(t * 2.5) * 3.0)
+		var secret := Vector2.INF
+		var best := 150.0
+		for it in world.interactables.values():
+			if is_instance_valid(it) and not it.used and it.kind in ["chest", "ecos"]:
+				var d: float = it.global_position.distance_to(lp.global_position)
+				if d < best:
+					best = d
+					secret = it.global_position
+		for e in world.enemies:
+			if e.type == "sombra" and e.is_alive() and e.global_position.distance_to(lp.global_position) < 220.0:
+				secret = e.global_position
+		if secret != Vector2.INF:
+			_sense = move_toward(_sense, 1.0, delta * 2.0)
+			home = home.lerp(secret + Vector2(0, -16), 0.45)
+			_chime -= delta
+			if _chime <= 0.0:
+				_chime = 2.6
+				Audio.sfx("ui_move", -14.0, 0.0)
+				Fx.burst(global_position, Color(1, 0.85, 0.5), 6, 40.0, 0.5, "fx_px", 180.0)
+		else:
+			_sense = move_toward(_sense, 0.0, delta * 2.0)
+		position = position.lerp(home, clampf(delta * 4.0, 0.0, 1.0))
+		var dark: bool = world.current_area() in ["area_gallery", "area_choir"]
+		light.texture_scale = (1.8 if dark else 1.2) + _sense * 0.6 + sin(t * 9.0) * 0.08
+		light.energy = 0.85 + _sense * 0.4
+		if randf() < 0.25:
+			Fx.burst(global_position + Vector2(randf_range(-2, 2), 0), Color(1, 0.6, 0.25), 1, 12.0, 0.5, "fx_px", 40.0, Vector2.UP, 0.25, false, Vector2(0, -20))
+		queue_redraw()
+	func _draw() -> void:
+		var p := 1.0 + _sense * 0.5 * absf(sin(t * 6.0))
+		draw_circle(Vector2.ZERO, 5.0 * p, Color(1, 0.45, 0.15, 0.35))
+		draw_circle(Vector2.ZERO, 3.0 * p, Color(1, 0.7, 0.3, 0.9))
+		draw_rect(Rect2(Vector2(-1, -1 - roundf(sin(t * 12.0))), Vector2(2, 2)), Color(1, 1, 0.85))
+		# ojitos
+		draw_rect(Rect2(Vector2(-2, 0), Vector2(1, 1)), UIKit.INK)
+		draw_rect(Rect2(Vector2(1, 0), Vector2(1, 1)), UIKit.INK)
+
+class EventFx extends Node2D:
+	## Partículas que cubren la pantalla durante un evento del mundo
+	var kind := "ash"
+	var parts: CPUParticles2D
+	func _ready() -> void:
+		z_index = 60
+		parts = CPUParticles2D.new()
+		parts.position = Vector2(0, -200)
+		parts.amount = 90
+		parts.lifetime = 4.0
+		parts.preprocess = 4.0
+		parts.texture = Fx.tex("fx_px")
+		parts.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		parts.emission_rect_extents = Vector2(360, 10)
+		parts.direction = Vector2(0.3, 1)
+		parts.spread = 15.0
+		parts.gravity = Vector2(10, 30)
+		parts.initial_velocity_min = 30.0
+		parts.initial_velocity_max = 70.0
+		parts.scale_amount_min = 1.0
+		parts.scale_amount_max = 2.0
+		if kind == "ash":
+			parts.color = Color(0.85, 0.6, 0.45, 0.8)
+		else:
+			parts.position = Vector2(0, 200)
+			parts.direction = Vector2(0, -1)
+			parts.gravity = Vector2(0, -20)
+			parts.color = Color(0.6, 0.4, 1.0, 0.7)
+		add_child(parts)
+	func fade() -> void:
+		parts.emitting = false
+		var tw := create_tween()
+		tw.tween_interval(4.0)
+		tw.tween_callback(queue_free)

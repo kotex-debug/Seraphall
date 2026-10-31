@@ -20,6 +20,9 @@ const WEAPONS := {
 	"hammer": {"name": ["Martillo del Juramento", "Oathbound Hammer"], "sprite": "hammer", "dmg": 27.0, "speed": 0.68, "range": 32.0,
 		"arc": 140.0, "combo": 2, "stam": 20.0, "poise": 26.0, "fue": 1.0, "des": 0.0, "fe": 0.0,
 		"desc": ["Lento y devastador. Rompe la postura de cualquiera.", "Slow and devastating. Breaks anyone's posture."]},
+	"choir": {"name": ["Diapasón del Coro", "Choir Tuning-Blade"], "sprite": "choir", "dmg": 17.0, "speed": 1.2, "range": 34.0,
+		"arc": 120.0, "combo": 3, "stam": 11.0, "poise": 9.0, "fue": 0.15, "des": 0.5, "fe": 0.6, "notes": true,
+		"desc": ["Arma del Coro Hueco. El golpe final lanza notas que atraviesan a los enemigos.", "Weapon of the Hollow Choir. The final blow releases notes that pierce enemies."]},
 	"seravel": {"name": ["Hoja de Seravel", "Seravel's Blade"], "sprite": "seravel", "dmg": 20.0, "speed": 1.1, "range": 36.0,
 		"arc": 130.0, "combo": 3, "stam": 12.0, "poise": 12.0, "fue": 0.35, "des": 0.35, "fe": 0.5, "wave": true,
 		"desc": ["Arma de Arconte. El tercer corte libera una onda de luz.", "Archon weapon. The third slash releases a wave of light."]},
@@ -28,26 +31,30 @@ const WEAPONS := {
 # ------------------------------------------------------------------ objetos
 ## type: consumable | amulet | key | material ; rarity 0-4
 const ITEMS := {
-	"bomb": {"type": "consumable", "icon": "bomb", "rarity": 1, "name": ["Bomba de Ceniza", "Ash Bomb"],
-		"desc": ["Lánzala con [X]: estalla en llamas y daña a todos los enemigos cercanos.", "Throw with [X]: bursts into flame, damaging all nearby enemies."]},
-	"incense": {"type": "consumable", "icon": "incense", "rarity": 1, "name": ["Incienso de Fe", "Incense of Faith"],
-		"desc": ["+30% de daño durante 30 segundos.", "+30% damage for 30 seconds."]},
-	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "name": ["Ungüento de Hierro", "Iron Ointment"],
-		"desc": ["-35% de daño recibido durante 30 segundos.", "-35% damage taken for 30 seconds."]},
-	"phoenix": {"type": "consumable", "icon": "phoenix", "rarity": 3, "name": ["Pluma de Fénix", "Phoenix Feather"],
-		"desc": ["Si caes, renaces al instante con la mitad de vida. Se consume sola.", "If you fall, you are instantly reborn at half health. Used automatically."]},
-	"amulet_wing": {"type": "amulet", "icon": "amulet_wing", "rarity": 2, "name": ["Amuleto del Ala Rota", "Broken Wing Amulet"],
-		"desc": ["+30% recuperación de aguante.", "+30% stamina recovery."]},
+	"bomb": {"type": "consumable", "icon": "bomb", "rarity": 1, "price": 120, "name": ["Nudo de Brasa", "Ember Knot"],
+		"desc": ["Plumas negras anudadas alrededor de un rescoldo vivo. Lánzalo con [X]: estalla en llamas.", "Black feathers knotted around a living ember. Throw with [X]: it bursts into flame."]},
+	"incense": {"type": "consumable", "icon": "incense", "rarity": 1, "price": 200, "name": ["Himno Embotellado", "Bottled Hymn"],
+		"desc": ["Un coro diminuto atrapado en cristal. Al romperlo, +30% de daño durante 30 s.", "A tiny choir trapped in glass. Break it for +30% damage for 30 s."]},
+	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "price": 200, "name": ["Escama de Querubín", "Cherub Scale"],
+		"desc": ["Escama que mudan los querubines al crecer. Endurece la piel: -35% de daño durante 30 s.", "A scale cherubs shed as they grow. Hardens the skin: -35% damage for 30 s."]},
+	"phoenix": {"type": "consumable", "icon": "phoenix", "rarity": 3, "name": ["Plumón de Aurora", "Aurora Down"],
+		"desc": ["El primer plumón de un ángel recién nacido. Si caes, renaces al instante. Se consume solo.", "The first down of a newborn angel. If you fall, you are reborn at once. Used automatically."]},
+	"amulet_wing": {"type": "amulet", "icon": "amulet_wing", "rarity": 2, "name": ["Vértebra de Serafín", "Seraph Vertebra"],
+		"desc": ["Hueso del ala de un serafín. Tu aguante se recupera un 30% más rápido.", "A bone from a seraph's wing. Your stamina recovers 30% faster."]},
 	"amulet_eye": {"type": "amulet", "icon": "amulet_eye", "rarity": 3, "name": ["Ojo de la Guardiana", "Warden's Eye"],
-		"desc": ["+10% probabilidad de crítico.", "+10% critical chance."]},
-	"amulet_ash": {"type": "amulet", "icon": "amulet_ash", "rarity": 2, "name": ["Sello de Ceniza", "Ash Seal"],
-		"desc": ["Tus golpes pueden quemar (+35% daño extra).", "Your hits may burn (+35% bonus damage)."]},
-	"key_vestibule": {"type": "key", "icon": "key", "rarity": 2, "name": ["Llave del Vestíbulo", "Vestibule Key"],
-		"desc": ["Abre la puerta sellada hacia el Círculo de la Guardiana.", "Opens the sealed gate to the Circle of the Warden."]},
-	"map_carto": {"type": "key", "icon": "scroll", "rarity": 1, "name": ["Mapa del Cartógrafo", "Cartographer's Map"],
-		"desc": ["Un mapa dibujado a tientas. Huele a vela y a polvo.", "A map drawn by touch. It smells of candle and dust."]},
-	"iron": {"type": "material", "icon": "iron", "rarity": 2, "name": ["Hierro Celeste", "Celestial Iron"],
-		"desc": ["Metal caído del cielo. Brenna lo usa para mejoras avanzadas.", "Metal fallen from the sky. Brenna uses it for advanced upgrades."]},
+		"desc": ["Nunca se cierra. +10% de probabilidad de crítico.", "It never closes. +10% critical chance."]},
+	"amulet_ash": {"type": "amulet", "icon": "amulet_ash", "rarity": 2, "name": ["Corazón de Rescoldo", "Ember Heart"],
+		"desc": ["Aún late bajo la ceniza. Tus golpes pueden quemar (+35% de daño).", "It still beats beneath the ash. Your hits may burn (+35% damage)."]},
+	"choir_heart": {"type": "amulet", "icon": "choir_heart", "rarity": 3, "name": ["Garganta de Cristal", "Crystal Throat"],
+		"desc": ["Canta cuando nadie la escucha. Tus hechizos cuestan un 25% menos de Luz.", "It sings when no one listens. Your spells cost 25% less Light."]},
+	"key_vestibule": {"type": "key", "icon": "key", "rarity": 2, "name": ["Llave de Hueso Cantor", "Singing Bone Key"],
+		"desc": ["Tallada en el hueso de un ángel que cantaba. Abre la puerta del Círculo de la Guardiana.", "Carved from the bone of a singing angel. Opens the gate to the Circle of the Warden."]},
+	"map_carto": {"type": "key", "icon": "scroll", "rarity": 1, "name": ["Cartografía Táctil", "Tactile Chart"],
+		"desc": ["Un mapa en relieve hecho para dedos ciegos. Huele a vela y a polvo.", "A raised map made for blind fingers. It smells of candle and dust."]},
+	"iron": {"type": "material", "icon": "iron", "rarity": 2, "price": 700, "name": ["Esquirla de Nimbo", "Nimbus Shard"],
+		"desc": ["Un trozo de la aureola que sellaba la Espiral. Ozias la usa para sus grabados y Brenna para las mejoras altas.", "A piece of the halo that sealed the Spiral. Ozias uses it for engravings and Brenna for high upgrades."]},
+	"tear": {"type": "material", "icon": "tear", "rarity": 3, "price": 900, "name": ["Lágrima Cristalizada", "Crystallized Tear"],
+		"desc": ["Lo que queda de un ángel que lloró hasta olvidar por qué. Madre Ilse la usa para fortalecer tus Lágrimas.", "What remains of an angel who wept until she forgot why. Mother Ilse uses it to strengthen your Tears."]},
 }
 const RARITY_COLORS := [Color(0.75, 0.72, 0.78), Color(0.55, 0.9, 0.55), Color(0.35, 0.75, 1.0), Color(0.85, 0.45, 1.0), Color(1.0, 0.75, 0.25)]
 
@@ -64,6 +71,115 @@ const MEMORIES := {
 		["Todavía arde.", "It still burns."],
 	]},
 }
+
+# ------------------------------------------------------------------ dificultad
+const DIFFICULTIES := [
+	{"name": ["Ala Ligera", "Light Wing"], "tag": ["Accesible: para todo el mundo", "Accessible: for everyone"],
+		"desc": ["Daño enemigo muy bajo, telegráficos más visibles y conservas todos tus Ecos. Las Brasas te devuelven plumas.", "Very low enemy damage, clearer telegraphs and you keep all your Echoes. Embers give feathers back."],
+		"hp": 0.6, "dmg": 0.4, "cd": 1.4, "ecos": 1.0, "keep": 1.0, "phase3": false, "skulls": 0, "color": Color(0.55, 0.85, 1.0), "regrow": true},
+	{"name": ["Peregrino", "Pilgrim"], "tag": ["Para disfrutar de la historia", "To enjoy the story"],
+		"desc": ["Enemigos con menos vida y daño. Al morir conservas la mitad de tus Ecos. Los jefes no tienen fase final.", "Enemies have less health and damage. You keep half your Echoes on death. Bosses have no final phase."],
+		"hp": 0.75, "dmg": 0.6, "cd": 1.25, "ecos": 1.0, "keep": 0.5, "phase3": false, "skulls": 1, "color": Color(0.45, 0.9, 0.6), "regrow": false},
+	{"name": ["Desplumado", "Featherless"], "tag": ["La experiencia pensada", "The intended experience"],
+		"desc": ["El equilibrio previsto. Los jefes despiertan su fase final al borde de la muerte.", "The intended balance. Bosses awaken their final phase at death's door."],
+		"hp": 1.0, "dmg": 1.0, "cd": 1.0, "ecos": 1.0, "keep": 0.0, "phase3": true, "skulls": 2, "color": Color(1.0, 0.82, 0.3), "regrow": false},
+	{"name": ["Serafín Caído", "Fallen Seraph"], "tag": ["Sin piedad", "No mercy"],
+		"desc": ["Enemigos más fuertes, rápidos y agresivos; los jefes ganan ataques nuevos. +30% de Ecos.", "Stronger, faster and more aggressive enemies; bosses gain new attacks. +30% Echoes."],
+		"hp": 1.45, "dmg": 1.5, "cd": 0.75, "ecos": 1.3, "keep": 0.0, "phase3": true, "skulls": 3, "color": Color(1.0, 0.25, 0.35), "regrow": false},
+]
+
+# ------------------------------------------------------------------ grabados de Ozias (infusiones de arma)
+const INFUSIONS := {
+	"": {"name": ["Sin grabado", "No engraving"], "color": Color(1, 0.95, 0.85), "desc": ["El acero tal y como salió de la forja.", "Steel as it left the forge."]},
+	"brasa": {"name": ["Grabado de Brasa", "Ember Engraving"], "color": Color(1.0, 0.5, 0.15),
+		"desc": ["Los golpes queman: +20% de daño de fuego que se acumula.", "Hits burn: +20% stacking fire damage."]},
+	"escarcha": {"name": ["Grabado de Escarcha", "Frost Engraving"], "color": Color(0.5, 0.85, 1.0),
+		"desc": ["Los golpes ralentizan al enemigo y quiebran su postura (+40%).", "Hits slow the enemy and crack their posture (+40%)."]},
+	"nimbo": {"name": ["Grabado del Nimbo", "Nimbus Engraving"], "color": Color(1.0, 0.9, 0.45),
+		"desc": ["El arma escala con Fe y recupera Luz al golpear.", "The weapon scales with Faith and restores Light on hit."]},
+	"sangre": {"name": ["Grabado de Sangre de Luz", "Lightblood Engraving"], "color": Color(1.0, 0.25, 0.4),
+		"desc": ["Cada tercer golpe abre una herida: daño igual al 6% de la vida máxima.", "Every third hit opens a wound: damage equal to 6% of max health."]},
+}
+
+const SHOP := [["bomb", 99], ["incense", 99], ["ointment", 99], ["_feather", 6], ["iron", 2], ["tear", 1]]
+
+const OATHS := {
+	"carcelero": {"name": ["Juramento de la Cadena", "Oath of the Chain"], "color": Color(1, 0.5, 0.3),
+		"desc": ["+40% de daño a la postura y +10% de daño. Te mueves un 8% más lento.", "+40% posture damage and +10% damage. You move 8% slower."]},
+	"choir": {"name": ["Juramento del Coro", "Oath of the Choir"], "color": Color(0.8, 0.55, 1.0),
+		"desc": ["Los hechizos cuestan un 30% menos de Luz y dañan un 20% más. -15% de vida máxima.", "Spells cost 30% less Light and deal 20% more damage. -15% max health."]},
+	"seravel": {"name": ["Juramento de la Puerta", "Oath of the Gate"], "color": Color(1, 0.85, 0.45),
+		"desc": ["El Instante (esquiva perfecta) dura el doble y llena más Ira. El aguante se recupera un 25% más lento.", "The Instant (perfect dodge) lasts twice as long and builds more Wrath. Stamina recovers 25% slower."]},
+}
+const WEAPON_MEMORY := {
+	"hueco": [40, ["Segadora de Huecos", "Husk Reaper"]], "acolito": [25, ["Quiebracantos", "Chantbreaker"]],
+	"bestia": [20, ["Domadora de Bestias", "Beast Tamer"]], "carcelero": [2, ["Matadora de Carceleros", "Jailer-Slayer"]],
+	"choir": [2, ["Silenciadora del Coro", "Choir-Silencer"]], "seravel": [2, ["Rompepuertas", "Gatebreaker"]],
+	"sombra": [3, ["Exorcista", "Exorcist"]],
+}
+const SYNERGIES := {
+	"ash_wing": {"a": ["amulet_ash", "amulet_wing"], "name": ["Ala de Rescoldo", "Ember Wing"], "desc": ["Tus esquivas dejan un rastro de fuego.", "Your dashes leave a trail of fire."]},
+	"eye_choir": {"a": ["amulet_eye", "choir_heart"], "name": ["Mirada Coral", "Choral Gaze"], "desc": ["Los críticos devuelven Luz.", "Critical hits restore Light."]},
+	"wing_eye": {"a": ["amulet_wing", "amulet_eye"], "name": ["Vuelo del Halcón", "Hawk's Flight"], "desc": ["Tras una esquiva perfecta, el siguiente golpe es crítico doble.", "After a perfect dodge, your next hit is a double critical."]},
+}
+
+func desplume() -> float:
+	return float(WING_MAX - wing_feathers) / float(WING_MAX)
+
+func is_desplumado() -> bool:
+	return wing_feathers <= 3
+
+func weapon_memory_mult(etype: String, wid := "") -> float:
+	if wid == "":
+		wid = equipped
+	if not WEAPON_MEMORY.has(etype):
+		return 1.0
+	return 1.2 if int(weapon_kills.get(wid, {}).get(etype, 0)) >= WEAPON_MEMORY[etype][0] else 1.0
+
+func record_kill(etype: String) -> void:
+	if not WEAPON_MEMORY.has(etype):
+		return
+	if not weapon_kills.has(equipped):
+		weapon_kills[equipped] = {}
+	var n: int = int(weapon_kills[equipped].get(etype, 0)) + 1
+	weapon_kills[equipped][etype] = n
+	if n == WEAPON_MEMORY[etype][0]:
+		G.toast(G.L(["MEMORIA DEL ARMA: ", "WEAPON MEMORY: "]) + G.L(WEAPON_MEMORY[etype][1]).to_upper(), Color(1, 0.8, 0.4))
+		Audio.sfx("levelup", -4.0)
+
+func synergy(id: String) -> bool:
+	var a: Array = SYNERGIES[id].a
+	var on: bool = has_amulet(a[0]) and has_amulet(a[1])
+	if on and not synergies.has(id):
+		synergies[id] = true
+		G.toast(G.L(["SINERGIA DESCUBIERTA: ", "SYNERGY DISCOVERED: "]) + G.L(SYNERGIES[id].name).to_upper(), Color(0.9, 0.6, 1.0))
+	return on
+
+func start_ng() -> void:
+	## Segundo Descenso: conservas personaje, armas y objetos; el mundo vuelve a empezar, más cruel.
+	ng += 1
+	flags = {}; quests = {}; last_brasa = "sanct"; dropped_ecos = {}; shadow = {}; unrecovered = 0
+	boss_deaths = {}; spared = {}; shop_bought = {}
+	inventory.erase("key_vestibule")
+	save_game()
+
+func lose_wing_feather() -> void:
+	wing_feathers = max(0, wing_feathers - 1)
+	changed.emit()
+
+func regrow_wing_feather() -> bool:
+	if wing_feathers >= WING_MAX:
+		return false
+	wing_feathers += 1
+	changed.emit()
+	return true
+
+const BOSS_INFO := {
+	"carcelero": {"rank": 1, "title": "boss_carcelero", "flag": "carcelero_dead"},
+	"choir": {"rank": 2, "title": "boss_choir", "flag": "choir_dead"},
+	"seravel": {"rank": 3, "title": "boss_seravel", "flag": "seravel_dead"},
+}
+const ASCENSION_REWARDS := {1: {"ecos": 800, "iron": 1}, 2: {"ecos": 1600, "tear": 1}, 3: {"ecos": 3200, "iron": 2, "tear": 1}}
 
 # ------------------------------------------------------------------ árbol de habilidades
 ## pos = (columna, fila) dentro de la rama; req = nodos necesarios
@@ -122,6 +238,9 @@ const QUESTS := {
 	"map": {"type": "side", "title": ["El Mapa Perdido", "The Lost Map"], "giver": "carto",
 		"count": 1, "text": ["Encuentra el mapa en la Galería Rota (%d/%d)", "Find the map in the Broken Gallery (%d/%d)"],
 		"reward": {"ecos": 200, "flask": 1}},
+	"choir": {"type": "bounty", "title": ["Silencio en la Galería", "Silence in the Gallery"], "giver": "velaria",
+		"count": 1, "text": ["Derrota al Coro Hueco al norte de la Galería Rota (%d/%d)", "Defeat the Hollow Choir north of the Broken Gallery (%d/%d)"],
+		"reward": {"ecos": 600, "sp": 1}},
 	"jailer_hunt": {"type": "bounty", "title": ["Caza: El Carcelero", "Hunt: The Jailer"], "giver": "brenna",
 		"count": 1, "text": ["Derrota al Carcelero (%d/%d)", "Defeat the Jailer (%d/%d)"],
 		"reward": {"ecos": 400, "feathers": 3}},
@@ -149,6 +268,25 @@ var amulets_eq := ["", ""]
 var quick_item := "bomb"
 var memories := {}             # id -> true
 var buffs := {}                # efectos temporales (no se guardan): id -> segundos
+var difficulty := 2
+# ---- v0.4: plumas, sombra, memoria de armas, juramentos, perdón, aspecto
+const WING_MAX := 10
+var wing_feathers := WING_MAX   # plumas del ala: cada muerte arranca una
+var deaths := 0
+var boss_deaths := {}           # jefe -> veces que te ha matado
+var unrecovered := 0            # muertes seguidas sin recuperar los Ecos
+var shadow := {}                # sombra activa {"amount", "pos"}
+var weapon_kills := {}          # arma -> {tipo: bajas}
+var oath := ""                  # juramento activo (jefe)
+var spared := {}                # Arcontes perdonados
+var synergies := {}             # sinergias descubiertas
+var ng := 0                     # Segundo Descenso (NG+)
+var spark := false              # Chispa, la brasa viva
+var event_ecos := 1.0           # multiplicador de los eventos del mundo (no se guarda)
+var infusions := {}            # arma -> grabado
+var flask_level := 0           # potencia de las Lágrimas (Madre Ilse)
+var shop_bought := {}          # objeto -> comprados
+var ascension := {}            # jefe -> nivel máximo superado
 
 func _process(delta: float) -> void:
 	playtime += delta
@@ -165,6 +303,9 @@ func reset() -> void:
 	weapons = {"sword": 0}; equipped = "sword"; flasks_max = 3; free_upgrades = 0
 	quests = {}; flags = {}; last_brasa = "sanct"; dropped_ecos = {}; playtime = 0.0
 	inventory = {"bomb": 2, "incense": 1}; amulets_eq = ["", ""]; quick_item = "bomb"; memories = {}; buffs = {}
+	infusions = {}; flask_level = 0; shop_bought = {}; ascension = {}
+	wing_feathers = WING_MAX; deaths = 0; boss_deaths = {}; unrecovered = 0; shadow = {}; weapon_kills = {}
+	oath = ""; spared = {}; synergies = {}; ng = 0; spark = false
 	changed.emit()
 
 # ------------------------------------------------------------------ estadísticas derivadas
@@ -172,13 +313,30 @@ func has_skill(id: String) -> bool:
 	return skills.has(id)
 
 func max_hp() -> float:
-	return 100.0 + (attr.vigor - 1) * 14.0
+	var hp = (100.0 + (attr.vigor - 1) * 14.0) * (1.0 - 0.3 * desplume())
+	if oath == "choir":
+		hp *= 0.85
+	return hp
+
+func diff() -> Dictionary:
+	return DIFFICULTIES[clampi(difficulty, 0, DIFFICULTIES.size() - 1)]
+
+func infusion(wid := "") -> String:
+	if wid == "":
+		wid = equipped
+	return infusions.get(wid, "")
+
+func heal_ratio() -> float:
+	return 0.45 + 0.07 * flask_level
+
+func spell_cost_mult() -> float:
+	return (0.75 if has_amulet("choir_heart") else 1.0) * (0.7 if oath == "choir" else 1.0)
 
 func has_amulet(id: String) -> bool:
 	return id in amulets_eq
 
 func stamina_regen_mult() -> float:
-	return 1.3 if has_amulet("amulet_wing") else 1.0
+	return (1.3 if has_amulet("amulet_wing") else 1.0) * (0.75 if oath == "seravel" else 1.0)
 
 func buff_damage_mult() -> float:
 	return 1.3 if buffs.has("incense") else 1.0
@@ -190,7 +348,7 @@ func max_light() -> float:
 	return 60.0 + (attr.fe - 1) * 6.0
 
 func move_speed() -> float:
-	return 118.0 * (1.12 if has_skill("a5") else 1.0)
+	return 118.0 * (1.12 if has_skill("a5") else 1.0) * (1.0 + 0.15 * desplume()) * (0.92 if oath == "carcelero" else 1.0)
 
 func flask_count() -> int:
 	return flasks_max + (1 if has_skill("c3") else 0)
@@ -205,14 +363,18 @@ func weapon_damage(id := "") -> float:
 		id = equipped
 	var w := weapon_data(id)
 	var up: int = weapons.get(id, 0)
-	var scale = 1.0 + 0.045 * ((attr.fuerza - 1) * w.fue + (attr.destreza - 1) * w.des + (attr.fe - 1) * w.fe)
+	var fe_s: float = w.fe + (0.6 if infusion(id) == "nimbo" else 0.0)
+	var scale: float = 1.0 + 0.045 * ((attr.fuerza - 1) * w.fue + (attr.destreza - 1) * w.des + (attr.fe - 1) * fe_s)
 	var dmg: float = w.dmg * scale * (1.0 + 0.09 * up)
 	if has_skill("f1"):
 		dmg *= 1.12
+	dmg *= 1.0 + 0.3 * desplume() + (0.1 if is_desplumado() else 0.0)
+	if oath == "carcelero":
+		dmg *= 1.1
 	return dmg * buff_damage_mult()
 
 func spell_damage(base: float) -> float:
-	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0) * buff_damage_mult()
+	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0) * buff_damage_mult() * (1.2 if oath == "choir" else 1.0)
 
 func crit_chance() -> float:
 	return 0.05 + 0.012 * (attr.destreza - 1) + (0.1 if has_amulet("amulet_eye") else 0.0)
@@ -221,14 +383,14 @@ func damage_taken_mult() -> float:
 	return (0.88 if has_skill("c2") else 1.0) * (0.65 if buffs.has("ointment") else 1.0)
 
 func ecos_mult() -> float:
-	return 1.0 + 0.03 * (attr.arcano - 1)
+	return (1.0 + 0.03 * (attr.arcano - 1)) * diff().ecos * event_ecos * (1.0 + 0.25 * ng)
 
 func level_cost() -> int:
 	return int(90 + 55 * level + 6 * level * level)
 
 func upgrade_cost(id: String) -> Array:
 	var lv: int = weapons.get(id, 0)
-	return [180 * (lv + 1), lv + 1]  # [ecos, plumas]
+	return [180 * (lv + 1), lv + 1, 1 if lv >= 4 else 0]  # [ecos, plumas, esquirlas de nimbo]
 
 # ------------------------------------------------------------------ acciones
 func add_ecos(n: int) -> void:
@@ -285,10 +447,12 @@ func upgrade_weapon(id: String) -> bool:
 		free_upgrades -= 1
 	else:
 		var c := upgrade_cost(id)
-		if ecos < c[0] or feathers < c[1]:
+		if ecos < c[0] or feathers < c[1] or item_count("iron") < c[2]:
 			return false
 		ecos -= c[0]
 		feathers -= c[1]
+		if c[2] > 0:
+			remove_item("iron", c[2])
 	weapons[id] = lv + 1
 	changed.emit()
 	return true
@@ -337,12 +501,75 @@ func equip_amulet(id: String) -> void:
 	if slot < 0:
 		slot = 1
 	amulets_eq[slot] = id
+	for sy in SYNERGIES:
+		synergy(sy)
 	changed.emit()
 
 func unequip_amulet(id: String) -> void:
 	var i := amulets_eq.find(id)
 	if i >= 0:
 		amulets_eq[i] = ""
+	changed.emit()
+
+# ------------------------------------------------------------------ servicios de la Sala del Nimbo
+func engrave(wid: String, inf: String) -> bool:
+	if infusion(wid) == inf or ecos < 400 or item_count("iron") < 1:
+		return false
+	ecos -= 400
+	remove_item("iron", 1)
+	infusions[wid] = inf
+	changed.emit()
+	return true
+
+func flask_upgrade_cost() -> int:
+	return 1 + flask_level / 2
+
+func upgrade_flask_potency() -> bool:
+	if flask_level >= 5 or item_count("tear") < flask_upgrade_cost():
+		return false
+	remove_item("tear", flask_upgrade_cost())
+	flask_level += 1
+	changed.emit()
+	return true
+
+func buy_flask_charge() -> bool:
+	if flasks_max >= 8 or item_count("tear") < 2:
+		return false
+	remove_item("tear", 2)
+	flasks_max += 1
+	changed.emit()
+	return true
+
+func shop_price(id: String) -> int:
+	if id == "_feather":
+		return 250
+	return int(ITEMS[id].get("price", 500))
+
+func shop_left(id: String, limit: int) -> int:
+	return limit - int(shop_bought.get(id, 0))
+
+func buy(id: String, limit: int) -> bool:
+	var price := shop_price(id)
+	if ecos < price or shop_left(id, limit) <= 0:
+		return false
+	ecos -= price
+	shop_bought[id] = int(shop_bought.get(id, 0)) + 1
+	if id == "_feather":
+		add_feathers(1)
+	else:
+		add_item(id, 1, true)
+	changed.emit()
+	return true
+
+func grant_ascension(boss: String, level: int) -> void:
+	var first := int(ascension.get(boss, 0)) < level
+	ascension[boss] = max(int(ascension.get(boss, 0)), level)
+	if first:
+		var r: Dictionary = ASCENSION_REWARDS[level]
+		ecos += r.ecos
+		for k in r:
+			if k != "ecos":
+				add_item(k, r[k])
 	changed.emit()
 
 func unlock_memory(id: String) -> bool:
@@ -425,7 +652,10 @@ func to_dict() -> Dictionary:
 		"skill_points": skill_points, "skills": skills, "weapons": weapons, "equipped": equipped, "flasks_max": flasks_max,
 		"free_upgrades": free_upgrades, "quests": quests, "flags": flags, "last_brasa": last_brasa,
 		"dropped_ecos": dropped_ecos, "playtime": playtime, "lang": G.lang, "inventory": inventory,
-		"amulets_eq": amulets_eq, "quick_item": quick_item, "memories": memories}
+		"amulets_eq": amulets_eq, "quick_item": quick_item, "memories": memories, "difficulty": difficulty,
+		"infusions": infusions, "flask_level": flask_level, "shop_bought": shop_bought, "ascension": ascension,
+		"wing_feathers": wing_feathers, "deaths": deaths, "boss_deaths": boss_deaths, "unrecovered": unrecovered, "shadow": shadow,
+		"weapon_kills": weapon_kills, "oath": oath, "spared": spared, "synergies": synergies, "ng": ng, "spark": spark, "look": G.look}
 
 func from_dict(d: Dictionary) -> void:
 	level = int(d.get("level", 1)); ecos = int(d.get("ecos", 0)); feathers = int(d.get("feathers", 0))
@@ -452,6 +682,23 @@ func from_dict(d: Dictionary) -> void:
 	quick_item = d.get("quick_item", "bomb")
 	memories = d.get("memories", {})
 	buffs = {}
+	difficulty = int(d.get("difficulty", 2))
+	wing_feathers = int(d.get("wing_feathers", WING_MAX)); deaths = int(d.get("deaths", 0))
+	boss_deaths = {}
+	for k in d.get("boss_deaths", {}):
+		boss_deaths[k] = int(d.boss_deaths[k])
+	unrecovered = int(d.get("unrecovered", 0)); shadow = d.get("shadow", {})
+	weapon_kills = d.get("weapon_kills", {}); oath = str(d.get("oath", "")); spared = d.get("spared", {})
+	synergies = d.get("synergies", {}); ng = int(d.get("ng", 0)); spark = bool(d.get("spark", false))
+	if d.has("look"):
+		G.look = d.look
+	infusions = d.get("infusions", {})
+	flask_level = int(d.get("flask_level", 0))
+	shop_bought = d.get("shop_bought", {})
+	ascension = {}
+	var asc: Dictionary = d.get("ascension", {})
+	for k in asc:
+		ascension[k] = int(asc[k])
 	changed.emit()
 
 func save_game() -> void:

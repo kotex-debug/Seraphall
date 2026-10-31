@@ -13,6 +13,12 @@ var lang := "es"  # "es" | "en"
 var music_volume := 0.8
 var sfx_volume := 0.9
 var autotest := ""  # modo de prueba automática (línea de comandos)
+var look := {}          # aspecto del personaje (creador)
+# accesibilidad
+var shake_mult := 1.0
+var flash_mult := 1.0
+var tele_boost := false   # telegráficos más gruesos y visibles
+var photo_mode := false
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -135,6 +141,47 @@ const TXT := {
 	"wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"boss_seravel": ["SERAVEL, GUARDIANA DE LAS PUERTAS", "SERAVEL, WARDEN OF THE GATES"],
 	"boss_carcelero": ["EL CARCELERO", "THE JAILER"],
+	"boss_choir": ["EL CORO HUECO", "THE HOLLOW CHOIR"],
+	"area_nimbo": ["Sala del Nimbo", "Hall of the Nimbus"],
+	"area_choir": ["Nave del Coro", "Choir Nave"],
+	"difficulty": ["Dificultad", "Difficulty"],
+	"choose_diff": ["ELIGE TU CAMINO", "CHOOSE YOUR PATH"],
+	"rank": ["RANGO", "RANK"],
+	"ascension": ["ASCENSIÓN", "ASCENSION"],
+	"asc_won": ["ASCENSIÓN SUPERADA", "ASCENSION CLEARED"],
+	"asc_failed": ["ASCENSIÓN FALLIDA", "ASCENSION FAILED"],
+	"combo_hits": ["GOLPES", "HITS"],
+	"buy": ["Comprar", "Buy"],
+	"sold_out": ["Agotado", "Sold out"],
+	"engrave": ["Grabar", "Engrave"],
+	"svc_ozias": ["OZIAS - GRABADOS", "OZIAS - ENGRAVINGS"], "svc_ilse": ["MADRE ILSE - LÁGRIMAS", "MOTHER ILSE - TEARS"],
+	"svc_nyx": ["NYX - TIENDA", "NYX - SHOP"], "svc_velaria": ["SOR VELARIA - ASCENSIÓN", "SISTER VELARIA - ASCENSION"],
+	"feather_torn": ["TE HAN ARRANCADO UNA PLUMA", "A FEATHER HAS BEEN TORN AWAY"],
+	"desplumado_mode": ["DESPLUMADO", "FEATHERLESS"],
+	"offer_feather": ["Ofrecer una pluma y encender", "Offer a feather and kindle"],
+	"no_feathers": ["No te quedan plumas que ofrecer.", "You have no feathers left to offer."],
+	"shadow_rises": ["TU SOMBRA SE ALZA", "YOUR SHADOW RISES"],
+	"shadow_name": ["Sombra del Desplumado", "Shade of the Featherless"],
+	"spare": ["Perdonar", "Spare"], "spared": ["ARCONTE PERDONADO", "ARCHON SPARED"],
+	"cross_wings": ["¡ALAS CRUZADAS!", "CROSSED WINGS!"],
+	"catch_feather": ["¡Atrapa su pluma!", "Catch their feather!"],
+	"ev_ash": ["LLUVIA DE CENIZA", "ASHFALL"], "ev_eclipse": ["ECLIPSE DEL NIMBO", "NIMBUS ECLIPSE"],
+	"ev_ash_d": ["Los enemigos arden con más fuerza. Mejor botín.", "Enemies burn fiercer. Better loot."],
+	"ev_eclipse_d": ["La luz se apaga: enemigos más fuertes, el doble de Ecos.", "The light dies: stronger enemies, double Echoes."],
+	"ev_end": ["El cielo se calma.", "The sky calms."],
+	"reflect": ["¡DEVUELTO!", "REFLECTED!"],
+	"photo": ["MODO FOTO", "PHOTO MODE"],
+	"ng_plus": ["SEGUNDO DESCENSO", "SECOND DESCENT"],
+	"create_char": ["CREA TU DESPLUMADO", "CREATE YOUR FEATHERLESS"],
+	"begin_descent": ["COMENZAR EL DESCENSO", "BEGIN THE DESCENT"],
+	"randomize": ["ALEATORIO", "RANDOM"],
+	"body": ["Cuerpo", "Body"], "girl": ["Chica", "Girl"], "boy": ["Chico", "Boy"], "hairstyle": ["Peinado", "Hairstyle"],
+	"hair_col": ["Pelo", "Hair"], "skin": ["Piel", "Skin"], "eye": ["Ojos", "Eyes"], "cloak": ["Capa", "Cloak"],
+	"armor": ["Armadura", "Armor"], "wing": ["Alas", "Wings"], "halo": ["Aureola", "Halo"], "char_name": ["Nombre", "Name"],
+	"access": ["Accesibilidad", "Accessibility"], "shake_opt": ["Temblor de pantalla", "Screen shake"],
+	"flash_opt": ["Destellos", "Flashes"], "tele_opt": ["Telegráficos reforzados", "Bold telegraphs"],
+	"on": ["SÍ", "ON"], "off": ["NO", "OFF"],
+	"stock": ["Quedan %d", "%d left"],
 	"hueco": ["Hueco", "Husk"], "acolito": ["Acólito", "Acolyte"], "bestia": ["Bestia de Ceniza", "Ash Beast"],
 	"execute": ["¡EJECUCIÓN!", "EXECUTION!"],
 	"parry": ["¡PARRY!", "PARRY!"],
@@ -173,6 +220,10 @@ func load_settings() -> void:
 		lang = cf.get_value("general", "lang", "es")
 		music_volume = cf.get_value("audio", "music", 0.8)
 		sfx_volume = cf.get_value("audio", "sfx", 0.9)
+		look = cf.get_value("player", "look", {})
+		shake_mult = cf.get_value("access", "shake", 1.0)
+		flash_mult = cf.get_value("access", "flash", 1.0)
+		tele_boost = cf.get_value("access", "tele", false)
 	else:
 		lang = "es"
 
@@ -181,6 +232,10 @@ func save_settings() -> void:
 	cf.set_value("general", "lang", lang)
 	cf.set_value("audio", "music", music_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
+	cf.set_value("player", "look", look)
+	cf.set_value("access", "shake", shake_mult)
+	cf.set_value("access", "flash", flash_mult)
+	cf.set_value("access", "tele", tele_boost)
 	cf.save(SETTINGS_PATH)
 
 func _setup_input() -> void:
@@ -188,7 +243,7 @@ func _setup_input() -> void:
 		"up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN], "left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SPACE], "parry": [KEY_SHIFT], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
 		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
-		"map": [KEY_M],
+		"map": [KEY_M], "photo": [KEY_P], "shot": [KEY_F12],
 	}
 	for action in keys:
 		if not InputMap.has_action(action):
@@ -229,10 +284,12 @@ func slowmo(id: String, scale: float, duration: float) -> void:
 	_slow_until[id] = [scale, Time.get_ticks_msec() + int(duration * 1000.0)]
 
 func shake(amount := 3.0, duration := 0.2) -> void:
-	shake_requested.emit(amount, duration)
+	if shake_mult > 0.01:
+		shake_requested.emit(amount * shake_mult, duration)
 
 func flash(color := Color(1, 1, 1, 0.5), duration := 0.12) -> void:
-	flash_requested.emit(color, duration)
+	if flash_mult > 0.01:
+		flash_requested.emit(Color(color, color.a * flash_mult), duration)
 
 func shockwave(pos: Vector2, strength := 1.0, duration := 0.5) -> void:
 	shockwave_requested.emit(pos, strength, duration)

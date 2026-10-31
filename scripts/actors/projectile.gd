@@ -17,6 +17,7 @@ var kind := "orb"            # orb | red | lance | sword | wave
 var delay := 0.0             # tiempo quieto antes de moverse (espadas del jefe)
 var target_pos := Vector2.INF  # si delay > 0, al terminar apunta aquí
 var speed_after := 0.0
+var homing := 0.0
 var _hit := {}
 var _spr: Sprite2D
 var _light: PointLight2D
@@ -35,6 +36,10 @@ func _ready() -> void:
 			_spr.texture = Fx.tex("proj_sword"); col = Color(1, 0.4, 0.45)
 		"red":
 			_spr.texture = Fx.tex("proj_red"); col = Color(1, 0.3, 0.3)
+		"feather":
+			_spr.texture = Fx.tex("fx_feather"); col = Color(1, 0.95, 0.9); _spr.scale = Vector2(1.5, 1.5)
+		"note":
+			_spr.texture = Fx.tex("proj_note"); col = Color(0.75, 0.55, 1.0)
 		"wave":
 			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.95, 0.7); _spr.scale = Vector2(1.6, 2.6)
 			_spr.material = Fx.add_material()
@@ -65,6 +70,14 @@ func _physics_process(delta: float) -> void:
 		return
 	if accel != 0.0:
 		vel += vel.normalized() * accel * delta
+	if homing > 0.0 and team == "enemy":
+		var w := get_tree().root.get_node_or_null("Main/World")
+		if w:
+			var lp: Node2D = w.local_player()
+			if lp:
+				var want := (lp.global_position + Vector2(0, -6) - global_position).angle()
+				vel = vel.rotated(clamp(wrapf(want - vel.angle(), -PI, PI), -homing * delta, homing * delta))
+				rotation = vel.angle()
 	position += vel * delta
 	_trail.push_front(global_position)
 	if _trail.size() > (10 if kind == "lance" else 6):
@@ -94,10 +107,23 @@ func _check_hits() -> void:
 				_hit[p] = true
 				var res: String = p.take_hit(damage, vel.normalized(), -1)
 				if res == "parry":
-					vel = -vel * 1.3
+					# devolver la luz enemiga: vuelve más rápida y el doble de fuerte hacia el enemigo más cercano
+					var tgt: Node2D = null
+					var bd := 400.0
+					for e in w.enemies_alive():
+						var dd: float = e.global_position.distance_to(global_position)
+						if dd < bd:
+							bd = dd
+							tgt = e
+					var spd := vel.length() * 1.6
+					vel = ((tgt.global_position + Vector2(0, -8) - global_position).normalized() * spd) if tgt else -vel * 1.6
+					damage *= 2.2
 					team = "player"
 					owner_peer = Net.my_id()
+					life = max(life, 1.5)
 					_hit.clear()
+					Fx.text(global_position, G.T("reflect"), Color(1, 0.95, 0.6), 9)
+					Fx.ring(global_position, 3.0, 22.0, Color(1, 0.95, 0.7), 0.25, 3.0)
 					return
 				if res != "dodge":
 					_die(true)
