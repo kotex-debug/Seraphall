@@ -350,6 +350,29 @@ func _run_autotest() -> void:
 				w.menu.close()
 			print("AUTOTEST_SHOTS2_OK")
 			get_tree().quit()
+		"hud":
+			var lp: Player = w.local_player()
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/h01_lleno.png")
+			lp.hp -= 37.0
+			lp.stamina = 45.0
+			lp.light = 25.0
+			await get_tree().create_timer(0.08).timeout
+			await _shot(out + "/h02_golpe.png")
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/h03_medio.png")
+			lp.hp = 18.0
+			lp.stamina = 0.0
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/h04_poca_vida.png")
+			Prog.buffs["ointment"] = 20.0
+			lp.hp = 64.0
+			Prog.attr.vigor = 12
+			lp.stamina = 70.0
+			lp.light = 60.0
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/h05_dorado_dos_filas.png")
+			get_tree().quit()
 		"cine":
 			var cine := preload("res://scripts/ui/boss_cinematic.gd").new()
 			cine.setup("choir", 1)

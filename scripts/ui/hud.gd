@@ -313,96 +313,132 @@ func _on_flash(color: Color, dur: float) -> void:
 
 # ====================================================================== piezas dibujadas
 class StatusCluster extends Control:
-	## Medallón del personaje, anillo de Ira, barras líquidas, lágrimas y efectos activos.
+	## Medallón con anillo de Ira y filas de iconos animados (estilo Minecraft):
+	## corazones de vida, llamas de aguante y cristales de Luz. Debajo, Lágrimas, efectos y plumas.
 	var hud: Node
-	var hp_bar: ColorRect
-	var st_bar: ColorRect
-	var li_bar: ColorRect
-	var _trail := 1.0
-	var _last_hp := -1.0
-	var _shake := 0.0
-	var _heal_flash := 0.0
 	var _t := 0.0
-	var _hp_w := 120.0
 	var _wrath_full_t := 0.0
-	var _over: Control
+	var _hearts_tex: Texture2D
+	var _flames_tex: Texture2D
+	var _crys_tex: Texture2D
+	# estado para las animaciones
+	var _last := {"hp": -1, "st": -1, "li": -1}
+	var _hurt_t := 0.0
+	var _heal_t := 0.0
+	var _regen_t := 0.0
+	var _ignite := {}         # índice de llama -> tiempo del "pop"
+	var _parts: Array = []    # [pos, vel, vida, color, gravedad, tamaño]
+	var _jit := []
+	var _jit_t := 0.0
+	var _rows := {}           # posiciones calculadas de cada fila
+
+	const HX := 54.0          # x de inicio de las filas
+	const HEART_W := 10.0
+	const FLAME_W := 9.0
+	const CRYS_W := 9.0
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		size = Vector2(240, 70)
-		hp_bar = _mk_bar(Color(0.45, 0.02, 0.1), UIKit.RED, Vector2(120, 12))
-		st_bar = _mk_bar(Color(0.55, 0.32, 0.03), UIKit.GOLD, Vector2(100, 6))
-		li_bar = _mk_bar(Color(0.04, 0.22, 0.45), UIKit.CYAN, Vector2(90, 6))
-		var stm: ShaderMaterial = st_bar.material
-		stm.set_shader_parameter("tip", 2.0)
-		var lim: ShaderMaterial = li_bar.material
-		lim.set_shader_parameter("tip", 2.0)
-		lim.set_shader_parameter("flow_speed", 0.6)
-		_over = Overlay.new()
-		_over.cluster = self
-		_over.size = size
-		add_child(_over)
+		size = Vector2(240, 74)
+		_hearts_tex = Fx.tex("hud_hearts")
+		_flames_tex = Fx.tex("hud_flames")
+		_crys_tex = Fx.tex("hud_crystals")
 
-	func _mk_bar(deep: Color, bright: Color, sz: Vector2) -> ColorRect:
-		var r := ColorRect.new()
-		r.size = sz
-		var m := UIKit.mat("liquid_bar")
-		m.set_shader_parameter("col_deep", deep)
-		m.set_shader_parameter("col_bright", bright)
-		m.set_shader_parameter("size", sz)
-		m.set_shader_parameter("tip", 4.0)
-		r.material = m
-		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(r)
-		return r
+	# ------------------------------------------------------------ cálculo de unidades (medias)
+	static func _count(maxv: float, lo: int, hi: int) -> int:
+		return clampi(int(round(maxv / 10.0)), lo, hi)
+
+	static func _halves(v: float, maxv: float, n: int) -> int:
+		if v <= 0.0:
+			return 0
+		var u := int(round(v / maxv * n * 2.0))
+		return clampi(max(u, 1), 0, n * 2)
+
+	func _layout() -> void:
+		var nh := clampi(int(ceil(Prog.max_hp() / 10.0)), 1, 20)
+		var hrows := 1 if nh <= 10 else 2
+		var y_flames := 3.0 + hrows * 10.0 + 2.0
+		_rows = {"nh": nh, "hrows": hrows, "y_hearts": 3.0, "y_flames": y_flames, "y_crys": y_flames + 12.0,
+			"nf": _count(Prog.max_stamina(), 6, 15), "nc": _count(Prog.max_light(), 4, 14), "y_flask": y_flames + 25.0}
+		size.y = _rows.y_flask + 36.0
+
+	func _heart_pos(i: int) -> Vector2:
+		var row := i / 10
+		return Vector2(HX + (i % 10) * HEART_W, _rows.y_hearts + row * 10.0)
 
 	func _process(delta: float) -> void:
 		_t += delta
 		var lp: Player = hud.world.local_player() if hud.world else null
 		if lp == null:
 			return
-		var mhp := Prog.max_hp()
-		var r: float = clamp(lp.hp / mhp, 0.0, 1.0)
-		if _last_hp >= 0.0 and lp.hp < _last_hp - 0.5:
-			_shake = 0.3
-		elif _last_hp >= 0.0 and lp.hp > _last_hp + 0.5:
-			_heal_flash = 1.0
-		_last_hp = lp.hp
-		_trail = max(r, lerpf(_trail, r, delta * 2.5))
-		_shake = max(0.0, _shake - delta)
-		_heal_flash = max(0.0, _heal_flash - delta * 2.0)
-		_hp_w = 110.0 + (mhp - 100.0) * 0.45
-		var off := Vector2(randf_range(-2, 2), randf_range(-1, 1)) * (_shake / 0.3) * 2.0
-		hp_bar.position = Vector2(56, 6) + off.round()
-		hp_bar.size = Vector2(_hp_w, 12)
-		var hm: ShaderMaterial = hp_bar.material
-		hm.set_shader_parameter("size", hp_bar.size)
-		hm.set_shader_parameter("fill", r)
-		hm.set_shader_parameter("trail", _trail)
-		hm.set_shader_parameter("pulse", clamp((0.3 - r) / 0.3, 0.0, 1.0) * 0.7 + _heal_flash * 0.6)
-		st_bar.position = Vector2(56, 22)
-		st_bar.size = Vector2(80.0 + Prog.max_stamina() * 0.25, 6)
-		var sm: ShaderMaterial = st_bar.material
-		sm.set_shader_parameter("size", st_bar.size)
-		sm.set_shader_parameter("fill", clamp(lp.stamina / Prog.max_stamina(), 0.0, 1.0))
-		sm.set_shader_parameter("trail", 0.0)
-		sm.set_shader_parameter("segments", Prog.max_stamina() / 20.0)
-		li_bar.position = Vector2(56, 31)
-		li_bar.size = Vector2(56.0 + Prog.max_light() * 0.5, 6)
-		var lm: ShaderMaterial = li_bar.material
-		lm.set_shader_parameter("size", li_bar.size)
-		lm.set_shader_parameter("fill", clamp(lp.light / Prog.max_light(), 0.0, 1.0))
-		lm.set_shader_parameter("trail", 0.0)
+		_layout()
+		var nh: int = _rows.nh
+		var hu := _halves(lp.hp, Prog.max_hp(), nh)
+		var su := _halves(lp.stamina, Prog.max_stamina(), _rows.nf)
+		var lu := _halves(lp.light, Prog.max_light(), _rows.nc)
+		# vida: daño -> parpadeo y corazones que estallan; curación -> ola de regeneración
+		if _last.hp >= 0:
+			if hu < _last.hp:
+				_hurt_t = 0.45
+				for k in range(hu, _last.hp):
+					var hp0 := _heart_pos(k / 2) + Vector2(5, 5)
+					for q in 5:
+						_parts.append([hp0, Vector2(randf_range(-50, 50), randf_range(-90, -30)), 0.6, Color(1, 0.2, 0.3) if q % 2 == 0 else Color(1, 0.75, 0.8), 260.0, 2.0])
+			elif hu > _last.hp:
+				_heal_t = 0.8
+				for k in range(_last.hp, hu):
+					var hp1 := _heart_pos(k / 2) + Vector2(5, 3)
+					_parts.append([hp1, Vector2(randf_range(-10, 10), randf_range(-40, -20)), 0.7, Color(1, 0.9, 0.95), -20.0, 1.0])
+		# aguante: humo al gastar, chispa al volver a prender
+		if _last.st >= 0:
+			if su < _last.st:
+				for k2 in range(su, _last.st):
+					var fp := Vector2(HX + (k2 / 2) * FLAME_W + 4, _rows.y_flames + 3)
+					_parts.append([fp, Vector2(randf_range(-6, 6), randf_range(-30, -18)), 0.7, Color(0.55, 0.5, 0.55, 0.8), -10.0, 2.0])
+					_parts.append([fp + Vector2(0, 4), Vector2(randf_range(-30, 30), randf_range(-50, -20)), 0.4, Color(1, 0.6, 0.2), 120.0, 1.0])
+			elif su > _last.st:
+				for k3 in range(_last.st, su):
+					if k3 % 2 == 1:
+						_ignite[k3 / 2] = 0.25
+		# Luz: esquirlas cian al gastar
+		if _last.li >= 0 and lu < _last.li:
+			for k4 in range(lu, _last.li):
+				var cp := Vector2(HX + (k4 / 2) * CRYS_W + 4, _rows.y_crys + 5)
+				for q2 in 4:
+					_parts.append([cp, Vector2(randf_range(-60, 60), randf_range(-70, -10)), 0.5, Color(0.6, 0.95, 1.0), 200.0, 1.0 if q2 % 2 else 2.0])
+		_last = {"hp": hu, "st": su, "li": lu}
+		_hurt_t = max(0.0, _hurt_t - delta)
+		_heal_t = max(0.0, _heal_t - delta)
+		for k5 in _ignite.keys():
+			_ignite[k5] -= delta
+			if _ignite[k5] <= 0.0:
+				_ignite.erase(k5)
+		# temblor de corazones con poca vida (cambia cada pocos fotogramas)
+		_jit_t -= delta
+		if _jit_t <= 0.0:
+			_jit_t = 0.07
+			_jit.clear()
+			for i in nh:
+				_jit.append(randi_range(-1, 1))
+		# partículas
+		for pp in _parts:
+			pp[1].y += pp[4] * delta
+			pp[0] += pp[1] * delta
+			pp[2] -= delta
+		_parts = _parts.filter(func(pp): return pp[2] > 0.0)
 		if lp.wrath >= 100.0:
 			_wrath_full_t += delta
 		else:
 			_wrath_full_t = 0.0
 		queue_redraw()
-		_over.queue_redraw()
+
+	# ------------------------------------------------------------ dibujo
+	func _icon(tex: Texture2D, frame: int, w: int, h: int, pos: Vector2, mod := Color.WHITE) -> void:
+		draw_texture_rect_region(tex, Rect2(pos.round(), Vector2(w, h)), Rect2(frame * w, 0, w, h), mod)
 
 	func _draw() -> void:
 		var lp: Player = hud.world.local_player() if hud.world else null
-		if lp == null:
+		if lp == null or _rows.is_empty():
 			return
 		var c := Vector2(24, 24)
 		# anillo de Ira: bloques alrededor del medallón
@@ -425,78 +461,130 @@ class StatusCluster extends Control:
 		var tex: Texture2D = lp.sprite.texture
 		var bob := roundf(sin(_t * 3.0))
 		draw_texture_rect_region(tex, Rect2(c + Vector2(-16, -17 + bob), Vector2(32, 26)), Rect2(4, 0, 16, 13))
-		# etiqueta de nivel
 		var lv := "LV%d" % Prog.level
 		var f := UIKit.font("head")
 		var tag := Rect2(c + Vector2(-17, 12), Vector2(f.get_string_size(lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 6, 10))
 		draw_rect(tag.grow(1), UIKit.INK)
 		draw_rect(tag, UIKit.RED)
 		f.draw_string(get_canvas_item(), tag.position + Vector2(3, 8), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
-		# lágrimas
+		# ---------------------------------------------------- corazones
+		var nh: int = _rows.nh
+		var hu: int = _last.hp
+		var ratio := lp.hp / Prog.max_hp()
+		var low := ratio <= 0.25 and lp.is_alive()
+		var blink := _hurt_t > 0.0 and int(_hurt_t * 16.0) % 2 == 0
+		var golden := Prog.buffs.has("ointment")
+		var cracked := Prog.is_desplumado()
+		if low:
+			var ga := 0.25 + 0.2 * sin(_t * 8.0)
+			var gw: float = min(nh, 10) * HEART_W + 3.0
+			draw_rect(Rect2(Vector2(HX - 2, _rows.y_hearts - 2), Vector2(gw, _rows.hrows * 10.0 + 3.0)), Color(1, 0.1, 0.2, ga * 0.35))
+		for i in nh:
+			var hp := _heart_pos(i)
+			if low:
+				hp.y += _jit[i] if i < _jit.size() else 0
+			if _heal_t > 0.0:
+				var wave := (0.8 - _heal_t) * 22.0 - i
+				if wave > 0.0 and wave < 2.0:
+					hp.y -= roundf(sin(wave / 2.0 * PI) * 2.0)
+			var st := 2
+			if hu >= (i + 1) * 2:
+				st = 0
+			elif hu == i * 2 + 1:
+				st = 1
+			var fr := st
+			if blink:
+				fr = 3 + st
+			elif st < 2:
+				if golden:
+					fr = 6 + st
+				elif cracked:
+					fr = 8 + st
+			_icon(_hearts_tex, fr, 11, 10, hp)
+		# ---------------------------------------------------- llamas de aguante
+		var nf: int = _rows.nf
+		var su: int = _last.st
+		var exhausted := lp.stamina <= 0.5
+		for i in nf:
+			var fp := Vector2(HX + i * FLAME_W, _rows.y_flames)
+			var st2 := 2
+			if su >= (i + 1) * 2:
+				st2 = 0
+			elif su == i * 2 + 1:
+				st2 = 1
+			var fr2 := 5
+			if st2 == 0:
+				fr2 = int(_t * 9.0 + i * 1.7) % 3
+			elif st2 == 1:
+				fr2 = 3 + int(_t * 7.0 + i) % 2
+			elif exhausted:
+				fp.x += randi_range(-1, 1)
+			var mod := Color.WHITE
+			if _ignite.has(i):
+				var k: float = _ignite[i] / 0.25
+				fp.y -= roundf(k * 2.0)
+				mod = Color(1.0 + k, 1.0 + k, 1.0 + k)
+			_icon(_flames_tex, fr2, 9, 11, fp, mod)
+		# ---------------------------------------------------- cristales de Luz
+		var nc: int = _rows.nc
+		var lu: int = _last.li
+		var lfull := lu >= nc * 2
+		var sweep := fmod(_t, 2.6) * 10.0
+		for i in nc:
+			var cpos := Vector2(HX + i * CRYS_W, _rows.y_crys)
+			var st3 := 2
+			if lu >= (i + 1) * 2:
+				st3 = 0
+			elif lu == i * 2 + 1:
+				st3 = 1
+			var fr3 := st3
+			if st3 == 0:
+				var dd := sweep - i
+				if dd >= 0.0 and dd < 3.0:
+					fr3 = 3 + int(dd)
+				if lfull:
+					cpos.y -= roundf(maxf(0.0, sin(_t * 4.0 - i * 0.7)) * 1.0)
+			_icon(_crys_tex, fr3, 9, 11, cpos)
+		# partículas de los iconos
+		for pp in _parts:
+			var a2: float = clampf(pp[2] / 0.4, 0.0, 1.0)
+			var col2: Color = pp[3]
+			draw_rect(Rect2((pp[0] as Vector2).round(), Vector2(pp[5], pp[5])), Color(col2, col2.a * a2))
+		# ---------------------------------------------------- Lágrimas y efectos
+		var fy: float = _rows.y_flask
 		var ic := Fx.tex("icon_flask")
 		for i in Prog.flask_count():
 			var on := i < lp.flasks
-			var y := 40.0 + (roundf(sin(_t * 4.0 + i) * 1.0) if on else 0.0)
-			draw_texture(ic, Vector2(56 + i * 13, y), Color(1, 1, 1, 1.0 if on else 0.25))
-		# efectos activos
-		var bx := 56.0 + Prog.flask_count() * 13 + 6
+			var y := fy + (roundf(sin(_t * 4.0 + i) * 1.0) if on else 0.0)
+			draw_texture(ic, Vector2(HX + i * 13, y), Color(1, 1, 1, 1.0 if on else 0.25))
+		var bx := HX + Prog.flask_count() * 13 + 6
 		for b in Prog.buffs:
 			var bic := Fx.tex("icon_" + Prog.ITEMS[b].icon)
-			draw_texture(bic, Vector2(bx, 40))
+			draw_texture(bic, Vector2(bx, fy))
 			var frac: float = Prog.buffs[b] / 30.0
-			draw_rect(Rect2(Vector2(bx, 57), Vector2(16, 2)), UIKit.INK)
-			draw_rect(Rect2(Vector2(bx, 57), Vector2(16 * frac, 2)), UIKit.GOLD)
+			draw_rect(Rect2(Vector2(bx, fy + 17), Vector2(16, 2)), UIKit.INK)
+			draw_rect(Rect2(Vector2(bx, fy + 17), Vector2(16 * frac, 2)), UIKit.GOLD)
 			bx += 20
-		# plumas del ala: cada muerte arranca una
+		# ---------------------------------------------------- plumas del ala
 		var wc := Look.color_of(G.look, "wing")
 		for i in Prog.WING_MAX:
 			var have := i < Prog.wing_feathers
-			var fp := Vector2(60 + i * 6, 65)
+			var fp2 := Vector2(HX + 4 + i * 6, fy + 25)
 			var fc := wc if have else Color(0.22, 0.14, 0.26)
-			var leaf := PackedVector2Array([fp + Vector2(1, -5), fp + Vector2(3, -1), fp + Vector2(1, 3), fp + Vector2(-1, -1)])
-			var big := PackedVector2Array([fp + Vector2(1, -7), fp + Vector2(4, -1), fp + Vector2(1, 5), fp + Vector2(-2, -1)])
+			var leaf := PackedVector2Array([fp2 + Vector2(1, -5), fp2 + Vector2(3, -1), fp2 + Vector2(1, 3), fp2 + Vector2(-1, -1)])
+			var big := PackedVector2Array([fp2 + Vector2(1, -7), fp2 + Vector2(4, -1), fp2 + Vector2(1, 5), fp2 + Vector2(-2, -1)])
 			draw_colored_polygon(big, UIKit.INK)
 			draw_colored_polygon(leaf, fc)
 			if have:
-				draw_line(fp + Vector2(1, 4), fp + Vector2(1, -4), fc.darkened(0.35), 1.0)
-				draw_rect(Rect2(fp + Vector2(1, -5), Vector2(1, 1)), Color.WHITE)
+				draw_line(fp2 + Vector2(1, 4), fp2 + Vector2(1, -4), fc.darkened(0.35), 1.0)
+				draw_rect(Rect2(fp2 + Vector2(1, -5), Vector2(1, 1)), Color.WHITE)
 		if Prog.is_desplumado():
 			var dt := G.T("desplumado_mode")
 			var dw := f.get_string_size(dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-			var dp := Vector2(58 + Prog.WING_MAX * 6 + 6, 61)
+			var dp := Vector2(HX + 2 + Prog.WING_MAX * 6 + 6, fy + 21)
 			UIKit.slash_band(self, Rect2(dp - Vector2(4, 0), Vector2(dw + 10, 10)), UIKit.RED.lerp(UIKit.PINK, 0.5 + 0.5 * sin(_t * 6.0)), 3.0)
 			f.draw_string_outline(get_canvas_item(), dp + Vector2(1, 8), dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
 			f.draw_string(get_canvas_item(), dp + Vector2(1, 8), dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
-
-	func draw_over(ci: Control) -> void:
-		var lp: Player = hud.world.local_player() if hud.world else null
-		if lp == null:
-			return
-		var f := UIKit.font("head")
-		_bar_frame(ci, Rect2(hp_bar.position, hp_bar.size), UIKit.WHITE)
-		_bar_frame(ci, Rect2(st_bar.position, st_bar.size), Color(0.9, 0.7, 0.3))
-		_bar_frame(ci, Rect2(li_bar.position, li_bar.size), Color(0.5, 0.85, 1.0))
-		var txt := "%d/%d" % [int(ceil(lp.hp)), int(Prog.max_hp())]
-		var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-		var tp := hp_bar.position + Vector2(hp_bar.size.x / 2.0 - tw / 2.0, 10)
-		f.draw_string_outline(ci.get_canvas_item(), tp.round(), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 4, UIKit.INK)
-		f.draw_string(ci.get_canvas_item(), tp.round(), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
-
-	func _bar_frame(ci: Control, r: Rect2, col: Color) -> void:
-		var tip := 4.0 if r.size.y > 8 else 2.0
-		var p := r.position
-		var s := r.size
-		var pts := PackedVector2Array([p + Vector2(-1, s.y / 2), p + Vector2(tip - 1, -1), p + Vector2(s.x - tip + 1, -1), p + Vector2(s.x + 1, s.y / 2),
-			p + Vector2(s.x - tip + 1, s.y + 1), p + Vector2(tip - 1, s.y + 1), p + Vector2(-1, s.y / 2)])
-		ci.draw_polyline(pts, UIKit.INK, 2.0)
-		ci.draw_polyline(pts, col, 1.0)
-
-	class Overlay extends Control:
-		var cluster: Node
-		func _ready() -> void:
-			mouse_filter = Control.MOUSE_FILTER_IGNORE
-		func _draw() -> void:
-			cluster.draw_over(self)
 
 class SkillBar extends Control:
 	var hud: Node
