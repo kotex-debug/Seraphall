@@ -37,6 +37,10 @@ const ITEMS := {
 		"desc": ["Un coro diminuto atrapado en cristal. Al romperlo, +30% de daño durante 30 s.", "A tiny choir trapped in glass. Break it for +30% damage for 30 s."]},
 	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "price": 200, "name": ["Escama de Querubín", "Cherub Scale"],
 		"desc": ["Escama que mudan los querubines al crecer. Endurece la piel: -35% de daño durante 30 s.", "A scale cherubs shed as they grow. Hardens the skin: -35% damage for 30 s."]},
+	"vial_luz": {"type": "consumable", "icon": "vial_luz", "rarity": 1, "price": 180, "name": ["Vial de Luz", "Vial of Light"],
+		"desc": ["Luz de vela atrapada en cristal. Te devuelve 30 de Luz al momento.", "Candlelight trapped in glass. Restores 30 Light instantly."]},
+	"vial_aliento": {"type": "consumable", "icon": "vial_aliento", "rarity": 1, "price": 160, "name": ["Vial de Aliento", "Vial of Breath"],
+		"desc": ["Aire de las alturas, embotellado. Llena el aguante y lo recupera el doble de rápido durante 20 s.", "Bottled air from the heights. Fills your stamina and doubles its recovery for 20 s."]},
 	"phoenix": {"type": "consumable", "icon": "phoenix", "rarity": 3, "name": ["Plumón de Aurora", "Aurora Down"],
 		"desc": ["El primer plumón de un ángel recién nacido. Si caes, renaces al instante. Se consume solo.", "The first down of a newborn angel. If you fall, you are reborn at once. Used automatically."]},
 	"amulet_wing": {"type": "amulet", "icon": "amulet_wing", "rarity": 2, "name": ["Vértebra de Serafín", "Seraph Vertebra"],
@@ -59,6 +63,11 @@ const ITEMS := {
 const RARITY_COLORS := [Color(0.75, 0.72, 0.78), Color(0.55, 0.9, 0.55), Color(0.35, 0.75, 1.0), Color(0.85, 0.45, 1.0), Color(1.0, 0.75, 0.25)]
 
 const MEMORIES := {
+	"m3": {"title": ["La Primera Pluma", "The First Feather"], "lines": [
+		["Recuerdas una sala blanca y una orden que no era tuya.", "You remember a white hall and an order that wasn't yours."],
+		["Seravel, de rodillas, con las alas abiertas. Confiaba en ti.", "Seravel, on her knees, wings open. She trusted you."],
+		["Y recuerdas tus propias manos arrancándole la primera pluma.", "And you remember your own hands tearing out her first feather."],
+		["Antes de caer, fuiste el verdugo del Arquitecto.", "Before you fell, you were the Architect's executioner."]]},
 	"m1": {"title": ["El Jardín de las Alas", "The Garden of Wings"], "lines": [
 		["Antes de la Espiral, había un jardín donde nadie contaba los días.", "Before the Spiral, there was a garden where no one counted the days."],
 		["Aprendimos a volar entre sus árboles de luz. Torpes. Riendo.", "We learned to fly among its trees of light. Clumsy. Laughing."],
@@ -101,7 +110,7 @@ const INFUSIONS := {
 		"desc": ["Cada tercer golpe abre una herida: daño igual al 6% de la vida máxima.", "Every third hit opens a wound: damage equal to 6% of max health."]},
 }
 
-const SHOP := [["bomb", 99], ["incense", 99], ["ointment", 99], ["_feather", 6], ["iron", 2], ["tear", 1]]
+const SHOP := [["vial_luz", 99], ["vial_aliento", 99], ["bomb", 99], ["incense", 99], ["ointment", 99], ["_feather", 6], ["iron", 2], ["tear", 1]]
 
 const OATHS := {
 	"carcelero": {"name": ["Juramento de la Cadena", "Oath of the Chain"], "color": Color(1, 0.5, 0.3),
@@ -380,7 +389,7 @@ func has_amulet(id: String) -> bool:
 	return id in amulets_eq
 
 func stamina_regen_mult() -> float:
-	return (1.3 if has_amulet("amulet_wing") else 1.0) * (0.75 if oath == "seravel" else 1.0)
+	return (1.3 if has_amulet("amulet_wing") else 1.0) * (0.75 if oath == "seravel" else 1.0) * (2.0 if buffs.has("vial_aliento") else 1.0)
 
 func buff_damage_mult() -> float:
 	return 1.3 if buffs.has("incense") else 1.0
@@ -535,6 +544,8 @@ func use_item(id: String) -> bool:
 			buffs["incense"] = 30.0
 		"ointment":
 			buffs["ointment"] = 30.0
+		"vial_aliento":
+			buffs["vial_aliento"] = 20.0
 	changed.emit()
 	return true
 

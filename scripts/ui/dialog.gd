@@ -12,14 +12,14 @@ var _auto_t := 0.0
 var _cinematic := false
 
 const PORTRAITS := {
-	"Brenna": ["npc_brenna", Rect2(0, 0, 24, 26)],
-	"El Cartógrafo": ["npc_carto", Rect2(0, 0, 24, 26)],
+	"Brenna": ["npc_brenna", Rect2(9, 1, 16, 16)],
+	"El Cartógrafo": ["npc_carto", Rect2(9, 1, 16, 16)],
 	"Seravel": ["boss_seravel", Rect2(0, 0, 52, 40)],
 	"El Carcelero": ["enemy_carcelero", Rect2(0, 0, 40, 30)],
-	"Ozias": ["npc_ozias", Rect2(0, 0, 24, 26)],
-	"Madre Ilse": ["npc_ilse", Rect2(0, 0, 24, 26)],
-	"Nyx": ["npc_nyx", Rect2(0, 0, 24, 26)],
-	"Sor Velaria": ["npc_velaria", Rect2(0, 0, 24, 26)],
+	"Ozias": ["npc_ozias", Rect2(9, 1, 16, 16)],
+	"Madre Ilse": ["npc_ilse", Rect2(9, 1, 16, 16)],
+	"Nyx": ["npc_nyx", Rect2(9, 1, 16, 16)],
+	"Sor Velaria": ["npc_velaria", Rect2(9, 1, 16, 16)],
 	"El Coro": ["boss_singer", Rect2(0, 0, 26, 36)],
 }
 

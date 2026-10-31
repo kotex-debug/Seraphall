@@ -376,7 +376,7 @@ func _update_aim() -> void:
 func _use_quick_item() -> void:
 	var id := Prog.quick_item
 	if Prog.item_count(id) <= 0:
-		for k in ["bomb", "incense", "ointment"]:
+		for k in ["bomb", "incense", "ointment", "vial_luz", "vial_aliento"]:
 			if Prog.item_count(k) > 0:
 				id = k
 				Prog.quick_item = k
@@ -390,6 +390,17 @@ func _use_quick_item() -> void:
 			var dist: float = clamp(m.length(), 30.0, 120.0)
 			world.throw_bomb(global_position + Vector2(0, -12), global_position + aim * dist, Net.my_id())
 			_swing(80.0, 0.1, true)
+		"vial_luz", "vial_aliento":
+			if Prog.use_item(id):
+				var vc := Color(0.45, 0.8, 1.0) if id == "vial_luz" else Color(1, 0.8, 0.3)
+				if id == "vial_luz":
+					light = min(Prog.max_light(), light + 30.0)
+				else:
+					stamina = Prog.max_stamina()
+				Audio.sfx("heal", -4.0)
+				Fx.ring(global_position + Vector2(0, -8), 3.0, 30.0, vc, 0.45, 3.0)
+				for i in 10:
+					Fx.burst(global_position + Vector2(randf_range(-8, 8), -4), vc, 1, 14.0, 0.8, "fx_px", 20.0, Vector2.UP, 0.5, false, Vector2(0, -45))
 		"incense", "ointment":
 			if Prog.use_item(id):
 				var c := Color(1, 0.75, 0.3) if id == "incense" else Color(0.4, 0.9, 1.0)

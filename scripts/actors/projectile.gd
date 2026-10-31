@@ -94,7 +94,7 @@ func _physics_process(delta: float) -> void:
 
 func _check_walls() -> void:
 	var w := get_tree().root.get_node_or_null("Main/World")
-	if w and kind != "wave" and w.is_wall_at(global_position):
+	if w and kind != "wave" and w.is_wall_at(global_position) and not w.is_pit_at(global_position):
 		_die(true)
 
 func _check_hits() -> void:

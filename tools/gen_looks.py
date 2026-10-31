@@ -222,8 +222,9 @@ def hero(body, hair, pose):
     hip = 23
     sh = 15 + bob
     # ---- alas (detrás): la derecha en sombra, la izquierda delante
-    wing(c, (cx + 2, sh + 1), 1, flap, True, 15)
-    wing(c, (cx - 3, sh + 1), -1, flap, False, 10)
+    if pose.get("wings", True):
+        wing(c, (cx + 2, sh + 1), 1, flap, True, 15)
+        wing(c, (cx - 3, sh + 1), -1, flap, False, 10)
     # ---- capa (por detrás del cuerpo)
     for y in range(sh + 1, base):
         k = (y - sh - 1) / float(base - sh - 2)
@@ -338,6 +339,8 @@ def hero(body, hair, pose):
     c.pattern(8, 2 + bob, face, FACE_MAP)
     c.pattern(8, 2 + bob, HAIRS[(body, hair)], HAIR_MAP)
     # ---- aureola (sin contorno en el juego)
+    if not pose.get("halo", True):
+        return c.img
     hy = bob
     for x in range(cx - 3, cx + 4):
         c.put(x, hy, 9, 1.0 if x not in (cx - 2, cx - 1) else 1.35)
@@ -388,8 +391,9 @@ def back(body, hair):
     d.line([(cx + 9, 18), (cx + 13, 38)], fill=(224, 228, 240, 255), width=2)
     return img
 
-for body in ("f", "m"):
-    for hair in range(3):
-        anim(body, hair).save(f"{OUT}/pl_{body}{hair}.png")
-        back(body, hair).save(f"{OUT}/pb_{body}{hair}.png")
-print("Hojas de aspecto generadas en", OUT)
+if __name__ == "__main__":
+    for body in ("f", "m"):
+        for hair in range(3):
+            anim(body, hair).save(f"{OUT}/pl_{body}{hair}.png")
+            back(body, hair).save(f"{OUT}/pb_{body}{hair}.png")
+    print("Hojas de aspecto generadas en", OUT)

@@ -464,6 +464,10 @@ func _on_item_sel(id: String) -> void:
 
 func _on_use_item(id: String) -> void:
 	var lp: Player = world.local_player()
+	if id.begins_with("vial") and lp:
+		Prog.quick_item = id
+		lp._use_quick_item()
+		return
 	if id == "bomb":
 		Prog.quick_item = "bomb"
 		G.toast(G.L(["Lanza la bomba con [X] en combate.", "Throw the bomb with [X] in combat."]), UIKit.GOLD)
@@ -770,12 +774,12 @@ func _svc_nyx() -> void:
 		var id: String = e[0]
 		var lim: int = e[1]
 		var x := 172.0 + (i % 2) * 210.0
-		var y := 28.0 + (i / 2) * 76.0
+		var y := 28.0 + (i / 2) * 64.0
 		var it: Dictionary = {"name": [G.T("feathers"), G.T("feathers")], "icon": "feather", "rarity": 1, "desc": ["", ""]} if id == "_feather" else Prog.ITEMS[id]
 		var bg := ColorRect.new()
 		bg.color = Color(Prog.RARITY_COLORS[it.rarity], 0.08)
 		bg.position = Vector2(x, y)
-		bg.size = Vector2(202, 70)
+		bg.size = Vector2(202, 60)
 		content.add_child(bg)
 		var ic := TextureRect.new()
 		ic.texture = Fx.tex("icon_" + it.icon)
@@ -787,9 +791,9 @@ func _svc_nyx() -> void:
 		_lbl("%d %s" % [Prog.shop_price(id), G.T("ecos")], Vector2(x + 44, y + 28), 10, UIKit.CYAN, 0.0, "title")
 		_lbl((G.T("stock") % left) if lim < 50 else "", Vector2(x + 130, y + 28), 10, UIKit.TEXT_DIM, 0.0, "title")
 		if left > 0:
-			_btn(G.T("buy"), Vector2(x + 44, y + 44), _on_nyx_buy.bind(id, lim), Prog.ecos >= Prog.shop_price(id), 80)
+			_btn(G.T("buy"), Vector2(x + 44, y + 38), _on_nyx_buy.bind(id, lim), Prog.ecos >= Prog.shop_price(id), 80)
 		else:
-			_lbl(G.T("sold_out"), Vector2(x + 44, y + 48), 8, UIKit.PINK, 0.0, "head")
+			_lbl(G.T("sold_out"), Vector2(x + 44, y + 42), 8, UIKit.PINK, 0.0, "head")
 		i += 1
 
 func _on_nyx_buy(id: String, lim: int) -> void:
@@ -936,7 +940,7 @@ func _build_options() -> void:
 		var code := Net.online_code()
 		_lbl(G.T("code_online") + ": " + (code if code != "" else "-"), Vector2(160, 134), 15, UIKit.GOLD)
 		_lbl(G.T("code_lan") + ": " + Net.lan_code(), Vector2(160, 152), 15, UIKit.CYAN)
-	_lbl(G.T("controls"), Vector2(160, 176), 10, UIKit.TEXT_DIM, 280, "title")
+	_lbl(G.controls_text(), Vector2(160, 176), 10, UIKit.TEXT_DIM, 280, "title")
 	_btn(G.T("save_quit").to_upper(), Vector2(200, 262), _on_save_quit, true, 200)
 	# accesibilidad
 	_panel(Rect2(470, 0, 130, 296), UIKit.CYAN)
@@ -1057,7 +1061,7 @@ class NpcBust extends Control:
 			draw_colored_polygon(PackedVector2Array([c + d * 26.0 + d.orthogonal() * 4.0, c + d * 72.0, c + d * 26.0 - d.orthogonal() * 4.0]), Color(col, 0.1))
 		var fr := int(t * 4.0) % 4
 		var bob := roundf(sin(t * 2.0) * 2.0)
-		draw_texture_rect_region(Fx.tex(sheet), Rect2(c + Vector2(-60, -70 + bob), Vector2(120, 130)), Rect2(fr * 24, 0, 24, 26))
+		draw_texture_rect_region(Fx.tex(sheet), Rect2(c + Vector2(-60, -70 + bob), Vector2(120, 130)), Rect2(fr * 32, 0, 32, 32))
 		for i in 6:
 			var p := Vector2(fmod(i * 37.0 + t * 12.0, size.x - 10) + 5, 200.0 - fmod(t * 20.0 + i * 31.0, 160.0))
 			draw_rect(Rect2(p.round(), Vector2(2, 2)), Color(col, 0.6))

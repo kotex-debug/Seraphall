@@ -43,9 +43,9 @@ const TXT := {
 	"conn_failed": ["No se pudo conectar. Revisa el código.", "Could not connect. Check the code."],
 	"host_wait": ["Esperando a tu compañero... Comparte este código:", "Waiting for your partner... Share this code:"],
 	"code_online": ["Código online", "Online code"],
-	"code_lan": ["Código red local", "LAN code"],
+	"code_lan": ["Código de red local", "LAN code"],
 	"upnp_ok": ["Puerto abierto automáticamente (UPnP).", "Port opened automatically (UPnP)."],
-	"upnp_fail": ["UPnP no disponible: el código online puede necesitar abrir el puerto 24680 UDP.", "UPnP unavailable: online code may require opening UDP port 24680."],
+	"upnp_fail": ["UPnP no disponible: puede que tengas que abrir el puerto UDP 24680 para usar el código online.", "UPnP unavailable: online code may require opening UDP port 24680."],
 	"start_alone": ["Empezar (tu compañero puede unirse luego)", "Start (your partner can join later)"],
 	"partner_joined": ["¡Tu compañero se ha unido!", "Your partner has joined!"],
 	"partner_left": ["Tu compañero se ha ido.", "Your partner has left."],
@@ -58,10 +58,10 @@ const TXT := {
 	"light_brasa": ["Encender la Brasa", "Kindle the Ember"],
 	"talk": ["Hablar", "Talk"],
 	"open": ["Abrir", "Open"],
-	"revive": ["Mantén F para revivir", "Hold F to revive"],
+	"revive": ["Mantén F para reanimar", "Hold F to revive"],
 	"brasa_lit": ["BRASA ENCENDIDA", "EMBER KINDLED"],
 	"you_died": ["HAS CAÍDO", "YOU HAVE FALLEN"],
-	"downed": ["Caído - tu compañero puede revivirte", "Downed - your partner can revive you"],
+	"downed": ["Has caído: tu compañero puede reanimarte", "Downed - your partner can revive you"],
 	"archon_defeated": ["ARCONTE DERROTADO", "ARCHON DEFEATED"],
 	"enemy_felled": ["ENEMIGO ABATIDO", "ENEMY FELLED"],
 	"level_up": ["¡Subes de nivel!", "Level up!"],
@@ -77,24 +77,24 @@ const TXT := {
 	"tab_options": ["Opciones", "Options"],
 	"vigor": ["Vigor", "Vigor"], "aguante": ["Aguante", "Endurance"], "fuerza": ["Fuerza", "Strength"],
 	"destreza": ["Destreza", "Dexterity"], "fe": ["Fe", "Faith"], "arcano": ["Arcano", "Arcane"],
-	"vigor_d": ["Aumenta la vida máxima.", "Increases max health."],
-	"aguante_d": ["Aumenta el aguante y su recuperación.", "Increases stamina and its recovery."],
-	"fuerza_d": ["Daño con armas pesadas y postura.", "Heavy weapon damage and poise."],
-	"destreza_d": ["Daño con armas ágiles y críticos.", "Agile weapon damage and crits."],
-	"fe_d": ["Daño de hechizos y Luz máxima.", "Spell damage and max Light."],
-	"arcano_d": ["Estados alterados y Ecos obtenidos.", "Status effects and Echoes gained."],
+	"vigor_d": ["Más vida máxima.", "Increases max health."],
+	"aguante_d": ["Más aguante, y se recupera antes.", "Increases stamina and its recovery."],
+	"fuerza_d": ["Más daño con armas pesadas y más castigo a la postura.", "Heavy weapon damage and poise."],
+	"destreza_d": ["Más daño con armas ágiles y más críticos.", "Agile weapon damage and crits."],
+	"fe_d": ["Hechizos más fuertes y más Luz máxima.", "Spell damage and max Light."],
+	"arcano_d": ["Efectos de estado más potentes y más Ecos al vencer.", "Status effects and Echoes gained."],
 	"buy_level": ["Subir nivel (%d Ecos)", "Level up (%d Echoes)"],
-	"only_at_brasa": ["Solo puedes subir de nivel descansando en una Brasa.", "You can only level up while resting at an Ember."],
+	"only_at_brasa": ["Solo puedes subir de nivel mientras descansas en una Brasa.", "You can only level up while resting at an Ember."],
 	"unlock": ["Desbloquear", "Unlock"],
 	"unlocked": ["Desbloqueado", "Unlocked"],
-	"locked_req": ["Requiere nodos anteriores", "Requires previous nodes"],
+	"locked_req": ["Requiere los nodos anteriores", "Requires previous nodes"],
 	"locked_archon": ["Requiere derrotar a Seravel", "Requires defeating Seravel"],
 	"cost": ["Coste: %d", "Cost: %d"],
 	"equip": ["Equipar", "Equip"],
 	"equipped": ["Equipada", "Equipped"],
 	"upgrade": ["Mejorar", "Upgrade"],
-	"upgrade_cost": ["Mejorar a +%d: %d Ecos, %d Fragmentos", "Upgrade to +%d: %d Echoes, %d Shards"],
-	"upgrade_at_forge": ["Las mejoras se hacen en la forja de Brenna.", "Upgrades are done at Brenna's forge."],
+	"upgrade_cost": ["Mejorar a +%d: %d Ecos y %d Fragmentos", "Upgrade to +%d: %d Echoes, %d Shards"],
+	"upgrade_at_forge": ["Las mejoras se hacen en la fragua de Brenna.", "Upgrades are done at Brenna's forge."],
 	"max_level": ["Nivel máximo", "Max level"],
 	"damage": ["Daño", "Damage"], "speed": ["Velocidad", "Speed"], "reach": ["Alcance", "Reach"], "combo": ["Combo", "Combo"],
 	"scaling": ["Escalado", "Scaling"],
@@ -107,7 +107,7 @@ const TXT := {
 	"sfx_vol": ["Volumen efectos", "SFX volume"],
 	"save_quit": ["Guardar y salir al menú", "Save and quit to menu"],
 	"close": ["Cerrar [Tab]", "Close [Tab]"],
-	"not_enough": ["No tienes suficientes recursos.", "Not enough resources."],
+	"not_enough": ["No tienes recursos suficientes.", "Not enough resources."],
 	"game_saved": ["Partida guardada", "Game saved"],
 	"new_weapon": ["Nueva arma: %s", "New weapon: %s"],
 	"new_spell": ["Nuevo poder: %s", "New power: %s"],
@@ -167,7 +167,7 @@ const TXT := {
 	"svc_nyx": ["NYX - TIENDA", "NYX - SHOP"], "svc_velaria": ["SOR VELARIA - ASCENSIÓN", "SISTER VELARIA - ASCENSION"],
 	"feather_torn": ["TE HAN ARRANCADO UNA PLUMA", "A FEATHER HAS BEEN TORN AWAY"],
 	"desplumado_mode": ["DESPLUMADO", "FEATHERLESS"],
-	"offer_feather": ["Ofrecer una pluma y encender", "Offer a feather and kindle"],
+	"offer_feather": ["Encender (cuesta una pluma)", "Offer a feather and kindle"],
 	"no_feathers": ["No te quedan plumas que ofrecer.", "You have no feathers left to offer."],
 	"shadow_rises": ["TU SOMBRA SE ALZA", "YOUR SHADOW RISES"],
 	"shadow_name": ["Sombra del Desplumado", "Shade of the Featherless"],
@@ -188,7 +188,7 @@ const TXT := {
 	"hair_col": ["Pelo", "Hair"], "skin": ["Piel", "Skin"], "eye": ["Ojos", "Eyes"], "cloak": ["Capa", "Cloak"],
 	"armor": ["Armadura", "Armor"], "wing": ["Alas", "Wings"], "halo": ["Aureola", "Halo"], "char_name": ["Nombre", "Name"],
 	"access": ["Accesibilidad", "Accessibility"], "shake_opt": ["Temblor de pantalla", "Screen shake"],
-	"flash_opt": ["Destellos", "Flashes"], "tele_opt": ["Telegráficos reforzados", "Bold telegraphs"],
+	"flash_opt": ["Destellos", "Flashes"], "tele_opt": ["Avisos de ataque más visibles", "Bold telegraphs"],
 	"on": ["SÍ", "ON"], "off": ["NO", "OFF"],
 	"stock": ["Quedan %d", "%d left"],
 	"hueco": ["Hueco", "Husk"], "acolito": ["Acólito", "Acolyte"], "bestia": ["Bestia de Ceniza", "Ash Beast"],
@@ -252,7 +252,7 @@ func save_settings() -> void:
 func _setup_input() -> void:
 	var keys := {
 		"up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN], "left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT],
-		"dash": [KEY_SPACE], "parry": [KEY_SHIFT], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
+		"dash": [KEY_SHIFT], "heavy": [KEY_SPACE], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
 		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
 		"map": [KEY_M], "photo": [KEY_P], "shot": [KEY_F12],
 	}
@@ -263,7 +263,7 @@ func _setup_input() -> void:
 			var ev := InputEventKey.new()
 			ev.physical_keycode = k
 			InputMap.action_add_event(action, ev)
-	var mouse := {"attack": MOUSE_BUTTON_LEFT, "heavy": MOUSE_BUTTON_RIGHT}
+	var mouse := {"attack": MOUSE_BUTTON_LEFT, "parry": MOUSE_BUTTON_RIGHT}
 	for action in mouse:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
@@ -337,6 +337,17 @@ func key_code(action: String) -> String:
 		if e is InputEventMouseButton:
 			return "m:%d" % e.button_index
 	return ""
+
+func controls_text() -> String:
+	var parts := []
+	for pair in [["up", ["mover", "move"]], ["attack", ["atacar", "attack"]], ["heavy", ["ataque cargado (mantén)", "heavy attack (hold)"]],
+			["dash", ["esquivar", "dash"]], ["parry", ["bloquear", "parry"]], ["heal", ["curarte", "heal"]], ["interact", ["interactuar", "interact"]],
+			["menu", ["menú", "menu"]], ["map", ["mapa", "map"]]]:
+		var k := key_label(pair[0])
+		if pair[0] == "up":
+			k = key_label("up") + key_label("left") + key_label("down") + key_label("right")
+		parts.append(k + " " + L(pair[1]))
+	return " · ".join(parts)
 
 func key_label(action: String) -> String:
 	var c := key_code(action)

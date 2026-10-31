@@ -4,14 +4,14 @@ extends CharacterBody2D
 ## los clientes y cada cliente comprueba los golpes solo contra su propio jugador.
 
 const TYPES := {
-	"hueco": {"sheet": "enemy_hueco", "fw": 22, "fh": 24, "hp": 48.0, "speed": 64.0, "radius": 7.0, "dmg": 14.0, "poise": 32.0,
-		"ecos": 28, "aggro": 150.0, "range": 30.0, "cd": 1.1, "off": -10.0,
+	"hueco": {"sheet": "enemy_hueco", "fw": 32, "fh": 32, "hp": 48.0, "speed": 64.0, "radius": 7.0, "dmg": 14.0, "poise": 32.0,
+		"ecos": 28, "aggro": 150.0, "range": 30.0, "cd": 1.1, "off": -14.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
-	"acolito": {"sheet": "enemy_acolito", "fw": 22, "fh": 26, "hp": 36.0, "speed": 52.0, "radius": 7.0, "dmg": 12.0, "poise": 14.0,
-		"ecos": 38, "aggro": 190.0, "range": 160.0, "cd": 2.0, "off": -12.0,
+	"acolito": {"sheet": "enemy_acolito", "fw": 32, "fh": 32, "hp": 36.0, "speed": 52.0, "radius": 7.0, "dmg": 12.0, "poise": 14.0,
+		"ecos": 38, "aggro": 190.0, "range": 160.0, "cd": 2.0, "off": -14.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
-	"bestia": {"sheet": "enemy_bestia", "fw": 32, "fh": 22, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
-		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -9.0,
+	"bestia": {"sheet": "enemy_bestia", "fw": 38, "fh": 28, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
+		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -12.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
 	"carcelero": {"sheet": "enemy_carcelero", "fw": 40, "fh": 40, "hp": 680.0, "speed": 46.0, "radius": 14.0, "dmg": 28.0, "poise": 130.0,
 		"ecos": 650, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",

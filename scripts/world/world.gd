@@ -145,6 +145,12 @@ func _build_map() -> void:
 				grid[y * MAPW + x] = 1
 				if room_of[y * MAPW + x] == -1 or not r.id.begins_with("hall"):
 					room_of[y * MAPW + x] = i
+	# pozos con profundidad (5): agujeros en el suelo por los que se ve el abismo, con falsa perspectiva 3D
+	for pit in PITS:
+		var pr: Rect2i = pit[0]
+		for y in range(pr.position.y, pr.end.y):
+			for x in range(pr.position.x, pr.end.x):
+				grid[y * MAPW + x] = 5
 	# paredes al norte (2), bordes de acantilado (3) y faldón del acantilado (4)
 	for y in MAPH:
 		for x in MAPW:
@@ -206,6 +212,16 @@ func _build_map() -> void:
 				wall_layer.set_cell(c, 0, Vector2i(16 if _floor_at(x, y - 1) else 18, 0))
 			elif g == 4:
 				floor_layer.set_cell(c, 0, Vector2i(17, 0))
+			elif g == 5:
+				wall_layer.set_cell(c, 0, Vector2i(18, 0))
+	for pit in PITS:
+		var dp := DepthPit.new()
+		var pr2: Rect2i = pit[0]
+		dp.position = Vector2(pr2.position) * TS
+		dp.size = Vector2(pr2.size) * TS
+		dp.style = pit[1]
+		dp.z_index = -9
+		add_child(dp)
 	var rim := EdgeRim.new()
 	rim.world = self
 	rim.z_index = -9
@@ -228,6 +244,13 @@ func _build_tileset() -> TileSet:
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, PackedVector2Array([Vector2(-8, -8), Vector2(8, -8), Vector2(8, 8), Vector2(-8, 8)]))
 	return ts
+
+const PITS := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"]]
+
+func is_pit_at(p: Vector2) -> bool:
+	var x := int(floor(p.x / TS))
+	var y := int(floor(p.y / TS))
+	return x >= 0 and y >= 0 and x < MAPW and y < MAPH and grid[y * MAPW + x] == 5
 
 func _floor_at(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < MAPW and y < MAPH and grid[y * MAPW + x] == 1
@@ -1099,6 +1122,7 @@ func enemy_alert(idx: int) -> void:
 		active_boss = enemies[idx]
 		hud.show_boss(enemies[idx])
 		Audio.play_music("boss_carcelero")
+		seal_for("carcelero")
 
 func request_damage_enemy(e: Enemy, dmg: float, dir: Vector2, poise: float, crit: bool) -> void:
 	if multiplayer.is_server():
@@ -1379,6 +1403,7 @@ func _rest_at(id: String) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _reset_enemies() -> void:
+	unseal_arena()
 	for e in enemies.duplicate():
 		if e.get_meta("extra", false):
 			enemies.erase(e)
@@ -1586,6 +1611,7 @@ func _ascension_start(boss_type: String, level: int) -> void:
 	active_boss = e
 	hud.show_boss(e)
 	Audio.play_music({"carcelero": "boss_carcelero", "choir": "boss_choir", "seravel": "boss_seravel3" if level >= 2 else "boss_seravel"}[boss_type], 0.3)
+	seal_for(boss_type)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_start_ascension(b: String, lvl: int) -> void:
@@ -1593,6 +1619,7 @@ func _rpc_start_ascension(b: String, lvl: int) -> void:
 		start_ascension(b, lvl)
 
 func _end_ascension(won: bool) -> void:
+	unseal_arena()
 	var info := asc_fight.duplicate()
 	asc_fight = {}
 	hud.hide_boss()
@@ -1658,6 +1685,7 @@ func _boss_intro(idx: int) -> void:
 	boss.cooldown = 0.8
 	hud.show_boss(boss)
 	Audio.play_music("boss_seravel", 0.3)
+	seal_for("seravel")
 	G.shockwave(boss.global_position + Vector2(0, -20), 1.5, 0.6)
 
 func _play_cinematic(kind: String) -> void:
@@ -1685,6 +1713,7 @@ func _carcelero_intro(idx: int) -> void:
 	active_boss = e
 	hud.show_boss(e)
 	Audio.play_music("boss_carcelero", 0.3)
+	seal_for("carcelero")
 
 @rpc("any_peer", "call_remote", "reliable")
 func _request_choir() -> void:
@@ -1717,10 +1746,12 @@ func _choir_intro(idx: int) -> void:
 	active_boss = e
 	hud.show_boss(e)
 	Audio.play_music("boss_choir", 0.3)
+	seal_for("choir")
 	if not Prog.quests.has("choir"):
 		Prog.start_quest("choir")
 
 func _on_choir_dead(e: Enemy) -> void:
+	unseal_arena()
 	wflags["choir_dead"] = true
 	Prog.flags["choir_dead"] = true
 	Prog.quest_progress("choir")
@@ -1728,6 +1759,12 @@ func _on_choir_dead(e: Enemy) -> void:
 	hud.hide_boss()
 	active_boss = null
 	hud.big_message(G.L(["CORO SILENCIADO", "CHOIR SILENCED"]), Color(0.8, 0.6, 1.0), 3.0)
+	# segundo giro: el canto mantenía dormida a la Voz
+	if G.autotest == "":
+		get_tree().create_timer(3.5).timeout.connect(dialog.play.bind([
+			["El Coro", ["Cantábamos su nombre al revés... para que siguiera dormido.", "We sang his name backwards... to keep him asleep."]],
+			["El Coro", ["Ahora que callamos, ¿no oyes cómo respira la Voz?", "Now that we are silent, can't you hear the Voice breathing?"]],
+			["???", ["Un coro menos. Bien hecho.", "One choir fewer. Well done."], ["Ya casi puedo verte.", "I can almost see you now."]]], Callable(), true))
 	Audio.play_music("victory", 0.2)
 	G.slowmo("kill", 0.25, 0.8)
 	await get_tree().create_timer(5.0).timeout
@@ -1752,6 +1789,7 @@ func show_boss_line(line: Array) -> void:
 	hud.subtitle("Seravel", G.L(line), 3.0)
 
 func _on_carcelero_dead(e: Enemy) -> void:
+	unseal_arena()
 	get_tree().create_timer(3.0).timeout.connect(Prog.grant_ability.bind("wrath"))
 	wflags["carcelero_dead"] = true
 	Prog.flags["carcelero_dead"] = true
@@ -1767,10 +1805,19 @@ func _on_carcelero_dead(e: Enemy) -> void:
 	G.toast(G.T("key_got"), Color(1, 0.85, 0.4))
 	set_gate(true)
 	Audio.play_music("explore", 3.0)
+	# primer giro: las celdas no eran para encerrar a nadie
+	var tw1 := [["El Carcelero", ["Las celdas... nunca fueron para encerraros a vosotros.", "The cells... were never meant to keep you in."]],
+		["El Carcelero", ["Eran para que ÉL no pudiera entrar. Y tú acabas de abrirle la puerta.", "They were to keep HIM out. And you've just opened the door for him."]],
+		["???", ["No le escuches. Sigue bajando, Desplumado.", "Don't listen to him. Keep descending, Featherless."], ["Gracias por la llave.", "Thank you for the key."]]]
+	if e.get_meta("spared", false):
+		tw1[1] = ["El Carcelero", ["¿Me perdonas? Entonces escucha: la llave no abre ninguna puerta. Abre un recuerdo. El tuyo.", "You spare me? Then listen: the key opens no door. It opens a memory. Yours."]]
+	if G.autotest == "":
+		dialog.play(tw1, Callable(), true)
 	if multiplayer.is_server():
 		Prog.save_game()
 
 func _on_seravel_dead(e: Enemy) -> void:
+	unseal_arena()
 	wflags["seravel_dead"] = true
 	Prog.flags["seravel_dead"] = true
 	hud.hide_boss()
@@ -1807,6 +1854,9 @@ func _on_seravel_dead(e: Enemy) -> void:
 			["Seravel", ["Te esperaré en las Puertas. Esta vez... del mismo lado.", "I will wait for you at the Gates. This time... on the same side."]],
 		]
 	var done := func():
+		# tercer giro: el recuerdo de la Primera Pluma
+		Prog.unlock_memory("m3")
+		await hud.memory_sequence(G.L(Prog.MEMORIES.m3.title), Prog.MEMORIES.m3.lines.map(func(l): return G.L(l)))
 		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name())
 		Audio.play_music("theme", 2.0)
 		if multiplayer.is_server():
@@ -1914,7 +1964,13 @@ func _play_intro() -> void:
 		hud.letterbox(false)
 		lp.revive(1.0)
 		hud.show_area(G.T("stratum1"), G.T("area_sanct"))
-		get_tree().create_timer(4.5).timeout.connect(G.toast.bind(G.T("controls"), Color(0.85, 0.85, 0.9)))
+		if G.get_meta("prologue", false):
+			G.set_meta("prologue", false)
+			var pr := preload("res://scripts/world/prologue.gd").new()
+			pr.world = self
+			add_child(pr)
+		else:
+			get_tree().create_timer(4.5).timeout.connect(G.toast.bind(G.controls_text(), Color(0.85, 0.85, 0.9)))
 	dialog.play(lines, done, true)
 
 var _contemplating := false
@@ -2522,3 +2578,205 @@ class EventFx extends Node2D:
 		var tw := create_tween()
 		tw.tween_interval(4.0)
 		tw.tween_callback(queue_free)
+
+
+# ====================================================================== salas de jefe selladas
+const ARENAS := {"carcelero": ["yard", "celda"], "choir": ["choir", "coro"], "seravel": ["circle", "luz"]}
+var _seals: Array[Node2D] = []
+
+func seal_for(boss_type: String) -> void:
+	if ARENAS.has(boss_type):
+		seal_arena(ARENAS[boss_type][0], ARENAS[boss_type][1])
+
+func seal_arena(room_id: String, style: String) -> void:
+	## Al empezar el combate, las entradas de la sala se cierran (celdas, tubos de órgano o un muro de luz)
+	unseal_arena()
+	var ri := -1
+	for i in ROOMS.size():
+		if ROOMS[i].id == room_id:
+			ri = i
+	if ri < 0:
+		return
+	var rect := _rect_of(ROOMS[ri]).grow(2)
+	var inner := Vector2.ZERO
+	for y in range(max(0, rect.position.y), min(MAPH, rect.end.y)):
+		for x in range(max(0, rect.position.x), min(MAPW, rect.end.x)):
+			var i := y * MAPW + x
+			if grid[i] != 1 or room_of[i] == ri:
+				continue
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx < 0 or ny < 0 or nx >= MAPW or ny >= MAPH:
+					continue
+				var ni := ny * MAPW + nx
+				if grid[ni] == 1 and room_of[ni] == ri:
+					var sl := ArenaSeal.new()
+					sl.style = style
+					sl.position = tile_pos(x, y)
+					entities.add_child(sl)
+					_seals.append(sl)
+					inner = tile_pos(nx, ny)
+					break
+	if _seals.is_empty():
+		return
+	Audio.sfx("gate", 0.0, 0.0)
+	Audio.sfx("slam", -4.0, 0.0)
+	G.shake(4.0, 0.3)
+	# quien se haya quedado fuera entra en la sala (cooperativo)
+	var lp := local_player()
+	if lp and lp.is_alive() and room_at(lp.global_position) != room_id and inner != Vector2.ZERO:
+		lp.respawn_at(inner)
+
+func unseal_arena() -> void:
+	for sl in _seals:
+		if is_instance_valid(sl):
+			sl.open_and_free()
+	_seals.clear()
+
+class ArenaSeal extends Node2D:
+	## Barrera de la entrada: "celda" (barrotes que caen), "coro" (tubos de órgano) o "luz" (plumas doradas)
+	var style := "celda"
+	var t := 0.0
+	var k := 0.0
+	var body: StaticBody2D
+	var _closing := true
+	func _ready() -> void:
+		z_index = 2
+		body = StaticBody2D.new()
+		body.collision_layer = 1
+		var cs := CollisionShape2D.new()
+		var sh := RectangleShape2D.new()
+		sh.size = Vector2(16, 16)
+		cs.shape = sh
+		body.add_child(cs)
+		add_child(body)
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = {"celda": Color(1, 0.5, 0.25), "coro": Color(0.7, 0.45, 1.0), "luz": Color(1, 0.85, 0.5)}[style]
+		l.texture_scale = 0.6
+		l.energy = 0.7
+		add_child(l)
+		Fx.burst(global_position + Vector2(0, 4), Color(0.6, 0.55, 0.6), 8, 50.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.4)
+	func open_and_free() -> void:
+		_closing = false
+		if body:
+			body.queue_free()
+			body = null
+	func _process(delta: float) -> void:
+		t += delta
+		k = move_toward(k, 1.0 if _closing else 0.0, delta * (6.0 if _closing else 2.5))
+		if not _closing and k <= 0.0:
+			queue_free()
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var h := 26.0
+		match style:
+			"celda":
+				var drop := (1.0 - k) * -30.0
+				draw_rect(Rect2(Vector2(-9, -h + drop), Vector2(18, 3)), Color(0.25, 0.22, 0.26))
+				for i in 5:
+					var x := -8.0 + i * 4.0
+					draw_rect(Rect2(Vector2(x - 1, -h + drop), Vector2(3, h + 6)), Color(0.07, 0.05, 0.08))
+					draw_rect(Rect2(Vector2(x, -h + drop), Vector2(1, h + 5)), Color(0.55, 0.5, 0.55))
+					draw_rect(Rect2(Vector2(x, 4 + drop), Vector2(1, 3)), Color(0.75, 0.7, 0.72))
+				draw_rect(Rect2(Vector2(-9, -8 + drop), Vector2(18, 2)), Color(0.35, 0.3, 0.35))
+				draw_rect(Rect2(Vector2(-6, -8 + drop), Vector2(1, 1)), Color(1, 0.55, 0.25))
+			"coro":
+				for i in 4:
+					var x2 := -7.0 + i * 4.5
+					var ph := (h - 4 + (i % 2) * 6) * k
+					draw_rect(Rect2(Vector2(x2 - 1, 8 - ph), Vector2(4, ph)), Color(0.12, 0.06, 0.18))
+					draw_rect(Rect2(Vector2(x2, 8 - ph), Vector2(2, ph)), Color(0.55, 0.38, 0.8))
+					draw_rect(Rect2(Vector2(x2, 8 - ph), Vector2(1, ph)), Color(0.85, 0.7, 1.0, 0.8))
+				if int(t * 3.0) % 2 == 0:
+					draw_rect(Rect2(Vector2(sin(t * 2.0) * 6.0, -h + 4), Vector2(2, 2)), Color(0.9, 0.75, 1.0))
+			"luz":
+				var a := 0.35 + 0.15 * sin(t * 5.0)
+				draw_rect(Rect2(Vector2(-8, -h * k + 8), Vector2(16, h * k)), Color(1, 0.85, 0.5, a * k))
+				for i in 3:
+					var fy := 8.0 - fmod(t * 14.0 + i * 9.0, h)
+					var fx := -5.0 + i * 5.0
+					draw_colored_polygon(PackedVector2Array([Vector2(fx, fy - 4), Vector2(fx + 2, fy), Vector2(fx, fy + 3), Vector2(fx - 2, fy)]), Color(1, 0.95, 0.8, k))
+
+
+class DepthPit extends Control:
+	## Pozo en el suelo con falsa perspectiva (como en Bloody Hell): las paredes interiores y el fondo
+	## se proyectan hacia el centro de la cámara, así que al moverte el agujero "gira" y parece hondo.
+	var style := "ember"
+	var t := 0.0
+	var motes := []
+	const DEPTH := 0.78
+	func _ready() -> void:
+		clip_contents = true
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = Color(1, 0.5, 0.2) if style == "ember" else Color(0.6, 0.35, 1.0)
+		l.texture_scale = 1.6
+		l.energy = 0.9
+		l.position = size / 2.0
+		get_parent().add_child.call_deferred(l)
+		l.set_deferred("global_position", global_position + size / 2.0)
+		for i in 26:
+			motes.append([randf(), randf(), randf_range(0.0, 1.0), randf_range(0.3, 1.0)])
+	func _process(delta: float) -> void:
+		t += delta
+		for m in motes:
+			m[2] += delta * 0.18 * m[3]
+			if m[2] > 1.0:
+				m[2] = 0.0; m[0] = randf(); m[1] = randf()
+		queue_redraw()
+	func _proj(p: Vector2, cam: Vector2, k: float) -> Vector2:
+		return cam + (p - cam) * k
+	func _draw() -> void:
+		var vp := get_viewport()
+		var cam: Vector2 = (vp.get_camera_2d().get_screen_center_position() - global_position) if vp.get_camera_2d() else size / 2.0
+		var hot := Color(1, 0.55, 0.15) if style == "ember" else Color(0.65, 0.35, 1.0)
+		var deep := Color(0.05, 0.015, 0.02) if style == "ember" else Color(0.03, 0.01, 0.07)
+		var wall := Color(0.2, 0.09, 0.08) if style == "ember" else Color(0.12, 0.08, 0.2)
+		draw_rect(Rect2(Vector2.ZERO, size), deep)
+		var tl := Vector2.ZERO
+		var tr := Vector2(size.x, 0)
+		var br := size
+		var bl := Vector2(0, size.y)
+		# fondo: núcleo que brilla, con rayos que giran, a la profundidad máxima
+		var bc := _proj(size / 2.0, cam, DEPTH)
+		for k in 10:
+			var a := TAU * k / 10.0 + t * 0.4
+			var r1 := 10.0 + 4.0 * sin(t * 3.0 + k)
+			draw_colored_polygon(PackedVector2Array([bc + Vector2.from_angle(a - 0.12) * 4.0, bc + Vector2.from_angle(a) * (r1 + 26.0), bc + Vector2.from_angle(a + 0.12) * 4.0]), Color(hot, 0.22))
+		for k2 in 4:
+			draw_circle(bc, 16.0 - k2 * 3.5 + sin(t * 4.0) * 1.0, Color(hot.lerp(Color(1, 1, 0.8), k2 * 0.25), 0.25 + k2 * 0.18))
+		# chispas que suben desde el fondo hacia la boca (cada una a su profundidad)
+		for m in motes:
+			var depth := lerpf(DEPTH, 1.0, m[2])
+			var p := _proj(Vector2(m[0] * size.x, m[1] * size.y), cam, depth)
+			draw_rect(Rect2(p.round(), Vector2(1, 1) * (1 + int(m[2] * 2.0))), Color(hot.lerp(Color(1, 0.95, 0.7), m[3]), 1.0 - m[2] * 0.7))
+		# paredes interiores (cuatro trapecios hacia el fondo) con estratos de profundidad
+		var walls := [[tl, tr, 1.0], [tr, br, 0.7], [br, bl, 0.45], [bl, tl, 0.8]]
+		for w in walls:
+			var a2: Vector2 = w[0]
+			var b2: Vector2 = w[1]
+			var shade: float = w[2]
+			var q := PackedVector2Array([a2, b2, _proj(b2, cam, DEPTH), _proj(a2, cam, DEPTH)])
+			draw_colored_polygon(q, wall.lerp(Color.BLACK, 1.0 - shade))
+			for s in 4:
+				var kk := 1.0 - (1.0 - DEPTH) * (s + 1) / 5.0
+				draw_line(_proj(a2, cam, kk), _proj(b2, cam, kk), Color(hot, 0.08 + 0.05 * (3 - s)), 1.0)
+			draw_line(_proj(a2, cam, DEPTH), _proj(b2, cam, DEPTH), Color(hot, 0.35), 1.0)
+		# niebla del fondo y borde de la boca con "dientes" de roca que cuelgan
+		draw_rect(Rect2(Vector2.ZERO, size), Color(deep, 0.25))
+		var rimc := Color(0.32, 0.27, 0.36)
+		draw_rect(Rect2(Vector2.ZERO, Vector2(size.x, 2)), rimc.lightened(0.25))
+		draw_rect(Rect2(Vector2(0, size.y - 2), Vector2(size.x, 2)), rimc.darkened(0.3))
+		draw_rect(Rect2(Vector2.ZERO, Vector2(2, size.y)), rimc)
+		draw_rect(Rect2(Vector2(size.x - 2, 0), Vector2(2, size.y)), rimc.darkened(0.15))
+		var x := 3.0
+		var i := 0
+		while x < size.x - 3:
+			var h := 3.0 + float((i * 7) % 5)
+			draw_colored_polygon(PackedVector2Array([Vector2(x - 2, 2), Vector2(x + 2, 2), Vector2(x, 2 + h)]), rimc.darkened(0.2))
+			x += 5.0
+			i += 1

@@ -69,10 +69,10 @@ func _ready() -> void:
 		"npc":
 			spr.texture = Fx.tex(data.get("sheet", "npc_brenna"))
 			spr.region_enabled = true
-			_fw = 24
+			_fw = 32
 			_frames = 4
-			spr.region_rect = Rect2(0, 0, 24, 26)
-			spr.offset = Vector2(0, -11)
+			spr.region_rect = Rect2(0, 0, 32, 32)
+			spr.offset = Vector2(0, -14)
 			spr.flip_h = data.get("flip", false)
 			light = PointLight2D.new()
 			light.texture = Fx.tex("light")
@@ -156,7 +156,7 @@ func _process(delta: float) -> void:
 				spr.region_rect = Rect2(0, 0, _fw, 26)
 		"npc":
 			var f2 := int(_t * 4.0) % _frames
-			spr.region_rect = Rect2(f2 * _fw, 0, _fw, 26)
+			spr.region_rect = Rect2(f2 * _fw, 0, _fw, 32)
 		"pickup", "ecos":
 			spr.position.y = sin(_t * 3.0) * 2.0
 			if randf() < 0.08:

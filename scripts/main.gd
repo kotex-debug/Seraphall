@@ -160,7 +160,64 @@ func _on_new_game_done(difficulty: int, look: Dictionary, mode: String) -> void:
 	Prog.difficulty = difficulty
 	if mode == "new":
 		Net.close()
+	# corto de introducción y, después, la pregunta del prólogo
+	var film := preload("res://scripts/ui/intro_film.gd").new()
+	film.finished.connect(_ask_prologue)
+	add_child(film)
+
+func _ask_prologue() -> void:
+	var ask := PrologueAsk.new()
+	ask.chosen.connect(_on_prologue_chosen)
+	if title_layer:
+		title_layer.add_child(ask)
+	else:
+		_on_prologue_chosen(false)
+
+func _on_prologue_chosen(play: bool) -> void:
+	G.set_meta("prologue", play)
 	_transition_to_game("new")
+
+class PrologueAsk extends Control:
+	## ¿Jugar el prólogo? (aprender los controles antes del Carcelero)
+	signal chosen(play: bool)
+	var t := 0.0
+	func _ready() -> void:
+		size = Vector2(640, 360)
+		var bg := ColorRect.new()
+		bg.color = Color(0.03, 0.01, 0.05, 0.94)
+		bg.size = size
+		add_child(bg)
+		var title := UIKit.label(G.L(["¿JUGAR EL PRÓLOGO?", "PLAY THE PROLOGUE?"]), 24, UIKit.WHITE, "logo", 6)
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.size = Vector2(640, 30)
+		title.position = Vector2(0, 112)
+		add_child(title)
+		var d := UIKit.label(G.L(["Un recorrido guiado por el Santuario para aprender a moverte, combatir, curarte y usar el menú y el mapa antes de enfrentarte al Carcelero.",
+			"A guided walk through the Sanctuary to learn how to move, fight, heal and use the menu and map before facing the Jailer."]), 15, UIKit.TEXT_DIM)
+		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.position = Vector2(120, 150)
+		d.size = Vector2(400, 40)
+		add_child(d)
+		var row := HBoxContainer.new()
+		row.position = Vector2(170, 214)
+		row.add_theme_constant_override("separation", 20)
+		add_child(row)
+		for opt in [[G.L(["JUGAR EL PRÓLOGO", "PLAY PROLOGUE"]), true], [G.L(["SALTARLO", "SKIP IT"]), false]]:
+			var b := Button.new()
+			b.text = opt[0]
+			b.theme = UIKit.button_theme(8)
+			b.custom_minimum_size = Vector2(130, 22)
+			b.pressed.connect(_pick.bind(opt[1]))
+			UIKit.juicy(b)
+			row.add_child(b)
+		row.get_child(0).grab_focus.call_deferred()
+		if G.autotest != "":
+			_pick.call_deferred(true)
+	func _pick(v: bool) -> void:
+		Audio.sfx("ui_ok", -6.0)
+		chosen.emit(v)
+		queue_free()
 
 func _on_new_game_cancel(mode: String) -> void:
 	if mode == "host":
