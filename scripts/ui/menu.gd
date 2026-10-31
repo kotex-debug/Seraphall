@@ -143,11 +143,12 @@ func _rebuild(animate := true) -> void:
 func _lbl(text: String, pos: Vector2, size := 15, color := UIKit.WHITE, width := 0.0, kind := "body") -> Label:
 	var l := UIKit.label(text, size, color, kind, 3 if size <= 10 else 4)
 	l.position = pos
+	content.add_child(l)
 	if width > 0.0:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(width, 0)
 		l.size = Vector2(width, 0)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(l)
+		l.set_deferred("size", Vector2(width, 0))
 	return l
 
 func _btn(text: String, pos: Vector2, cb: Callable, enabled := true, min_w := 0.0) -> Button:
