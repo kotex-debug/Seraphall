@@ -2,8 +2,8 @@ class_name Player
 extends CharacterBody2D
 ## Desplumado jugable. Solo el dueño (autoridad) simula su entrada; el resto interpola.
 
-const FW := 24
-const FH := 26
+const FW := 32
+const FH := 32
 const ROWS := {"idle": [0, 4, 6.0], "run": [1, 6, 12.0], "attack": [2, 3, 14.0], "hurt": [3, 1, 1.0], "dead": [3, 1, 1.0]}
 
 var peer_id := 1
@@ -120,12 +120,12 @@ func _ready() -> void:
 	sprite.texture = Look.texture(look, feathers_shown)
 	sprite.region_enabled = true
 	sprite.region_rect = Rect2(0, 0, FW, FH)
-	sprite.offset = Vector2(0, -11)
+	sprite.offset = Vector2(0, -14)
 	_flash_mat = Fx.flash_material()
 	sprite.material = _flash_mat
 	add_child(sprite)
 	weapon_pivot = Node2D.new()
-	weapon_pivot.position = Vector2(0, -8)
+	weapon_pivot.position = Vector2(0, -10)
 	add_child(weapon_pivot)
 	weapon_spr = Sprite2D.new()
 	weapon_spr.offset = Vector2(14, 0)
@@ -145,7 +145,7 @@ func _ready() -> void:
 		ls.outline_color = Color.BLACK
 		ls.font_color = Color(1, 0.9, 0.6) if variant == 1 else Color(0.6, 0.95, 1)
 		name_label.label_settings = ls
-		name_label.position = Vector2(-6, -36)
+		name_label.position = Vector2(-6, -42)
 		add_child(name_label)
 	refresh_stats(true)
 	_update_weapon_sprite()
@@ -836,7 +836,7 @@ func _animate(delta: float) -> void:
 		f = 1
 	sprite.region_rect = Rect2(f * FW, row[0] * FH, FW, FH)
 	sprite.flip_h = facing < 0
-	sprite.offset.y = -8.0 if sitting else -11.0
+	sprite.offset.y = -11.0 if sitting else -14.0
 	if sitting:
 		sprite.region_rect = Rect2(0, 0, FW, FH)
 	# respiración y estiramiento suave

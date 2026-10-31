@@ -220,7 +220,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			G.chroma(2.0, 0.7)
 			Fx.burst(global_position + Vector2(0, -40), Color(0.85, 0.6, 1.0), 60, 220.0, 1.2, "fx_soft", 180.0, Vector2.UP, 0.6)
 			phase = 2
-			Audio.play_music("boss2", 0.5)
+			Audio.play_music("boss_choir", 0.5)
 			if not await _wait(1.2, my_id):
 				_invuln = false
 				return

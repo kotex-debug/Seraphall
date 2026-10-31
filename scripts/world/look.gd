@@ -48,7 +48,8 @@ static func palette(look: Dictionary) -> Dictionary:
 	var wc := Color.html(OPTIONS.wing[l.wing][2])
 	var pal := {1: Color.html(OPTIONS.skin[l.skin][2]), 2: Color.html(OPTIONS.hair_col[l.hair_col][2]), 3: Color.html(OPTIONS.eye[l.eye][2]),
 		4: Color.html(ar[2]), 5: Color.html(ar[3]), 6: Color.html(ar[4]), 7: Color.html(OPTIONS.cloak[l.cloak][2]), 8: wc,
-		9: Color.html(OPTIONS.halo[l.halo][2]), 20: Color.html(OPTIONS.skin[l.skin][2]).darkened(0.45)}
+		9: Color.html(OPTIONS.halo[l.halo][2]), 20: Color.html(OPTIONS.skin[l.skin][2]).darkened(0.45),
+		21: Color(0.97, 0.96, 1.0), 22: Color.html(OPTIONS.skin[l.skin][2]).lerp(Color(1, 0.35, 0.45), 0.35)}
 	for i in range(10, 20):
 		pal[i] = wc
 	return pal
@@ -94,8 +95,8 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 				out.set_pixel(x, y, c)
 				solid[y * w + x] = 1
 	# contorno (sin cruzar de un fotograma a otro)
-	var fw := 24 if kind == "pl" else w
-	var fh := 26 if kind == "pl" else h
+	var fw := 32 if kind == "pl" else w
+	var fh := 32 if kind == "pl" else h
 	for y in h:
 		for x in w:
 			if solid[y * w + x] == 1 or out.get_pixel(x, y).a > 0.5:

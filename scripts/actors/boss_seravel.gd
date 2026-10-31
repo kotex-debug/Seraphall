@@ -377,7 +377,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			pose = "windup"
 			Audio.sfx("roar")
 			if act == "phase2":
-				Audio.play_music("boss2", 0.5)
+				Audio.play_music("boss_seravel3", 0.5)
 			G.shake(8.0, 1.2)
 			G.flash(Color(1, 0.2, 0.2, 0.5) if act == "phase2" else Color(1, 1, 1, 0.6), 0.5)
 			G.shockwave(global_position + Vector2(0, -20), 2.2, 0.9)

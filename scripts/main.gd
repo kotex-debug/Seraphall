@@ -53,6 +53,25 @@ func _ready() -> void:
 			await _shot(sd + "/n06_inicio.png")
 			print("NEWGAME look=", G.look, " diff=", Prog.difficulty)
 			get_tree().quit()
+		"promo_title":
+			var sd := OS.get_environment("SERAPHALL_SHOTS")
+			G.look = Look.sane({})
+			_build_title()
+			await get_tree().create_timer(5.0).timeout
+			await _shot(sd + "/p01_titulo.png")
+			_on_title_action("new", "")
+			await get_tree().create_timer(0.6).timeout
+			var ng: Control = title_layer.get_child(title_layer.get_child_count() - 1)
+			await get_tree().create_timer(0.6).timeout
+			await _shot(sd + "/p02_descenso.png")
+			ng._confirm_diff()
+			ng.look = Look.sane({"body": "f", "hair": 1, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": "Aurel"})
+			ng._name_edit.text = "Aurel"
+			ng._refresh_preview()
+			ng.row_sel = 7
+			await get_tree().create_timer(1.4).timeout
+			await _shot(sd + "/p03_creador.png")
+			get_tree().quit()
 		"title":
 			_build_title()
 			await get_tree().create_timer(1.2).timeout
@@ -200,6 +219,12 @@ func back_to_title(msg: String) -> void:
 	_build_title()
 	if msg != "":
 		_toast_title(msg)
+
+func _promo_clean(w: Node) -> void:
+	for c in w.hud.toast_box.get_children():
+		c.queue_free()
+	for c2 in w.hud.big_layer.get_children():
+		c2.queue_free()
 
 func reload_continue() -> void:
 	await back_to_title("")
@@ -349,6 +374,127 @@ func _run_autotest() -> void:
 				await _shot(out + "/s10_menu_%s.png" % tb)
 				w.menu.close()
 			print("AUTOTEST_SHOTS2_OK")
+			get_tree().quit()
+		"promo":
+			var lp: Player = w.local_player()
+			G.look = Look.sane({"body": "f", "hair": 1, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": "Aurel"})
+			w.send_look()
+			Prog.level = 14
+			Prog.weapons = {"sword": 6, "seravel": 3, "choir": 2, "scythe": 4}
+			Prog.equipped = "seravel"
+			Prog.infusions = {"seravel": "brasa"}
+			for sk in ["f1", "f2", "f3", "a1", "a2", "l1", "l2", "l4", "c1", "c2"]:
+				Prog.skills[sk] = true
+			Prog.spark = true
+			Prog.wing_feathers = 8
+			for rid in ["sanct", "hall1", "chains", "hall2", "east", "gallery", "yard", "nim_link", "nimbo", "mirador", "mir_link"]:
+				Prog.flags["seen_" + rid] = true
+			lp.refresh_stats(true)
+			lp._update_weapon_sprite()
+			w._light_brasa("sanct")
+			# compañero de cooperativo (marioneta para la foto)
+			var mate = w._spawn_player(424242, 2)
+			mate.set_look({"body": "m", "hair": 1, "hair_col": 1, "skin": 3, "eye": 1, "cloak": 1, "armor": 1, "wing": 4, "halo": 1, "name": "Kael"}, 10)
+			# 1. Santuario
+			lp.respawn_at(w.tile_pos(49, 89))
+			mate.position = lp.position + Vector2(22, 4); mate._net_pos = mate.position
+			w.camera.zoom = Vector2(1.4, 1.4)
+			await get_tree().create_timer(3.5).timeout
+			_promo_clean(w)
+			await _shot(out + "/p04_santuario.png")
+			# 2. Sala del Nimbo
+			lp.respawn_at(w.tile_pos(65, 89))
+			mate.position = lp.position + Vector2(26, -2); mate._net_pos = mate.position
+			await get_tree().create_timer(3.0).timeout
+			_promo_clean(w)
+			await _shot(out + "/p05_sala_del_nimbo.png")
+			# 3. Combate cooperativo
+			lp.respawn_at(w.tile_pos(44, 63))
+			mate.position = lp.position + Vector2(-20, 14); mate._net_pos = mate.position
+			await get_tree().create_timer(1.2).timeout
+			for i in 5:
+				lp.state = "move"
+				lp.aim = (w.enemies[1].global_position - lp.global_position).normalized()
+				lp._start_attack()
+				await get_tree().create_timer(0.09 if i == 4 else 0.2).timeout
+			_promo_clean(w)
+			await _shot(out + "/p06_combate.png")
+			await get_tree().create_timer(0.4).timeout
+			lp.state = "move"
+			lp.wrath = 100.0
+			lp._cast_wrath()
+			await get_tree().create_timer(0.4).timeout
+			_promo_clean(w)
+			await _shot(out + "/p07_ira_serafica.png")
+			await get_tree().create_timer(1.2).timeout
+			# 4. Cinemática de Seravel
+			w.hud.visible = false
+			lp.cutscene = true
+			var cine := preload("res://scripts/ui/boss_cinematic.gd").new()
+			cine.setup("seravel", 1)
+			w.add_child(cine)
+			await get_tree().create_timer(5.0, true, false, true).timeout
+			await _shot(out + "/p08_seravel_despierta.png")
+			await get_tree().create_timer(3.7, true, false, true).timeout
+			await _shot(out + "/p09_seravel_nombre.png")
+			await cine.finished
+			var cine2 := preload("res://scripts/ui/boss_cinematic.gd").new()
+			cine2.setup("choir", 1)
+			w.add_child(cine2)
+			await get_tree().create_timer(9.2, true, false, true).timeout
+			await _shot(out + "/p10_coro_hueco.png")
+			await cine2.finished
+			lp.cutscene = false
+			w.hud.visible = true
+			# 5. Mirador (paz)
+			lp.respawn_at(w.tile_pos(34, 86.5))
+			mate.position = lp.position + Vector2(-16, 6); mate._net_pos = mate.position
+			await get_tree().create_timer(1.5).timeout
+			w._contemplate(w.interactables["bench_mirador"])
+			await get_tree().create_timer(2.6).timeout
+			_promo_clean(w)
+			await _shot(out + "/p11_mirador.png")
+			while w._contemplating:
+				await get_tree().create_timer(0.2).timeout
+			# 6. Lluvia de Ceniza en el Patio del Carcelero
+			w.camera.zoom = Vector2(1.4, 1.4)
+			w._world_event("ash", 40.0)
+			lp.respawn_at(w.tile_pos(80, 60))
+			mate.position = lp.position + Vector2(20, 6); mate._net_pos = mate.position
+			await get_tree().create_timer(3.5).timeout
+			_promo_clean(w)
+			await _shot(out + "/p12_lluvia_de_ceniza.png")
+			w._world_event_end()
+			# 7. Combate contra Seravel
+			Prog.flags["carcelero_dead"] = true
+			w.wflags["carcelero_dead"] = true
+			for e in w.enemies:
+				if e.type == "carcelero":
+					e.die()
+			w.set_gate(true)
+			w.camera.zoom = Vector2.ONE
+			lp.respawn_at(w.tile_pos(49, 22))
+			mate.position = lp.position + Vector2(24, 0); mate._net_pos = mate.position
+			await get_tree().create_timer(12.0).timeout
+			var boss: Enemy = w.active_boss
+			if boss:
+				w._server_damage(boss.idx, boss.max_hp * 0.55, Vector2.RIGHT, 0.0, false)
+			await get_tree().create_timer(3.5).timeout
+			lp.hp = Prog.max_hp()
+			if boss:
+				lp.respawn_at(boss.global_position + Vector2(-50, 30))
+			await get_tree().create_timer(0.6).timeout
+			for i in 3:
+				lp.state = "move"
+				if boss:
+					lp.aim = (boss.global_position - lp.global_position).normalized()
+				lp._start_attack()
+				await get_tree().create_timer(0.1 if i == 2 else 0.22).timeout
+			_promo_clean(w)
+			await _shot(out + "/p13_seravel_combate.png")
+			await get_tree().create_timer(2.0).timeout
+			await _shot(out + "/p14_seravel_fase2.png")
+			print("AUTOTEST_PROMO_OK")
 			get_tree().quit()
 		"hud":
 			var lp: Player = w.local_player()

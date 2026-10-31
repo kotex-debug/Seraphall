@@ -140,9 +140,21 @@ func _on_quest_updated(_id: String) -> void:
 		tw.tween_property(c, "scale", Vector2(1.15, 1.15), 0.06)
 		tw.tween_property(c, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
-func _process(_delta: float) -> void:
+var _beat_t := 0.0
+
+func _process(delta: float) -> void:
 	if _boss and (not is_instance_valid(_boss) or not _boss.is_alive()):
 		hide_boss()
+	# latido con poca vida (cada vez más rápido)
+	var lp: Player = world.local_player() if world else null
+	if lp and lp.is_alive() and lp.hp / Prog.max_hp() <= 0.25:
+		_beat_t -= delta
+		if _beat_t <= 0.0:
+			var r: float = lp.hp / Prog.max_hp()
+			_beat_t = 0.55 + r * 1.6
+			Audio.sfx("heartbeat", -2.0, 0.0)
+	else:
+		_beat_t = 0.0
 
 func set_progress(v: float, text: String) -> void:
 	progress.visible = v >= 0.0 and text != ""
@@ -460,7 +472,7 @@ class StatusCluster extends Control:
 		UIKit.frame(self, Rect2(c - Vector2(17, 17), Vector2(34, 34)), UIKit.RED if not full else UIKit.GOLD, Color(0.16, 0.06, 0.2), 4.0)
 		var tex: Texture2D = lp.sprite.texture
 		var bob := roundf(sin(_t * 3.0))
-		draw_texture_rect_region(tex, Rect2(c + Vector2(-16, -17 + bob), Vector2(32, 26)), Rect2(4, 0, 16, 13))
+		draw_texture_rect_region(tex, Rect2(c + Vector2(-14, -16 + bob), Vector2(28, 26)), Rect2(9, 1, 14, 13))
 		var lv := "LV%d" % Prog.level
 		var f := UIKit.font("head")
 		var tag := Rect2(c + Vector2(-17, 12), Vector2(f.get_string_size(lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 6, 10))

@@ -843,6 +843,10 @@ func _build_quests() -> void:
 		y += 54.0
 		i += 1
 	_panel(Rect2(400, 0, 200, 296))
+	var dv := DestinyScale.new()
+	dv.position = Vector2(400, 196)
+	dv.size = Vector2(200, 100)
+	content.add_child(dv)
 	_lbl(G.T("done_quests").to_upper(), Vector2(412, 8), 8, Color(0.55, 1.0, 0.6), 0.0, "head")
 	var y2 := 26.0
 	for id in Prog.QUESTS:
@@ -937,6 +941,55 @@ func _on_save_quit() -> void:
 	world.main.back_to_title("")
 
 # ====================================================================== piezas
+class DestinyScale extends Control:
+	## Balanza del destino: hacia qué final se inclinan tus decisiones
+	var t := 0.0
+	var _ang := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		tooltip_text = G.T("route_hint")
+	func _process(delta: float) -> void:
+		t += delta
+		var want := clampf(-Prog.route_score() / 6.0, -1.0, 1.0) * 0.45
+		_ang = lerpf(_ang, want + sin(t * 1.6) * 0.03, clampf(delta * 3.0, 0.0, 1.0))
+		queue_redraw()
+	func _draw() -> void:
+		var f := UIKit.font("head")
+		var tf := UIKit.font("title")
+		draw_rect(Rect2(Vector2(8, 0), Vector2(size.x - 16, 1)), Color(1, 1, 1, 0.15))
+		f.draw_string_outline(get_canvas_item(), Vector2(12, 14), G.T("destiny"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), Vector2(12, 14), G.T("destiny"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
+		var c := Vector2(size.x / 2.0, 40)
+		# pilar y brazo de la balanza
+		draw_rect(Rect2(c + Vector2(-1, 0), Vector2(3, 30)), UIKit.INK)
+		draw_rect(Rect2(c + Vector2(0, 0), Vector2(1, 30)), UIKit.GOLD_DARK)
+		var d := Vector2.from_angle(_ang)
+		var l := c - d * 56.0
+		var r := c + d * 56.0
+		draw_line(l, r, UIKit.INK, 4.0)
+		draw_line(l, r, UIKit.GOLD, 2.0)
+		UIKit.diamond(self, c, 4.0, UIKit.GOLD)
+		# platillo izquierdo: alas abiertas
+		var wc := Color(0.75, 0.9, 1.0)
+		var lp := l + Vector2(0, 10)
+		draw_line(l, lp, Color(1, 1, 1, 0.5), 1.0)
+		UIKit.wing(self, lp + Vector2(-2, 0), -1.0, 10.0, wc, 0.8 + 0.1 * sin(t * 4.0))
+		UIKit.wing(self, lp + Vector2(2, 0), 1.0, 10.0, wc, 0.8 + 0.1 * sin(t * 4.0))
+		# platillo derecho: trono
+		var rp := r + Vector2(0, 10)
+		draw_line(r, rp, Color(1, 1, 1, 0.5), 1.0)
+		var tc := Color(1, 0.35, 0.4)
+		draw_rect(Rect2(rp + Vector2(-6, -2), Vector2(12, 12)), UIKit.INK)
+		draw_rect(Rect2(rp + Vector2(-5, -1), Vector2(3, 10)), tc)
+		draw_rect(Rect2(rp + Vector2(-5, 5), Vector2(10, 3)), tc)
+		draw_rect(Rect2(rp + Vector2(2, 4), Vector2(3, 5)), tc.darkened(0.3))
+		var sc := Prog.route_score()
+		var wn := G.T("route_wings") if sc >= 0 else G.T("route_throne")
+		var col := wc if sc >= 0 else tc
+		var w := tf.get_string_size(wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+		tf.draw_string_outline(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 86), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
+		tf.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 86), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+
 class NpcBust extends Control:
 	## Retrato grande animado del PNJ del servicio
 	var sheet := "npc_nyx"
@@ -1081,7 +1134,7 @@ class Portrait extends Control:
 		var lp: Player = world.local_player() if world else null
 		var tex: Texture2D = lp.sprite.texture if lp else Look.texture(G.look, Prog.wing_feathers)
 		var bob := roundf(sin(t * 3.0) * 2.0)
-		draw_texture_rect_region(tex, Rect2(Vector2(-48, -60 + bob), Vector2(96, 104)), Rect2(frame * 24, 0, 24, 26))
+		draw_texture_rect_region(tex, Rect2(Vector2(-48, -70 + bob), Vector2(96, 96)), Rect2(frame * 32, 0, 32, 32))
 
 class PipBar extends Control:
 	var value := 1

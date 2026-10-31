@@ -86,14 +86,14 @@ func _process(delta: float) -> void:
 	if box.chars < box.text.length():
 		var before := int(box.chars)
 		box.chars = min(float(box.text.length()), box.chars + delta * 45.0)
-		if int(box.chars) != before and int(box.chars) % 3 == 0:
-			Audio.sfx("ui_move", -20.0, 0.3)
+		if int(box.chars) != before and int(box.chars) % 2 == 0 and box.text.substr(int(box.chars) - 1, 1) != " ":
+			Audio.voice(box.speaker)
 	if box.truth != "" and box.chars >= box.text.length() * 0.6:
 		box.glitch_t -= delta
 		if box.glitch_t <= 0.0:
 			box.glitch = 0.16
 			box.glitch_t = randf_range(0.9, 1.6)
-			Audio.sfx("parry", -14.0, 0.6)
+			Audio.sfx("glitch", -6.0, 0.2)
 	box.glitch = max(0.0, box.glitch - delta)
 	if G.autotest != "":
 		_auto_t = min(_auto_t, 0.05)

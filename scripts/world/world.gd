@@ -1098,7 +1098,7 @@ func enemy_alert(idx: int) -> void:
 	if idx < enemies.size() and enemies[idx].type == "carcelero":
 		active_boss = enemies[idx]
 		hud.show_boss(enemies[idx])
-		Audio.play_music("boss1")
+		Audio.play_music("boss_carcelero")
 
 func request_damage_enemy(e: Enemy, dmg: float, dir: Vector2, poise: float, crit: bool) -> void:
 	if multiplayer.is_server():
@@ -1165,6 +1165,7 @@ func _enemy_die(idx: int) -> void:
 			Prog.unrecovered = 0
 			Prog.changed.emit()
 			hud.big_message(G.L(["SOMBRA DISIPADA", "SHADOW DISPELLED"]), Color(0.75, 0.55, 1.0), 2.5)
+			Audio.play_music("explore", 2.5)
 			Fx.souls(e.global_position + Vector2(0, -8), lpk, 16)
 		return
 	if e.is_boss and asc_fight.is_empty() and not wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false):
@@ -1583,7 +1584,7 @@ func _ascension_start(boss_type: String, level: int) -> void:
 	e.cooldown = 0.8
 	active_boss = e
 	hud.show_boss(e)
-	Audio.play_music("boss1" if level < 3 else "boss2", 0.3)
+	Audio.play_music({"carcelero": "boss_carcelero", "choir": "boss_choir", "seravel": "boss_seravel3" if level >= 2 else "boss_seravel"}[boss_type], 0.3)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_start_ascension(b: String, lvl: int) -> void:
@@ -1655,7 +1656,7 @@ func _boss_intro(idx: int) -> void:
 	boss.state = "chase"
 	boss.cooldown = 0.8
 	hud.show_boss(boss)
-	Audio.play_music("boss1", 0.3)
+	Audio.play_music("boss_seravel", 0.3)
 	G.shockwave(boss.global_position + Vector2(0, -20), 1.5, 0.6)
 
 func _play_cinematic(kind: String) -> void:
@@ -1682,7 +1683,7 @@ func _carcelero_intro(idx: int) -> void:
 	e.cooldown = 1.0
 	active_boss = e
 	hud.show_boss(e)
-	Audio.play_music("boss1", 0.3)
+	Audio.play_music("boss_carcelero", 0.3)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _request_choir() -> void:
@@ -1714,7 +1715,7 @@ func _choir_intro(idx: int) -> void:
 	e.cooldown = 1.0
 	active_boss = e
 	hud.show_boss(e)
-	Audio.play_music("boss1", 0.3)
+	Audio.play_music("boss_choir", 0.3)
 	if not Prog.quests.has("choir"):
 		Prog.start_quest("choir")
 
@@ -1804,7 +1805,7 @@ func _on_seravel_dead(e: Enemy) -> void:
 			["Seravel", ["Te esperaré en las Puertas. Esta vez... del mismo lado.", "I will wait for you at the Gates. This time... on the same side."]],
 		]
 	var done := func():
-		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body"))
+		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name())
 		Audio.play_music("theme", 2.0)
 		if multiplayer.is_server():
 			Prog.save_game()
@@ -1820,6 +1821,8 @@ func on_local_player_died(p: Player) -> void:
 		if not any_alive:
 			_end_ascension(false)
 	Audio.sfx("die")
+	Audio.sfx("feather_tear", -2.0, 0.0)
+	Audio.play_music("gameover", 0.4)
 	hud.big_message(G.T("you_died"), Color(0.85, 0.15, 0.15), 3.0, true)
 	G.slowmo("death", 0.3, 1.2)
 	Prog.deaths += 1
@@ -1863,6 +1866,8 @@ func on_local_player_died(p: Player) -> void:
 			any_alive = true
 	p.respawn_at(_brasa_spawn(Prog.last_brasa))
 	send_look()
+	_area = ""
+	Audio.play_music("peace" if AREAS.get(room_at(p.global_position), "") in PEACE_AREAS else "explore", 2.0)
 	if Prog.dropped_ecos.has("amount"):
 		_spawn_ecos_drop()
 	if shadow_new and any_alive:
@@ -2233,6 +2238,8 @@ func _spawn_shadow(owner: int, pos: Vector2, amount: int, l: Dictionary, feather
 	Fx.burst(pos + Vector2(0, -10), Color(0.5, 0.25, 0.8), 30, 90.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.6)
 	if owner == Net.my_id() and announce:
 		hud.big_message(G.T("shadow_rises"), Color(0.7, 0.45, 1.0), 2.5, true)
+		Audio.sfx("shadow_rise", 0.0, 0.0)
+		Audio.play_music("shadow", 1.0)
 
 # ---------------------------------------------------------------------- eventos del mundo
 @rpc("any_peer", "call_remote", "reliable")
@@ -2243,7 +2250,7 @@ func _world_event(kind: String, dur: float) -> void:
 	var col := Color(1, 0.55, 0.3) if kind == "ash" else Color(0.7, 0.45, 1.0)
 	hud.big_message(G.T("ev_" + kind), col, 3.0, true)
 	G.toast(G.T("ev_" + kind + "_d"), col)
-	Audio.sfx("roar", -8.0)
+	Audio.sfx("event", 0.0, 0.0)
 	G.chroma(1.0, 0.6)
 	if _event_fx:
 		_event_fx.queue_free()

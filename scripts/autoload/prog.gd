@@ -155,6 +155,33 @@ func synergy(id: String) -> bool:
 		G.toast(G.L(["SINERGIA DESCUBIERTA: ", "SYNERGY DISCOVERED: "]) + G.L(SYNERGIES[id].name).to_upper(), Color(0.9, 0.6, 1.0))
 	return on
 
+# ------------------------------------------------------------------ estructura: juego base + 2 DLC -> 2 finales
+## Juego base (~10 h, 4 estratos, final abierto) -> DLC I "Los Cielos Rotos" (~5 h) y DLC II "El Abismo Sin Nombre" (~5 h),
+## cada uno con su final. Las decisiones de las tres partes deciden el final definitivo: ALAS ABIERTAS o EL TRONO VACÍO.
+const CAMPAIGN := [
+	{"id": "base", "name": ["Seraphall", "Seraphall"], "hours": 10, "strata": ["Vestíbulo de Ceniza", "Bosque de Plumas Muertas", "Fundición de Halos", "El Trono Vacío"]},
+	{"id": "dlc1", "name": ["Los Cielos Rotos", "The Broken Heavens"], "hours": 5},
+	{"id": "dlc2", "name": ["El Abismo Sin Nombre", "The Nameless Abyss"], "hours": 5},
+]
+
+func route_score() -> int:
+	## > 0: Alas Abiertas (libertad) · < 0: El Trono Vacío (dominio)
+	var sc := 0
+	for b in BOSS_INFO:
+		if flags.get(BOSS_INFO[b].flag, false):
+			sc += 2 if spared.has(b) else -1
+	sc += memories.size()
+	if oath != "":
+		sc -= 1
+	if wing_feathers >= 7:
+		sc += 1
+	elif wing_feathers <= 3:
+		sc -= 1
+	return sc
+
+func route_name() -> String:
+	return G.T("route_wings") if route_score() >= 0 else G.T("route_throne")
+
 func start_ng() -> void:
 	## Segundo Descenso: conservas personaje, armas y objetos; el mundo vuelve a empezar, más cruel.
 	ng += 1

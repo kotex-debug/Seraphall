@@ -36,7 +36,7 @@ func play_music(name: String, fade := 1.2) -> void:
 	if stream == null:
 		return
 	if stream is AudioStreamOggVorbis:
-		stream.loop = name != "victory"
+		stream.loop = not (name in ["victory", "gameover"])
 	var old := _music_a
 	var nw := _music_b
 	_music_a = nw
@@ -58,6 +58,13 @@ func stop_music(fade := 1.0) -> void:
 func refresh_volume() -> void:
 	if _music_a.playing:
 		_music_a.volume_db = linear_to_db(max(0.001, G.music_volume))
+
+const VOICES := {"Brenna": "brenna", "El Cartógrafo": "carto", "Ozias": "ozias", "Madre Ilse": "ilse", "Nyx": "nyx",
+	"Sor Velaria": "velaria", "???": "voz", "Seravel": "seravel", "El Carcelero": "carcelero", "El Coro": "coro"}
+
+## Voz de diálogo propia de cada personaje (pitidos como en Undertale)
+func voice(speaker: String) -> void:
+	sfx("voice_" + VOICES.get(speaker, "default"), -9.0, 0.05)
 
 func sfx(name: String, vol := 0.0, pitch_var := 0.08) -> void:
 	var now := Time.get_ticks_msec()

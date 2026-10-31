@@ -37,6 +37,12 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 - **Amigo:** *Unirse con código* → escribe el código.
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
 
+## 🧪 Versión ALFA 0.5
+- **Juego base de ~10 h** con final abierto, más **2 DLC de ~5 h** (*Los Cielos Rotos* y *El Abismo Sin Nombre*), cada uno con su final, que llevan a **2 finales definitivos** (*Alas Abiertas* o *El Trono Vacío*). La alfa incluye el Estrato I completo y la **balanza del destino**, que ya registra tus decisiones.
+- **Banda sonora original con leitmotivs**: el tema de la Pluma, el de la Voz, el de Seravel, el lamento del Coro y la Cadena reaparecen transformados en cada pista. Hay temas propios para cada jefe y cambian en la fase final, ambientes espeluznantes, latido con poca vida y **voces de diálogo distintas para cada personaje**.
+- **HUD con iconos animados**: corazones, llamas de aguante y cristales de Luz.
+- **Protagonista más detallado** (32×32): cara, bufanda, hombrera, emblema, botas, capa con pliegues y alas con plumas sombreadas.
+
 ## ✨ Contenido de la demo (v0.4)
 - **Creador de personaje**: chica o chico, 3 peinados por cuerpo y colores de pelo, piel, ojos, capa, armadura, alas y aureola, con nombre propio. Tu compañero en cooperativo ve tu aspecto.
 - **4 modos de dificultad**: Ala Ligera (accesible), Peregrino, Desplumado (recomendado) y Serafín Caído; más el **Segundo Descenso (NG+)**.
@@ -57,7 +63,7 @@ Fuentes: Jersey 10/15, Silkscreen y Pixelify Sans (SIL Open Font License, ver `a
 ## 🛠️ Desarrollo
 Hecho con **Godot 4.7** (gratis y de código abierto).
 - Abre la carpeta con Godot 4.7 → *Importar* → `project.godot`.
-- Arte y audio provisionales generados por código: `python3 tools/gen_art.py`, `python3 tools/gen_looks.py` (personaje personalizable) y `python3 tools/gen_audio.py --force`.
+- Arte y audio provisionales generados por código: `python3 tools/gen_art.py`, `python3 tools/gen_looks.py` (personaje personalizable) y `python3 tools/gen_music.py` (banda sonora y voces), `python3 tools/gen_hud.py` (iconos del HUD).
 - Exportar: *Proyecto → Exportar → Windows Desktop*.
 
 Diseño completo en [`GDD_Seraphall.md`](GDD_Seraphall.md).

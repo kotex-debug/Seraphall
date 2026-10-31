@@ -317,13 +317,13 @@ func _draw_creator() -> void:
 		elif cyc >= 5.0 and cyc < 5.6:
 			row = 2; nfr = 3; fps = 6.0
 		var fr := int(_anim_t * fps) % nfr
-		var sc := 6.0 + _burst * 0.6
-		var ds := Vector2(24, 26) * sc
+		var sc := 5.0 + _burst * 0.5
+		var ds := Vector2(32, 32) * sc
 		var bob := roundf(sin(_t * 3.0) * 2.0)
-		var dest := Rect2(c - Vector2(ds.x / 2.0, ds.y - 72) + Vector2(0, bob), ds)
+		var dest := Rect2(c - Vector2(ds.x / 2.0, ds.y - 82) + Vector2(0, bob), ds)
 		if _facing < 0:
 			draw_set_transform(Vector2(c.x * 2.0, 0), 0.0, Vector2(-1, 1))
-		draw_texture_rect_region(_preview_tex, dest, Rect2(fr * 24, row * 26, 24, 26))
+		draw_texture_rect_region(_preview_tex, dest, Rect2(fr * 32, row * 32, 32, 32))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var nm := str(look.get("name", "")).strip_edges()
 	if _name_edit:
