@@ -316,10 +316,10 @@ func _local_update(delta: float) -> void:
 			heal_t -= delta
 			velocity = velocity.lerp(input * Prog.move_speed() * 0.3, 0.2)
 			if heal_t <= 0.0:
+				var before := hp
 				hp = min(Prog.max_hp(), hp + Prog.max_hp() * Prog.heal_ratio())
-				Audio.sfx("heal")
-				Fx.burst(global_position + Vector2(0, -8), Color(1, 0.6, 0.45), 18, 60.0, 0.8, "fx_soft", 180.0, Vector2.UP, 0.4)
-				Fx.light_flash(global_position, Color(1, 0.6, 0.4), 1.2, 1.0, 0.5)
+				Audio.sfx("heal", -2.0)
+				_heal_fx(hp - before)
 				state = "move"
 		"downed":
 			velocity = Vector2.ZERO
@@ -421,12 +421,30 @@ func _start_attack() -> void:
 	attack_len = (0.30 if not final else 0.42) / w.speed
 	facing = 1 if aim.x >= 0.0 else -1
 	velocity = aim * (95.0 if not final else 150.0)
+	# cada golpe del combo es distinto: barrido, revés, tajo descendente y un remate propio de cada arma
+	var style = ["sweep", "backhand", "overhead", "sweep"][(combo - 1) % 4]
+	if final:
+		style = {"sword": "spin", "spear": "burst", "scythe": "reap", "hammer": "quake", "seravel": "spin", "choir": "spin"}.get(w.sprite, "spin")
 	var dmg := Prog.weapon_damage() * (1.0 if not final else 1.7)
 	var arc: float = w.arc * (1.0 if not final else 1.25)
 	var rng: float = w.range * (1.0 if not final else 1.15)
-	Audio.sfx("swing" if not final else "swing_heavy")
-	var cw := combo % 2 == 1
-	_swing(arc, 0.09 / w.speed + 0.04, cw)
+	match style:
+		"backhand":
+			arc *= 0.9; dmg *= 1.05
+		"overhead":
+			arc *= 0.55; rng *= 1.25; dmg *= 1.2
+		"spin":
+			arc = 360.0; rng *= 0.95
+		"burst":
+			arc *= 0.5; rng *= 1.5
+		"reap":
+			arc = 300.0
+		"quake":
+			arc = 360.0; rng *= 1.1
+	Audio.sfx("swing" if not final else "swing_heavy", 0.0, 0.12)
+	var cw = style != "backhand"
+	_swing(arc if arc < 300.0 else 300.0, 0.09 / w.speed + 0.04, cw)
+	_combo_fx(style, rng, w)
 	var col := Color(1, 0.95, 0.85, 0.85) if variant == 1 else Color(0.7, 0.95, 1, 0.85)
 	if w.sprite == "seravel":
 		col = Color(1, 0.6, 0.65, 0.9)
@@ -447,6 +465,44 @@ func _start_attack() -> void:
 	if final and w.get("notes", false):
 		for a in [-0.35, 0.0, 0.35]:
 			world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 10, aim.rotated(a) * 230.0, Prog.spell_damage(9.0), "note", "player", Net.my_id(), 6.0, 0.9, 3])
+
+func _heal_fx(amount: float) -> void:
+	## Curación: espiral de luz que sube, anillo cálido y la cifra recuperada
+	var p := global_position
+	Fx.ring(p + Vector2(0, -2), 4.0, 26.0, Color(1, 0.55, 0.5), 0.45, 3.0)
+	Fx.ring(p + Vector2(0, -2), 2.0, 16.0, Color(1, 0.95, 0.85), 0.35, 2.0)
+	for i in 14:
+		var a := TAU * i / 14.0
+		Fx.burst(p + Vector2(cos(a) * 10.0, sin(a) * 4.0), Color(1, 0.55, 0.6) if i % 2 else Color(1, 0.92, 0.8), 1, 16.0, 0.9, "fx_px", 20.0, Vector2.UP, 0.5, false, Vector2(0, -50))
+	Fx.burst(p + Vector2(0, -10), Color(1, 0.7, 0.7), 10, 40.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.35)
+	Fx.light_flash(p, Color(1, 0.6, 0.55), 1.4, 1.1, 0.6)
+	if amount > 0.5:
+		Fx.text(p + Vector2(0, -26), "+%d" % int(round(amount)), Color(1, 0.6, 0.65), 10)
+	_flash(0.6, Color(1, 0.8, 0.8))
+
+func _combo_fx(style: String, rng: float, w: Dictionary) -> void:
+	var p := global_position + Vector2(0, -8)
+	match style:
+		"overhead":
+			_squash(Vector2(0.85, 1.25))
+			get_tree().create_timer(0.07).timeout.connect(func():
+				Fx.ring(p + aim * rng * 0.9, 3.0, 16.0, Color(1, 0.85, 0.55), 0.25, 3.0)
+				Fx.sparks(p + aim * rng * 0.9, Vector2.UP, Color(1, 0.8, 0.45), 6, 90.0, 120.0)
+				G.shake(1.5, 0.08))
+		"spin":
+			Fx.slash(p, aim.angle() + PI, rng * 0.75, 200.0, Color(1, 1, 1, 0.55), 10.0, 0.22, false)
+			Fx.ring(global_position, 4.0, rng, Color(1, 0.9, 0.7), 0.3, 3.0)
+		"reap":
+			Fx.slash(p, aim.angle() + PI * 0.5, rng * 0.8, 180.0, Color(0.85, 0.7, 1.0, 0.8), 12.0, 0.25, true)
+		"quake":
+			get_tree().create_timer(0.08).timeout.connect(func():
+				Fx.ring(global_position, 6.0, rng * 1.3, Color(1, 0.6, 0.3), 0.4, 6.0)
+				Fx.scorch(global_position + aim * 10.0, 14.0)
+				G.shockwave(global_position, 0.8, 0.35)
+				G.shake(3.5, 0.15))
+		"burst":
+			for i in 3:
+				Fx.burst(p + aim * (rng * (0.4 + i * 0.3)), Color(1, 0.95, 0.8), 3, 30.0, 0.25, "fx_soft", 30.0, aim, 0.4)
 
 func _thrust_fx(rng: float, col: Color) -> void:
 	var p := global_position + Vector2(0, -8)
@@ -603,6 +659,9 @@ func _start_parry() -> void:
 
 func _cast_lance() -> void:
 	var lc := 15.0 * Prog.spell_cost_mult()
+	if not Prog.ability("lance"):
+		_locked_hint()
+		return
 	if light < lc or state != "move":
 		return
 	light -= lc
@@ -620,14 +679,28 @@ func _cast_lance() -> void:
 
 func _cast_nova() -> void:
 	var nc := 28.0 * Prog.spell_cost_mult()
-	if not Prog.has_skill("l2") or light < nc or state != "move":
+	if not Prog.ability("nova"):
+		_locked_hint()
+		return
+	if light < nc or state != "move":
 		return
 	light -= nc
 	var big := Prog.has_skill("l6")
 	var r := 80.0 if big else 54.0
 	world.bcast("cast_nova", [global_position, r, Prog.spell_damage(30.0 if not big else 38.0), Net.my_id(), big])
 
+var _lock_t := 0
+
+func _locked_hint() -> void:
+	if Time.get_ticks_msec() - _lock_t > 1500:
+		_lock_t = Time.get_ticks_msec()
+		Audio.sfx("ui_move", -10.0)
+		G.toast(G.L(["Aún no dominas esa habilidad.", "You haven't mastered that ability yet."]), Color(0.75, 0.7, 0.8))
+
 func _cast_wrath() -> void:
+	if not Prog.ability("wrath"):
+		_locked_hint()
+		return
 	if wrath < 100.0 or state != "move":
 		return
 	wrath = 0.0

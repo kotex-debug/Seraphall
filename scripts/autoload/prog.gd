@@ -123,6 +123,23 @@ const SYNERGIES := {
 	"wing_eye": {"a": ["amulet_wing", "amulet_eye"], "name": ["Vuelo del Halcón", "Hawk's Flight"], "desc": ["Tras una esquiva perfecta, el siguiente golpe es crítico doble.", "After a perfect dodge, your next hit is a double critical."]},
 }
 
+func ability(id: String) -> bool:
+	## Empiezas solo con el ataque básico; el resto se gana jugando
+	match id:
+		"lance": return flags.get("ab_lance", false)
+		"nova": return flags.get("ab_lance", false) and has_skill("l2")
+		"wrath": return flags.get("ab_wrath", false)
+	return true
+
+func grant_ability(id: String) -> void:
+	if flags.get("ab_" + id, false):
+		return
+	flags["ab_" + id] = true
+	var names := {"lance": ["LANZA DE LUZ", "LANCE OF LIGHT"], "wrath": ["IRA SERÁFICA", "SERAPHIC WRATH"]}
+	G.toast(G.L(["NUEVA HABILIDAD: ", "NEW ABILITY: "]) + G.L(names.get(id, ["?", "?"])) + "  [" + G.key_label({"lance": "spell1", "wrath": "wrath"}.get(id, "spell1")) + "]", Color(1, 0.85, 0.4))
+	Audio.sfx("levelup", -4.0)
+	changed.emit()
+
 func desplume() -> float:
 	return float(WING_MAX - wing_feathers) / float(WING_MAX)
 
@@ -719,6 +736,10 @@ func from_dict(d: Dictionary) -> void:
 	synergies = d.get("synergies", {}); ng = int(d.get("ng", 0)); spark = bool(d.get("spark", false))
 	if d.has("look"):
 		G.look = d.look
+	if flags.get("brasa_sanct", false):
+		flags["ab_lance"] = true
+	if flags.get("carcelero_dead", false):
+		flags["ab_wrath"] = true
 	infusions = d.get("infusions", {})
 	flask_level = int(d.get("flask_level", 0))
 	shop_bought = d.get("shop_bought", {})

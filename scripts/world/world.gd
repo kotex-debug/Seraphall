@@ -1352,6 +1352,7 @@ func _light_brasa(id: String) -> void:
 	Prog.last_brasa = id
 	if id == "sanct":
 		Prog.quest_step("main1", "brasa")
+		get_tree().create_timer(1.6).timeout.connect(Prog.grant_ability.bind("lance"))
 	if not Prog.spark:
 		Prog.spark = true
 		get_tree().create_timer(2.4).timeout.connect(_spark_joins)
@@ -1751,6 +1752,7 @@ func show_boss_line(line: Array) -> void:
 	hud.subtitle("Seravel", G.L(line), 3.0)
 
 func _on_carcelero_dead(e: Enemy) -> void:
+	get_tree().create_timer(3.0).timeout.connect(Prog.grant_ability.bind("wrath"))
 	wflags["carcelero_dead"] = true
 	Prog.flags["carcelero_dead"] = true
 	Prog.quest_step("main1", "kill_carcelero")

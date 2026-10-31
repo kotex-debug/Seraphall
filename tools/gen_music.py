@@ -408,6 +408,15 @@ def sfx_all():
     for k in ("brenna", "carto", "ozias", "ilse", "nyx", "velaria", "voz", "seravel", "carcelero", "coro", "default"):
         save_sfx("voice_" + k, voice(k), 0.7)
     save_sfx("heartbeat", heartbeat(1.0), 0.95)
+    # interfaz: tonos suaves y redondos (sin ataques bruscos)
+    def soft_tone(fs, d=0.12, g=0.45):
+        t = T(d); y = sum(np.sin(2 * np.pi * f * t) * np.exp(-t * (18 + i * 6)) for i, f in enumerate(fs))
+        y *= np.clip(t / 0.006, 0, 1)
+        return lp(y, 2600) * g
+    save_sfx("ui_move", soft_tone([880, 1320], 0.08), 0.35)
+    save_sfx("ui_ok", np.concatenate([soft_tone([660, 990], 0.07), soft_tone([990, 1485], 0.14)]), 0.4)
+    save_sfx("pickup", np.concatenate([soft_tone([784], 0.06), soft_tone([1046], 0.06), soft_tone([1568], 0.18)]), 0.45)
+    save_sfx("quest", np.concatenate([soft_tone([523, 659], 0.12), soft_tone([659, 784], 0.12), soft_tone([784, 1046], 0.35)]), 0.5)
     t = T(0.6)   # pluma arrancada: desgarro de tela + campanilla
     tear = bp(RNG.normal(0, 1, len(t)), 1500, 6000) * np.exp(-t * 7) * (1 + 0.5 * np.sin(2 * np.pi * 60 * t))
     save_sfx("feather_tear", tear + np.pad(mbox(mf(86), 0.5), (int(0.05 * SR), 0))[:len(t)] * 0.6)

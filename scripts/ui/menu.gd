@@ -17,9 +17,9 @@ var _inv_filter := "all"
 var _info: Control
 var _anim_dir := 1
 
-const TABS := ["char", "skills", "inventory", "weapons", "quests", "map", "options"]
+const TABS := ["char", "skills", "inventory", "weapons", "quests", "map", "controls", "options"]
 const TAB_KEYS := {"char": "tab_char", "skills": "tab_skills", "inventory": "tab_inventory", "weapons": "tab_weapons",
-	"quests": "tab_quests", "map": "tab_map", "options": "tab_options"}
+	"quests": "tab_quests", "map": "tab_map", "controls": "tab_controls", "options": "tab_options"}
 
 func _ready() -> void:
 	layer = 20
@@ -103,6 +103,17 @@ func close() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
+	if _rebinding != "":
+		if (event is InputEventKey and event.pressed and not event.echo) or (event is InputEventMouseButton and event.pressed):
+			get_viewport().set_input_as_handled()
+			if event is InputEventKey and event.physical_keycode == KEY_ESCAPE:
+				_rebinding = ""
+			else:
+				G.rebind(_rebinding, event)
+				Audio.sfx("ui_ok", -10.0)
+				_rebinding = ""
+			_rebuild(false)
+		return
 	if event.is_action_pressed("menu") or event.is_action_pressed("pause"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -137,6 +148,7 @@ func _rebuild(animate := true) -> void:
 		"map": _build_map()
 		"options": _build_options()
 		"service": _build_service()
+		"controls": _build_controls()
 	if animate:
 		content.position.x = 20 + 40 * _anim_dir
 		content.modulate.a = 0.0
@@ -567,6 +579,42 @@ func _grade(v: float, n: String) -> String:
 	elif v >= 0.45: g = "C"
 	elif v >= 0.25: g = "D"
 	return n + ":" + g
+
+# ------------------------------------------------------------------ controles
+var _rebinding := ""
+const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left": ["Izquierda", "Left"], "right": ["Derecha", "Right"],
+	"attack": ["Ataque", "Attack"], "heavy": ["Ataque cargado", "Heavy attack"], "dash": ["Esquivar", "Dash"], "parry": ["Bloquear (parry)", "Parry"],
+	"spell1": ["Lanza de Luz", "Lance of Light"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
+	"heal": ["Curarse", "Heal"], "item": ["Objeto rápido", "Quick item"], "interact": ["Interactuar", "Interact"], "menu": ["Menú", "Menu"],
+	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"]}
+
+func _build_controls() -> void:
+	_panel(Rect2(0, 0, 600, 296), UIKit.CYAN)
+	_lbl(G.L(["CONTROLES  -  pulsa una acción y luego la tecla o el botón nuevo", "CONTROLS  -  click an action, then press the new key or button"]), Vector2(14, 10), 8, UIKit.CYAN, 0.0, "head")
+	var i := 0
+	for a in G.REBINDABLE:
+		var col := i / 9
+		var row := i % 9
+		var x := 16.0 + col * 296.0
+		var y := 32.0 + row * 27.0
+		_lbl(G.L(ACTION_NAMES[a]), Vector2(x, y + 1), 15, UIKit.WHITE)
+		var txt := G.L(["...pulsa una tecla...", "...press a key..."]) if _rebinding == a else G.key_label(a)
+		var b := _btn(txt, Vector2(x + 150, y), _on_rebind.bind(a), true, 120)
+		if _rebinding == a:
+			b.add_theme_color_override("font_color", UIKit.GOLD)
+		i += 1
+	_btn(G.L(["RESTABLECER", "RESET"]), Vector2(464, 268), _on_reset_keys, true, 120)
+	_lbl(G.L(["Esc cancela. El mando funciona siempre con su esquema.", "Esc cancels. Gamepads keep their layout."]), Vector2(16, 272), 10, UIKit.TEXT_DIM, 0.0, "title")
+
+func _on_rebind(a: String) -> void:
+	_rebinding = a
+	Audio.sfx("ui_move", -10.0)
+	_rebuild(false)
+
+func _on_reset_keys() -> void:
+	G.reset_bindings()
+	Audio.sfx("ui_ok", -10.0)
+	_rebuild(false)
 
 # ------------------------------------------------------------------ servicios de la Sala del Nimbo
 var _svc_weapon := ""

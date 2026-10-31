@@ -19,6 +19,9 @@ var shake_mult := 1.0
 var flash_mult := 1.0
 var tele_boost := false   # telegráficos más gruesos y visibles
 var photo_mode := false
+var bindings := {}        # acción -> "k:<keycode>" | "m:<botón>" (personalizadas por el jugador)
+const REBINDABLE := ["up", "down", "left", "right", "attack", "heavy", "dash", "parry", "spell1", "spell2", "wrath",
+	"heal", "item", "interact", "menu", "map", "photo"]
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -150,6 +153,7 @@ const TXT := {
 	"area_nimbo": ["Sala del Nimbo", "Hall of the Nimbus"],
 	"area_choir": ["Nave del Coro", "Choir Nave"],
 	"difficulty": ["Dificultad", "Difficulty"],
+	"tab_controls": ["Controles", "Controls"],
 	"choose_diff": ["ELIGE TU CAMINO", "CHOOSE YOUR PATH"],
 	"rank": ["RANGO", "RANK"],
 	"ascension": ["ASCENSIÓN", "ASCENSION"],
@@ -229,6 +233,7 @@ func load_settings() -> void:
 		shake_mult = cf.get_value("access", "shake", 1.0)
 		flash_mult = cf.get_value("access", "flash", 1.0)
 		tele_boost = cf.get_value("access", "tele", false)
+		bindings = cf.get_value("controls", "bindings", {})
 	else:
 		lang = "es"
 
@@ -241,6 +246,7 @@ func save_settings() -> void:
 	cf.set_value("access", "shake", shake_mult)
 	cf.set_value("access", "flash", flash_mult)
 	cf.set_value("access", "tele", tele_boost)
+	cf.set_value("controls", "bindings", bindings)
 	cf.save(SETTINGS_PATH)
 
 func _setup_input() -> void:
@@ -272,12 +278,76 @@ func _setup_input() -> void:
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = pad[action]
 		InputMap.action_add_event(action, jb)
+	apply_bindings()
 	var axes := {"left": [JOY_AXIS_LEFT_X, -1.0], "right": [JOY_AXIS_LEFT_X, 1.0], "up": [JOY_AXIS_LEFT_Y, -1.0], "down": [JOY_AXIS_LEFT_Y, 1.0]}
 	for action in axes:
 		var jm := InputEventJoypadMotion.new()
 		jm.axis = axes[action][0]
 		jm.axis_value = axes[action][1]
 		InputMap.action_add_event(action, jm)
+
+# ------------------------------------------------------------------ controles
+func _event_from(code: String) -> InputEvent:
+	if code.begins_with("m:"):
+		var mb := InputEventMouseButton.new()
+		mb.button_index = int(code.substr(2))
+		return mb
+	var ev := InputEventKey.new()
+	ev.physical_keycode = int(code.substr(2))
+	return ev
+
+func apply_bindings() -> void:
+	## Sustituye teclado/ratón de cada acción personalizada (el mando se conserva)
+	for action in bindings:
+		if not InputMap.has_action(action):
+			continue
+		for e in InputMap.action_get_events(action):
+			if e is InputEventKey or e is InputEventMouseButton:
+				InputMap.action_erase_event(action, e)
+		InputMap.action_add_event(action, _event_from(bindings[action]))
+
+func rebind(action: String, ev: InputEvent) -> void:
+	var code := ""
+	if ev is InputEventKey:
+		code = "k:%d" % (ev.physical_keycode if ev.physical_keycode != 0 else ev.keycode)
+	elif ev is InputEventMouseButton:
+		code = "m:%d" % ev.button_index
+	else:
+		return
+	# si otra acción ya usaba esa tecla, se intercambian
+	var old := key_code(action)
+	for other in REBINDABLE:
+		if other != action and key_code(other) == code:
+			bindings[other] = old
+	bindings[action] = code
+	apply_bindings()
+	save_settings()
+
+func reset_bindings() -> void:
+	bindings = {}
+	for action in REBINDABLE:
+		InputMap.action_erase_events(action)
+	_setup_input()
+	save_settings()
+
+func key_code(action: String) -> String:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			return "k:%d" % (e.physical_keycode if e.physical_keycode != 0 else e.keycode)
+		if e is InputEventMouseButton:
+			return "m:%d" % e.button_index
+	return ""
+
+func key_label(action: String) -> String:
+	var c := key_code(action)
+	if c == "":
+		return "-"
+	if c.begins_with("m:"):
+		var b := int(c.substr(2))
+		return L(["CLIC IZQ", "LMB"]) if b == MOUSE_BUTTON_LEFT else (L(["CLIC DER", "RMB"]) if b == MOUSE_BUTTON_RIGHT else (L(["RUEDA", "MMB"]) if b == MOUSE_BUTTON_MIDDLE else "M%d" % b))
+	var k := int(c.substr(2))
+	var s := OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k) if k > 0 else k)
+	return s.to_upper().replace("SPACE", L(["ESPACIO", "SPACE"])).replace("ESCAPE", "ESC")
 
 # ------------------------------------------------------------------ "juice" global
 func hitstop(duration := 0.06, scale := 0.03) -> void:

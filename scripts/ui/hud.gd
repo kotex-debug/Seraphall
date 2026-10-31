@@ -412,6 +412,11 @@ class StatusCluster extends Control:
 				for k3 in range(_last.st, su):
 					if k3 % 2 == 1:
 						_ignite[k3 / 2] = 0.25
+		# Luz: destellos al recuperarla
+		if _last.li >= 0 and lu > _last.li:
+			for k6 in range(_last.li, lu):
+				var cp2 := Vector2(HX + (k6 / 2) * CRYS_W + 4, _rows.y_crys + 5)
+				_parts.append([cp2, Vector2(randf_range(-8, 8), randf_range(-26, -12)), 0.6, Color(0.75, 1.0, 1.0), -10.0, 1.0])
 		# Luz: esquirlas cian al gastar
 		if _last.li >= 0 and lu < _last.li:
 			for k4 in range(lu, _last.li):
@@ -487,6 +492,12 @@ class StatusCluster extends Control:
 		var blink := _hurt_t > 0.0 and int(_hurt_t * 16.0) % 2 == 0
 		var golden := Prog.buffs.has("ointment")
 		var cracked := Prog.is_desplumado()
+		if _heal_t > 0.0:
+			var hk := _heal_t / 0.8
+			var gw2: float = min(nh, 10) * HEART_W + 5.0
+			draw_rect(Rect2(Vector2(HX - 3, _rows.y_hearts - 3), Vector2(gw2, _rows.hrows * 10.0 + 5.0)), Color(1, 0.75, 0.8, 0.22 * hk))
+			var sx: float = HX + (1.0 - hk) * gw2
+			draw_rect(Rect2(Vector2(sx - 3, _rows.y_hearts - 2), Vector2(6, _rows.hrows * 10.0 + 3.0)), Color(1, 1, 1, 0.5 * hk))
 		if low:
 			var ga := 0.25 + 0.2 * sin(_t * 8.0)
 			var gw: float = min(nh, 10) * HEART_W + 3.0
@@ -603,7 +614,7 @@ class SkillBar extends Control:
 	var _t := 0.0
 	var _pop := {}
 	var _was_ready := {}
-	const SLOTS := [["Q", "lance"], ["E", "nova"], ["R", "luz"], ["X", "item"], ["C", "flask"]]
+	const SLOTS := [["Q", "spell1"], ["E", "spell2"], ["R", "wrath"], ["X", "item"], ["C", "heal"]]
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -631,6 +642,7 @@ class SkillBar extends Control:
 		var x := 0.0
 		for s in SLOTS:
 			var key: String = s[0]
+			var locked := (key == "Q" and not Prog.ability("lance")) or (key == "E" and not Prog.ability("nova")) or (key == "R" and not Prog.ability("wrath"))
 			var ready := true
 			var fill := 1.0
 			var icon: Texture2D
@@ -640,10 +652,7 @@ class SkillBar extends Control:
 					icon = Fx.tex("icon_lance"); ready = lp.light >= 15.0; fill = clamp(lp.light / 15.0, 0.0, 1.0)
 				"E":
 					icon = Fx.tex("icon_nova")
-					if not Prog.has_skill("l2"):
-						ready = false; fill = 0.0
-					else:
-						ready = lp.light >= 28.0; fill = clamp(lp.light / 28.0, 0.0, 1.0)
+					ready = lp.light >= 28.0; fill = clamp(lp.light / 28.0, 0.0, 1.0)
 				"R":
 					icon = Fx.tex("icon_luz"); ready = lp.wrath >= 100.0; fill = lp.wrath / 100.0
 				"X":
@@ -653,6 +662,8 @@ class SkillBar extends Control:
 					ready = count > 0
 				"C":
 					icon = Fx.tex("icon_flask"); count = lp.flasks; ready = lp.flasks > 0
+			if locked:
+				ready = false; fill = 1.0
 			if ready and not _was_ready.get(key, true):
 				_pop[key] = 1.0
 			_was_ready[key] = ready
@@ -667,12 +678,25 @@ class SkillBar extends Control:
 			var ip := (r.get_center() - Vector2(8, 8)).round()
 			if key == "R" and ready:
 				ip.y += roundf(sin(_t * 10.0) * 1.0)
-			draw_texture(icon, ip, Color(1, 1, 1, 1.0 if ready else 0.35).lerp(Color(2, 2, 2, 1), pop))
-			# tecla
-			var kr := Rect2(r.position + Vector2(-3, -4), Vector2(9, 9))
+			if locked:
+				# candado
+				var lc := r.get_center().round()
+				draw_arc(lc + Vector2(0, -2), 3.0, PI, TAU, 8, UIKit.INK, 3.0)
+				draw_arc(lc + Vector2(0, -2), 3.0, PI, TAU, 8, Color(0.75, 0.7, 0.8), 1.0)
+				draw_rect(Rect2(lc + Vector2(-5, -1), Vector2(10, 7)), UIKit.INK)
+				draw_rect(Rect2(lc + Vector2(-4, 0), Vector2(8, 5)), Color(0.7, 0.62, 0.75))
+				draw_rect(Rect2(lc + Vector2(-1, 1), Vector2(2, 2)), UIKit.INK)
+			else:
+				draw_texture(icon, ip, Color(1, 1, 1, 1.0 if ready else 0.35).lerp(Color(2, 2, 2, 1), pop))
+			# tecla (la que el jugador haya configurado)
+			var kl := G.key_label(s[1])
+			if kl.length() > 3:
+				kl = kl.substr(0, 3)
+			var kw := f.get_string_size(kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 4
+			var kr := Rect2(r.position + Vector2(-3, -4), Vector2(max(9.0, kw), 9))
 			draw_rect(kr.grow(1), UIKit.INK)
 			draw_rect(kr, UIKit.WHITE if ready else Color(0.5, 0.45, 0.5))
-			f.draw_string(get_canvas_item(), kr.position + Vector2(2, 8), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.INK)
+			f.draw_string(get_canvas_item(), kr.position + Vector2(2, 8), kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.INK)
 			if count >= 0:
 				var ct := str(count)
 				var cp := r.end + Vector2(-7 - (6 if count > 9 else 0), -1)

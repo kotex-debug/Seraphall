@@ -64,7 +64,7 @@ const VOICES := {"Brenna": "brenna", "El Cartógrafo": "carto", "Ozias": "ozias"
 
 ## Voz de diálogo propia de cada personaje (pitidos como en Undertale)
 func voice(speaker: String) -> void:
-	sfx("voice_" + VOICES.get(speaker, "default"), -9.0, 0.05)
+	sfx("voice_" + VOICES.get(speaker, "default"), -6.0, 0.04)
 
 func sfx(name: String, vol := 0.0, pitch_var := 0.08) -> void:
 	var now := Time.get_ticks_msec()
@@ -74,6 +74,9 @@ func sfx(name: String, vol := 0.0, pitch_var := 0.08) -> void:
 	var stream := _load("res://assets/audio/sfx_%s.wav" % name)
 	if stream == null:
 		return
+	# los sonidos de interfaz e interacción, más suaves
+	if name.begins_with("ui_") or name.begins_with("voice_") or name in ["pickup", "quest", "levelup", "spark"]:
+		vol -= 7.0
 	for p in _sfx_pool:
 		if not p.playing:
 			p.stream = stream
