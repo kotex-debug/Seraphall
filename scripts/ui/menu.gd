@@ -515,8 +515,10 @@ func _build_weapons() -> void:
 	_panel(Rect2(0, 0, 230, 296))
 	var y := 10.0
 	var i := 0
+	var locked_list: Array = []
 	for id in Prog.WEAPONS:
 		if not Prog.weapons.has(id):
+			locked_list.append(id)
 			continue
 		var card := WeaponCard.new()
 		card.id = id
@@ -528,6 +530,17 @@ func _build_weapons() -> void:
 		content.add_child(card)
 		y += 46.0
 		i += 1
+	# armas aún por encontrar: silueta y una pista de dónde están
+	for lid in locked_list:
+		if y > 250.0:
+			break
+		var lc := LockedWeaponCard.new()
+		lc.id = lid
+		lc.position = Vector2(8, y)
+		lc.size = Vector2(214, 40)
+		content.add_child(lc)
+		y += 46.0
+	_lbl(G.L(["ARSENAL %d/%d", "ARSENAL %d/%d"]) % [Prog.weapons.size(), Prog.WEAPONS.size()], Vector2(12, 282), 8, UIKit.TEXT_DIM, 0.0, "head")
 	var w2: Dictionary = Prog.WEAPONS[_sel_weapon]
 	_panel(Rect2(240, 0, 360, 296), UIKit.RED)
 	var show := WeaponShowcase.new()
@@ -2507,3 +2520,20 @@ class KeyHints extends Control:
 			draw_rect(Rect2(kr.position, Vector2(kr.size.x, 2)), Color(0.5, 0.34, 0.6))
 			hf.draw_string(get_canvas_item(), kr.position + Vector2(4, 11), key.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
 			tf.draw_string(get_canvas_item(), p + Vector2(kw + 6, 12), G.L(a[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+
+
+class LockedWeaponCard extends Control:
+	## Arma que aún no tienes: silueta oscura y pista de dónde conseguirla
+	var id := ""
+	const HINTS := {"hammer": ["Derrota al Carcelero.", "Defeat the Jailer."], "choir": ["Silencia al Coro Hueco.", "Silence the Hollow Choir."],
+		"seravel": ["Vence a la Guardiana de las Puertas.", "Defeat the Warden of the Gates."], "spear": ["Duerme en un cofre de la Galería Rota.", "It sleeps in a chest in the Broken Gallery."],
+		"scythe": ["El Cartógrafo la da por limpiar el Pasillo.", "The Cartographer gives it for clearing the Hall."]}
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var w: Dictionary = Prog.WEAPONS[id]
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), Color(0.22, 0.13, 0.26), Color(0.06, 0.03, 0.08, 0.9), 3.0, -1.0)
+		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(6, 8), Vector2(64, 24)), false, Color(0.02, 0.01, 0.03, 0.95))
+		var f := UIKit.font("title")
+		f.draw_string(get_canvas_item(), Vector2(76, 18), "???", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+		f.draw_string(get_canvas_item(), Vector2(76, 32), G.L(HINTS.get(id, ["Sigue descendiendo.", "Keep descending."])), HORIZONTAL_ALIGNMENT_LEFT, size.x - 80, 10, Color(0.55, 0.45, 0.6))

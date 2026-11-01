@@ -1490,7 +1490,7 @@ class Minimap extends Control:
 	## Minimapa: silueta real del Estrato alrededor del jugador, iconos y zona actual.
 	var hud: Node
 	var t := 0.0
-	const PX := 2.0
+	const PX := 3.0
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		clip_contents = true
@@ -1507,8 +1507,14 @@ class Minimap extends Control:
 		var center: Vector2 = lp.global_position / 16.0 if lp else Vector2(49, 86)
 		var tiles := view.size / PX
 		var src := Rect2(center - tiles / 2.0, tiles)
-		var tex: ImageTexture = w.map_texture()
-		draw_texture_rect_region(tex, view, src)
+		# fondo estrellado y el mapa detallado con su grosor
+		for k in 14:
+			var spos := view.position + Vector2(fposmod(k * 37.0 - src.position.x * 0.6, view.size.x), fposmod(k * 23.0 - src.position.y * 0.6, view.size.y))
+			draw_rect(Rect2(spos.floor(), Vector2(1, 1)), Color(1, 1, 1, 0.25 + 0.2 * sin(t * 2.0 + k)))
+		var tex: ImageTexture = w.map_texture_hd()
+		var hsrc := Rect2(src.position * 3.0, src.size * 3.0)
+		draw_texture_rect_region(tex, Rect2(view.position + Vector2(0, 2), view.size), hsrc, Color(0.12, 0.06, 0.14, 1.0))
+		draw_texture_rect_region(tex, view, hsrc)
 		for m in w.map_markers():
 			var mp: Vector2 = view.position + (m[1] - src.position) * PX
 			if not view.grow(-2).has_point(mp):
