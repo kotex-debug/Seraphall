@@ -335,3 +335,111 @@ class NearLayer extends Node2D:
 			var r: float = m[1]
 			for k in 3:
 				draw_circle(p, r * (1.0 - k * 0.3), Color(tint, 0.025 + k * 0.015))
+
+
+class Column extends Node2D:
+	## Columna alta dibujada en perspectiva: la base está en el suelo y el capitel se proyecta hacia la
+	## cámara según su altura, así que al moverte la columna "gira" y se ve su volumen.
+	var height := 64.0
+	var radius := 7.0
+	var stone := Color(0.78, 0.72, 0.66)
+	var gold := Color(0.85, 0.66, 0.3)
+	var broken := false
+	var ivy := false
+	func _ready() -> void:
+		var b := StaticBody2D.new()
+		b.collision_layer = 1
+		var cs := CollisionShape2D.new()
+		var sh := CircleShape2D.new()
+		sh.radius = radius
+		cs.shape = sh
+		b.add_child(cs)
+		add_child(b)
+	func _process(_delta: float) -> void:
+		var cam := Depth3D.cam_center(self)
+		if absf(global_position.x - cam.x) < 380.0 and absf(global_position.y - cam.y) < 260.0:
+			queue_redraw()
+	func _draw() -> void:
+		var cam := Depth3D.cam_center(self) - global_position
+		var h := height * (0.62 if broken else 1.0)
+		var top := Depth3D.lift(Vector2.ZERO, h, cam)
+		var r := radius
+		# sombra en el suelo, alargada en dirección contraria a la cámara
+		var away := (-cam).normalized() * 6.0 if cam.length() > 1.0 else Vector2.ZERO
+		draw_set_transform(away * 0.5, 0.0, Vector2(1.0, 0.4))
+		draw_circle(Vector2.ZERO, r * 1.6, Color(0, 0, 0, 0.35))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# basa
+		_ell(Vector2(0, 1), r + 3.0, stone.darkened(0.45))
+		_ell(Vector2.ZERO, r + 3.0, stone.darkened(0.15))
+		# fuste: bandas verticales con luz a la izquierda y sombra a la derecha
+		var bands := 5
+		for i in bands:
+			var t0 := -1.0 + 2.0 * i / bands
+			var t1 := -1.0 + 2.0 * (i + 1) / bands
+			var lit := 1.15 - absf(t0 + 0.4) * 0.45
+			var col := stone * Color(lit, lit, lit)
+			col.a = 1.0
+			var pts := PackedVector2Array([Vector2(t0 * r, 0), Vector2(t1 * r, 0), top + Vector2(t1 * r * 0.9, 0), top + Vector2(t0 * r * 0.9, 0)])
+			Depth3D.poly(self, pts, col)
+		draw_line(Vector2(-r, 0), top + Vector2(-r * 0.9, 0), stone.lightened(0.3), 1.0)
+		draw_line(Vector2(r, 0), top + Vector2(r * 0.9, 0), stone.darkened(0.5), 1.0)
+		# anillos dorados a media altura
+		for k in [0.35, 0.7]:
+			if broken and k > 0.6:
+				continue
+			var p := Vector2.ZERO.lerp(top, k)
+			draw_line(p + Vector2(-r * 0.95, 0), p + Vector2(r * 0.95, 0), gold, 2.0)
+		if ivy:
+			for k2 in 6:
+				var q := Vector2.ZERO.lerp(top, k2 / 6.0) + Vector2(sin(k2 * 1.7) * r * 0.7, 0)
+				draw_circle(q, 1.6, Color(0.3, 0.5, 0.32))
+		# capitel (o rotura)
+		if broken:
+			var pts2 := PackedVector2Array([top + Vector2(-r * 0.9, 0), top + Vector2(-r * 0.3, -4), top + Vector2(r * 0.2, 1), top + Vector2(r * 0.9, -3), top + Vector2(r * 0.9, 2), top + Vector2(-r * 0.9, 2)])
+			Depth3D.poly(self, pts2, stone.darkened(0.25))
+		else:
+			_ell(top + Vector2(0, 1), r + 4.0, stone.darkened(0.3))
+			_ell(top, r + 4.0, stone.lightened(0.15))
+			_ell(top + Vector2(0, -2), r + 2.0, gold)
+	func _ell(c: Vector2, rx: float, col: Color) -> void:
+		draw_set_transform(c, 0.0, Vector2(1.0, 0.38))
+		draw_circle(Vector2.ZERO, rx, col)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+class HangingChain extends Node2D:
+	## Cadena que cuelga desde muy alto (desde "la cámara") hasta poco por encima del suelo.
+	## El extremo de arriba se proyecta con mucha altura, así que parece bajar hacia la escena.
+	var top_h := 260.0
+	var low_h := 34.0
+	var t := 0.0
+	var hook := true
+	func _ready() -> void:
+		z_index = 20
+		t = randf() * 10.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var cam := Depth3D.cam_center(self) - global_position
+		var sway := Vector2(sin(t * 0.8) * 4.0, 0)
+		var n := 18
+		for i in n:
+			var k := float(i) / (n - 1)
+			var h := lerpf(top_h, low_h, k)
+			var p := Depth3D.lift(sway * k, h, cam)
+			var sc := 1.0 + h / 300.0
+			var dark := clampf(h / top_h, 0.0, 1.0)
+			var col := Color(0.45, 0.42, 0.5).lerp(Color(0.12, 0.1, 0.14), dark * 0.6)
+			if i % 2 == 0:
+				draw_rect(Rect2(p - Vector2(1.5, 3) * sc, Vector2(3, 6) * sc), col)
+			else:
+				draw_rect(Rect2(p - Vector2(2.5, 1) * sc, Vector2(5, 2) * sc), col.lightened(0.15))
+		if hook:
+			var e := Depth3D.lift(sway, low_h, cam)
+			draw_arc(e + Vector2(0, 4), 4.0, 0.0, PI, 8, Color(0.55, 0.5, 0.58), 2.0)
+		# sombra en el suelo
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.4))
+		draw_circle(Vector2.ZERO, 4.0, Color(0, 0, 0, 0.25))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

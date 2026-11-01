@@ -592,7 +592,12 @@ func _build_arena_decor() -> void:
 		var p := tile_pos(49, 14) + Vector2(cos(a) * 176.0, sin(a) * 150.0)
 		if p.y > tile_pos(49, 24).y:
 			continue
-		_prop("pillar", p, 2, 1 if i % 3 == 0 else 0, 5.0)
+		var col := Depth3D.Column.new()
+		col.position = p
+		col.height = 78.0
+		col.broken = i % 3 == 0
+		col.ivy = i % 4 == 1
+		entities.add_child(col)
 	for bp in [Vector2(43, 3.5), Vector2(55, 3.5)]:
 		_prop("banner", tile_pos(bp.x, bp.y), 2, 0)
 	var shafts := LightShafts.new()
@@ -3154,6 +3159,18 @@ func _build_antechambers() -> void:
 	# --- Antesala del Juicio: estandartes y luz que cae
 	for b in [Vector2(66.5, 5.5), Vector2(71.5, 5.5)]:
 		_prop("banner", tile_pos(b.x, b.y), 2, 0)
+	for cp in [Vector2(66.2, 9), Vector2(71.8, 9), Vector2(66.2, 24), Vector2(71.8, 24)]:
+		var col2 := Depth3D.Column.new()
+		col2.position = tile_pos(cp.x, cp.y)
+		col2.height = 70.0
+		col2.radius = 6.0
+		entities.add_child(col2)
+	# cadenas que bajan desde lo alto (Pasillo de las Cadenas y Celdas)
+	for hp in [Vector2(42, 58), Vector2(56, 58), Vector2(47, 65), Vector2(39, 63), Vector2(59, 63), Vector2(21, 49), Vector2(31, 49.5)]:
+		var hc := Depth3D.HangingChain.new()
+		hc.position = tile_pos(hp.x, hp.y)
+		hc.low_h = 30.0 + fmod(hp.x * 7.0, 26.0)
+		add_child(hc)
 	var shafts := LightShafts.new()
 	shafts.position = tile_pos(69, 15)
 	shafts.col = Color(1, 0.9, 0.6)

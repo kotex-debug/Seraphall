@@ -398,6 +398,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			Haz.ring_wave(global_position, 20.0, 230.0, 1.3, cfg.dmg * 0.8 * dm, Color(1, 0.8, 0.4), 10.0, idx)
 			if not await _wait(1.4, my_id): return
 		"phase2", "phase3":
+			world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position, 20, Color(0.6, 0.52, 0.4), 1.5))
 			_transitioning = true
 			_invuln = true
 			pose = "windup"

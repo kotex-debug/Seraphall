@@ -273,6 +273,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 					world.spawn_extra_enemy("hueco", global_position + Vector2.from_angle(rng.randf() * TAU) * 70.0)
 			if not await _wait(1.0, my_id): return
 		"phase2":
+			world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position, 18, Color(0.45, 0.36, 0.36), 1.4))
 			pose = "roar"
 			Audio.sfx("roar")
 			G.shake(7.0, 1.0)
