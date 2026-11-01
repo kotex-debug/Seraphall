@@ -982,7 +982,7 @@ func _spawn_interactables() -> void:
 	_add_inter("chest", "chest_gallery", tile_pos(90, 59), {"weapon": "spear", "items": {"amulet_wing": 1, "ointment": 1}})
 	_add_inter("chest", "chest_reaper", tile_pos(72.5, 25.4), {"weapon": "reaper", "ecos": 200})
 	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250, "items": {"iron": 1, "incense": 1}})
-	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150})
+	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150, "weapon": "bow"})
 	_add_inter("bench", "bench_mirador", tile_pos(34, 85.5), {"memory": "m1"})
 	_add_inter("npc", "ozias", tile_pos(62.5, 83), {"sheet": "npc_ozias", "name": ["Ozias, el Grabador", "Ozias, the Engraver"], "light": Color(0.4, 0.9, 1.0)})
 	_add_inter("npc", "ilse", tile_pos(69.5, 83), {"sheet": "npc_ilse", "name": ["Madre Ilse", "Mother Ilse"], "flip": true, "light": Color(0.6, 0.75, 1.0)})

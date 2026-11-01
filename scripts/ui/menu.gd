@@ -2587,7 +2587,8 @@ class LockedWeaponCard extends Control:
 	const HINTS := {"hammer": ["Derrota al Carcelero.", "Defeat the Jailer."], "choir": ["Silencia al Coro Hueco.", "Silence the Hollow Choir."],
 		"seravel": ["Vence a la Guardiana de las Puertas.", "Defeat the Warden of the Gates."], "spear": ["Duerme en un cofre de la Galería Rota.", "It sleeps in a chest in the Broken Gallery."],
 		"scythe": ["Encargo del Cartógrafo.", "The Cartographer's errand."], "reaper": ["Un cofre en lo alto de la Escalinata.", "A chest atop the Stairway."],
-		"staff": ["Habla con Madre Ilse en el Nimbo.", "Talk to Mother Ilse in the Nimbus."], "fists": ["Tobías, tras abrir las Celdas.", "Tobias, after the Cells open."]}
+		"staff": ["Habla con Madre Ilse en el Nimbo.", "Talk to Mother Ilse in the Nimbus."], "fists": ["Tobías, tras abrir las Celdas.", "Tobias, after the Cells open."],
+		"bow": ["El cofre del Mirador del Ala Rota.", "The chest at the Broken Wing Overlook."]}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:

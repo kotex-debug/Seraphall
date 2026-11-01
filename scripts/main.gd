@@ -1197,10 +1197,10 @@ func _run_autotest() -> void:
 			lp.iframes = 9999.0
 			for ar in ["area_chains", "area_gallery"]:
 				Prog.flags["thought_" + ar] = true
-			for wid in ["reaper", "staff", "fists"]:
+			for wid in ["reaper", "staff", "fists", "bow"]:
 				Prog.add_weapon(wid)
 			var n := 1
-			for wid in ["reaper", "staff", "fists"]:
+			for wid in ["reaper", "staff", "fists", "bow"]:
 				Prog.equipped = wid
 				lp._update_weapon_sprite()
 				lp.respawn_at(w.tile_pos(47, 62))
@@ -1221,13 +1221,13 @@ func _run_autotest() -> void:
 					lp._start_attack()
 					await get_tree().create_timer(0.38).timeout
 				await _shot(out + "/w%d_%s.png" % [n, wid])
-				if wid == "staff":
+				if wid == "staff" or wid == "bow":
 					lp.state = "move"
 					lp.heavy_charge = 0.8
 					lp.stamina = Prog.max_stamina()
 					lp._release_heavy()
 					await get_tree().create_timer(1.0).timeout
-					await _shot(out + "/w%d_staff_circulo.png" % n)
+					await _shot(out + "/w%d_%s_cargado.png" % [n, wid])
 				print("WEAPON ", wid, " hp ", hp0, " -> ", lp.hp)
 				n += 1
 			print("AUTOTEST_WEAPONS_OK")

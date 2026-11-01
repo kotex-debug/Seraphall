@@ -507,6 +507,9 @@ func _start_attack() -> void:
 
 func _staff_attack(w: Dictionary, final: bool) -> void:
 	## Báculo del Alba: orbes de luz a distancia; el remate es una nova curativa
+	if w.get("bow", false):
+		_bow_attack(w, final)
+		return
 	attack_len = (0.32 if not final else 0.5) / w.speed
 	velocity = -aim * 30.0
 	_swing(50.0, 0.08, true)
@@ -522,6 +525,19 @@ func _staff_attack(w: Dictionary, final: bool) -> void:
 			var dv := Vector2.from_angle(TAU * k / 8.0)
 			world.bcast("spawn_projectile", [global_position + Vector2(0, -8) + dv * 8, dv * 220.0, dmg * 0.7, "dawn", "player", Net.my_id(), 6.0, 0.6, 1])
 		world.bcast("spawn_heal_zone", [global_position, 0.6, 46.0, Prog.max_hp() * 0.06])
+
+func _bow_attack(w: Dictionary, final: bool) -> void:
+	## Arco de Pluma: flecha rápida; el tercer disparo se abre en abanico
+	attack_len = (0.28 if not final else 0.42) / w.speed
+	velocity = -aim * 40.0
+	_swing(30.0, 0.06, true)
+	_squash(Vector2(1.1, 0.92))
+	Audio.sfx("dash", -10.0, 0.25)
+	var dmg := Prog.weapon_damage()
+	var angs := [0.0] if not final else [-0.18, 0.0, 0.18]
+	for a in angs:
+		var dv: Vector2 = aim.rotated(a)
+		world.bcast("spawn_projectile", [global_position + Vector2(0, -8) + dv * 12, dv * 420.0, dmg * (1.0 if not final else 0.85), "feather", "player", Net.my_id(), 5.0, 0.8, 0])
 
 func _heal_fx(amount: float) -> void:
 	## Curación: espiral de luz que sube, anillo cálido y la cifra recuperada
@@ -668,6 +684,17 @@ func _release_heavy() -> void:
 	var lvl := int(heavy_charge / 0.4)
 	if not spend_stamina(w.stam * 1.6):
 		state = "move"
+		return
+	if w.get("bow", false):
+		# Arco cargado: flecha de luz que atraviesa a todos los enemigos en línea
+		state = "heavy"
+		attack_t = 0.0
+		attack_len = 0.4
+		velocity = -aim * 80.0
+		_squash(Vector2(1.3, 0.8))
+		Audio.sfx("lance", -2.0)
+		G.shake(2.0 + lvl, 0.15)
+		world.bcast("spawn_projectile", [global_position + Vector2(0, -8) + aim * 12, aim * 560.0, Prog.weapon_damage() * (2.0 + 0.8 * lvl), "lance", "player", Net.my_id(), 6.0, 0.9, 8])
 		return
 	if w.get("ranged", false):
 		# Báculo: círculo de luz que cura a quien esté dentro (tú y tu compañero) durante unos segundos

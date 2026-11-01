@@ -36,6 +36,9 @@ const WEAPONS := {
 	"fists": {"name": ["Puños del Penitente", "Penitent's Fists"], "sprite": "fists", "dmg": 8.0, "speed": 1.75, "range": 22.0,
 		"arc": 80.0, "combo": 5, "stam": 6.0, "poise": 11.0, "fue": 0.7, "des": 0.5, "fe": 0.0, "rapid": true,
 		"desc": ["Ráfagas de cinco puñetazos que destrozan la postura. El quinto es un gancho que levanta al enemigo.", "Five-punch flurries that shred posture. The fifth is an uppercut that lifts the enemy."]},
+	"bow": {"name": ["Arco de Pluma", "Feather Bow"], "sprite": "bow", "dmg": 12.0, "speed": 1.05, "range": 24.0,
+		"arc": 60.0, "combo": 3, "stam": 7.0, "poise": 5.0, "fue": 0.1, "des": 0.9, "fe": 0.0, "ranged": true, "bow": true,
+		"desc": ["Flechas de pluma a distancia; la tercera se abre en abanico. Cargado: una flecha que atraviesa a todos en línea.", "Feather arrows at range; the third fans out. Charged: an arrow that pierces everything in a line."]},
 }
 
 # ------------------------------------------------------------------ objetos
