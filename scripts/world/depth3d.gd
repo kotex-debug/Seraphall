@@ -552,3 +552,81 @@ class CastShadow extends Sprite2D:
 		offset = Vector2(0, -hh * 0.5 + 2.0 / maxf(sc.y, 0.01))
 		transform = Transform2D(Vector2(dir.y, -dir.x) * 0.9 * sc.x, -dir * len * sc.y, Vector2(0, 1))
 		modulate = Color(0, 0, 0, a)
+
+
+class Chandelier extends Node2D:
+	## Lámpara de araña colgada muy alto: el aro de velas está "cerca de la cámara", así que se desplaza y
+	## crece con la perspectiva al moverte por debajo. Cadenas que suben hasta perderse.
+	var ring_h := 86.0
+	var radius := 22.0
+	var candles := 8
+	var t := 0.0
+	var _light: PointLight2D
+	func _ready() -> void:
+		z_index = 22
+		t = randf() * 10.0
+		_light = PointLight2D.new()
+		_light.texture = Fx.tex("light")
+		_light.color = Color(1, 0.78, 0.45)
+		_light.texture_scale = 3.2
+		_light.energy = 0.55
+		add_child(_light)
+	func _process(delta: float) -> void:
+		t += delta
+		_light.energy = 0.5 + sin(t * 7.0) * 0.03 + sin(t * 13.0) * 0.02
+		queue_redraw()
+	func _ring_pt(a: float, h: float, cam: Vector2, sway: Vector2) -> Vector2:
+		return Depth3D.lift(Vector2(cos(a) * radius, sin(a) * radius * 0.5) + sway, h, cam)
+	func _draw() -> void:
+		var cam := Depth3D.cam_center(self) - global_position
+		var sway := Vector2(sin(t * 0.7) * 2.0, cos(t * 0.5) * 1.0)
+		var iron := Color(0.34, 0.26, 0.2)
+		var iron_hi := Color(0.86, 0.66, 0.36)
+		# charco de luz y sombra del aro en el suelo
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
+		draw_circle(Vector2.ZERO, radius * 1.9, Color(1, 0.75, 0.4, 0.06))
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 28, Color(0, 0, 0, 0.18), 3.0)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var hub_h := ring_h + 64.0
+		var hub := Depth3D.lift(sway * 0.5, hub_h, cam)
+		# cadenas: aro -> nudo -> techo
+		for k in 3:
+			var a := PI * 0.5 + k * TAU / 3.0
+			var p0 := _ring_pt(a, ring_h, cam, sway)
+			draw_line(p0, hub, Color(0.08, 0.05, 0.08), 3.0)
+			draw_line(p0, hub, iron_hi.darkened(0.25), 1.0)
+		var n := 10
+		for i in n:
+			var kk := float(i) / (n - 1)
+			var h := lerpf(hub_h, 340.0, kk)
+			var p := Depth3D.lift(sway * 0.5 * (1.0 - kk), h, cam)
+			var sc := 1.0 + h / 260.0
+			if i % 2 == 0:
+				draw_rect(Rect2(p - Vector2(1.5, 3) * sc, Vector2(3, 6) * sc), Color(0.45, 0.4, 0.42).lerp(Color(0.08, 0.05, 0.09), kk * 0.7))
+			else:
+				draw_rect(Rect2(p - Vector2(2.5, 1) * sc, Vector2(5, 2) * sc), Color(0.62, 0.56, 0.58).lerp(Color(0.08, 0.05, 0.09), kk * 0.7))
+		draw_circle(hub, 4.0, Color(0.08, 0.05, 0.08))
+		draw_circle(hub, 3.0, iron_hi)
+		draw_circle(hub + Vector2(0, 4), 2.0, iron_hi.darkened(0.3))
+		# aro: mitad trasera, velas, mitad delantera
+		var seg := 28
+		var sc2 := 1.0 + ring_h / 260.0
+		for half in [0, 1]:
+			var pts := PackedVector2Array()
+			for i in seg + 1:
+				var a2 := PI * float(half) + PI * float(i) / seg
+				pts.append(_ring_pt(a2, ring_h, cam, sway))
+			draw_polyline(pts, Color(0.08, 0.05, 0.08), 5.0 * sc2)
+			draw_polyline(pts, iron, 3.0 * sc2)
+			draw_polyline(pts, iron_hi, 1.0)
+			for c in candles:
+				var ac := TAU * float(c) / candles + 0.2
+				var back := sin(ac) < 0.0
+				if (half == 0) != back:
+					continue
+				var cp := _ring_pt(ac, ring_h, cam, sway)
+				draw_rect(Rect2(cp + Vector2(-1.5, -6) * sc2, Vector2(3, 6) * sc2), Color(0.92, 0.88, 0.8))
+				var fl := cp + Vector2(0, -8) * sc2 + Vector2(sin(t * 9.0 + c) * 0.6, 0)
+				draw_circle(fl, 5.0 * sc2, Color(1, 0.6, 0.2, 0.12))
+				draw_circle(fl, 1.8 * sc2, Color(1, 0.75, 0.3))
+				draw_circle(fl + Vector2(0, 0.6), 0.9 * sc2, Color(1, 1, 0.85))

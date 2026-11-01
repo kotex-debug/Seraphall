@@ -896,6 +896,18 @@ func _run_autotest() -> void:
 				n += 1
 			print("AUTOTEST_DLG_OK")
 			get_tree().quit()
+		"chand":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			Prog.flags["echo_nimbo"] = true
+			var n := 1
+			for sp in [Vector2(66, 89), Vector2(62, 84), Vector2(49, 85.5)]:
+				lp.respawn_at(w.tile_pos(sp.x, sp.y))
+				await get_tree().create_timer(2.6).timeout
+				await _shot(out + "/c%d.png" % n)
+				n += 1
+			print("AUTOTEST_CHAND_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

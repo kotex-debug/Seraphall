@@ -3424,6 +3424,10 @@ func _build_antechambers() -> void:
 		var wt2 := WallTorch.new()
 		wt2.position = tile_pos(tp2.x, tp2.y)
 		entities.add_child(wt2)
+	for cpos in [Vector2(66, 86), Vector2(49, 82.5), Vector2(84.5, 78.5), Vector2(69.5, 12.5), Vector2(69.5, 21.5)]:
+		var ch := Depth3D.Chandelier.new()
+		ch.position = tile_pos(cpos.x, cpos.y)
+		add_child(ch)
 	var sanct_rays := LightShafts.new()
 	sanct_rays.position = tile_pos(49, 85)
 	sanct_rays.col = Color(1, 0.8, 0.55)
