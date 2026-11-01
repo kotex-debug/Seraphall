@@ -631,9 +631,9 @@ const CODEX := [
 	["bestia", "enemy_bestia", Rect2(0, 0, 38, 28), ["Bestia de Ceniza", "Ash Beast"], ["Lo que queda cuando un ángel olvida que lo fue. Huele el miedo y la luz por igual.", "What remains when an angel forgets it ever was one. It smells fear and light alike."]],
 	["guardia", "enemy_guardia", Rect2(0, 0, 32, 32), ["Guardia de las Celdas", "Cell Guard"], ["Llevan la puerta de su propia celda como escudo. Ataca por la espalda o rompe su postura: de frente, nada pasa.", "They carry the door of their own cell as a shield. Strike from behind or break their stance: from the front, nothing gets through."]],
 	["custodio", "enemy_custodio", Rect2(0, 0, 48, 48), ["El Custodio del Umbral", "The Threshold Warden"], ["Estatua jurada a una sola puerta. Esperó mil años a que volviera el verdugo... y lo reconoció al instante.", "A statue sworn to a single door. It waited a thousand years for the executioner's return... and recognised it at once."]],
-	["carcelero", "enemy_carcelero", Rect2(0, 0, 40, 40), ["El Carcelero", "The Jailer"], ["No encerraba a los presos para castigarlos, sino para esconderlos. Su llave no abre: impide que algo entre.", "He didn't lock the prisoners away to punish them, but to hide them. His key doesn't open: it keeps something out."]],
+	["carcelero", "cinematic/carcelero_body", Rect2(0, 0, 92, 112), ["El Carcelero", "The Jailer"], ["No encerraba a los presos para castigarlos, sino para esconderlos. Su llave no abre: impide que algo entre.", "He didn't lock the prisoners away to punish them, but to hide them. His key doesn't open: it keeps something out."]],
 	["choir", "boss_singer", Rect2(0, 0, 26, 36), ["El Coro Hueco", "The Hollow Choir"], ["Tres voces que cantaban un nombre al revés para que su dueño no despertara. Cuando callaron, algo se dio la vuelta en el fondo.", "Three voices that sang a name backwards so its owner would not wake. When they fell silent, something turned over at the bottom."]],
-	["seravel", "boss_seravel", Rect2(0, 0, 52, 56), ["Seravel, Guardiana de las Puertas", "Seravel, Warden of the Gates"], ["La primera de los serafines. Confió en el verdugo que le arrancó la primera pluma. Todavía lo espera a las puertas... del mismo lado, si la perdonas.", "First of the seraphim. She trusted the executioner who tore out her first feather. She still waits for them at the gates... on the same side, if you spare her."]],
+	["seravel", "cinematic/seravel_body", Rect2(0, 0, 72, 112), ["Seravel, Guardiana de las Puertas", "Seravel, Warden of the Gates"], ["La primera de los serafines. Confió en el verdugo que le arrancó la primera pluma. Todavía lo espera a las puertas... del mismo lado, si la perdonas.", "First of the seraphim. She trusted the executioner who tore out her first feather. She still waits for them at the gates... on the same side, if you spare her."]],
 ]
 var _codex_sel := "hueco"
 const CODEX_NPCS := [
@@ -2255,6 +2255,9 @@ class CodexPortrait extends Control:
 		var tex: Texture2D = Fx.tex(sheet)
 		if tex == null:
 			return
+		if known and sheet.begins_with("cinematic/"):
+			_draw_boss_art()
+			return
 		var sc := floorf(minf(size.x / region.size.x, size.y / region.size.y) * 0.8)
 		var ds := region.size * sc
 		var bob := roundf(sin(_t * 2.0) * 2.0)
@@ -2264,6 +2267,28 @@ class CodexPortrait extends Control:
 			var f := UIKit.font("logo")
 			f.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - 8, size.y / 2.0 + 14), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(0.7, 0.5, 0.8, 0.6))
 
+
+	func _draw_boss_art() -> void:
+		var c := size / 2.0 + Vector2(0, 18 + roundf(sin(_t * 2.0) * 2.0))
+		if sheet == "cinematic/seravel_body":
+			var k := 0.62
+			var wing := Fx.tex("cinematic/seravel_wing")
+			var flap := sin(_t * 1.6) * 3.0
+			var wr := Rect2(c + Vector2(-103, -81 - flap) * k, Vector2(96, 104) * k)
+			draw_texture_rect(wing, wr, false)
+			draw_set_transform(Vector2(2.0 * c.x, 0), 0.0, Vector2(-1, 1))
+			draw_texture_rect(wing, wr, false)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			draw_texture_rect(Fx.tex(sheet), Rect2(c + Vector2(-36, -56) * k, Vector2(72, 112) * k), false)
+			draw_texture_rect(Fx.tex("cinematic/seravel_sword"), Rect2(c + Vector2(24, -39) * k, Vector2(12, 84) * k), false)
+			draw_texture_rect(Fx.tex("cinematic/seravel_eyes"), Rect2(c + Vector2(-36, -56) * k, Vector2(72, 112) * k), false, Color(1, 1, 1, 0.7 + 0.3 * sin(_t * 3.0)))
+			draw_texture_rect(Fx.tex("cinematic/seravel_halo"), Rect2(c + Vector2(-22, -77 + sin(_t * 2.4) * 2.0) * k, Vector2(44, 14) * k), false)
+		else:
+			var k2 := 1.0
+			var r2 := Rect2(c + Vector2(-46, -66) * k2, Vector2(92, 112) * k2)
+			draw_texture_rect(Fx.tex(sheet), r2, false)
+			draw_texture_rect(Fx.tex(sheet.replace("_body", "_eyes")), r2, false, Color(1, 1, 1, 0.75 + 0.25 * sin(_t * 4.0)))
+			draw_circle(c + Vector2(0, -48), 14.0, Color(1, 0.45, 0.15, 0.06 + 0.04 * sin(_t * 4.0)))
 
 class CodexBust extends Control:
 	## Busto de PNJ en el Códice (en silueta si aún no lo conoces), con parpadeo

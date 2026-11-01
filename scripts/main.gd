@@ -1443,6 +1443,17 @@ func _run_autotest() -> void:
 					await get_tree().create_timer(0.6).timeout
 					await _shot(out + "/m_personajes.png")
 					w.menu.close()
+					w.menu.open("codex", {})
+					w.menu._on_codex("carcelero")
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_codex_jefe.png")
+					w.menu.close()
+					Prog.flags["killed_seravel"] = true
+					w.menu.open("codex", {})
+					w.menu._on_codex("seravel")
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_codex_seravel.png")
+					w.menu.close()
 					w.menu.open("service", {"npc": "nyx"})
 					await get_tree().create_timer(0.6).timeout
 					await _shot(out + "/m_servicio.png")
