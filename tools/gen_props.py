@@ -118,6 +118,57 @@ def brazier_frame(k):
     return img
 
 
+STONE = C("8a8496"); STONE_L = C("b4aec0"); STONE_D = C("5a5468"); VELVET = C("8a2030"); VELVET_L = C("c04050")
+WOOD = C("7a4a2a"); WOOD_L = C("a86a3a"); WOOD_D = C("4a2a1a"); IRON = C("4a4652"); IRON_L = C("8a8694"); GOLD = C("e8b848")
+
+
+def bench():
+    """Banco de oración de piedra tallada con cojín de terciopelo (donde se contempla)."""
+    img = Image.new("RGBA", (28, 14)); d = ImageDraw.Draw(img)
+    for x0 in (2, 22):                                           # patas talladas
+        d.rectangle([x0, 7, x0 + 3, 13], fill=STONE_D)
+        d.line([(x0, 7), (x0, 13)], fill=STONE)
+        d.point((x0 + 1, 10), fill=STONE_L)
+    d.rectangle([0, 4, 27, 7], fill=STONE)                       # tablero
+    d.line([(1, 4), (26, 4)], fill=STONE_L)
+    d.line([(0, 7), (27, 7)], fill=STONE_D)
+    for x in (6, 13, 20):                                        # relieve
+        d.point((x, 6), fill=STONE_D)
+    d.rectangle([5, 1, 22, 4], fill=VELVET)                      # cojín
+    d.line([(6, 1), (21, 1)], fill=VELVET_L)
+    d.point((5, 4), fill=GOLD); d.point((22, 4), fill=GOLD)       # borlas
+    d.point((13, 2), fill=C("e06070"))
+    return outline(img)
+
+
+def chest_frame(open_):
+    """Cofre de madera con herrajes de hierro, esquinas doradas y cerradura que brilla."""
+    img = Image.new("RGBA", (20, 18)); d = ImageDraw.Draw(img)
+    d.rectangle([1, 8, 18, 17], fill=WOOD)
+    for y in (10, 13, 16):
+        d.line([(2, y), (17, y)], fill=WOOD_D)
+    d.line([(1, 8), (1, 17)], fill=WOOD_L)
+    if not open_:
+        d.rectangle([1, 3, 18, 8], fill=WOOD)
+        d.chord([1, 0, 18, 8], 180, 360, fill=WOOD_L)
+        d.line([(2, 2), (17, 2)], fill=C("c88a50"))
+        d.rectangle([1, 7, 18, 8], fill=IRON)
+    else:
+        d.polygon([(1, 8), (3, 0), (16, 0), (18, 8)], fill=WOOD_D)
+        d.polygon([(3, 7), (5, 2), (14, 2), (16, 7)], fill=C("2a160c"))
+        d.rectangle([4, 6, 15, 8], fill=C("ffd060"))                 # brillo del tesoro
+        d.point((7, 5), fill=C("fff8d0")); d.point((12, 5), fill=C("fff8d0"))
+    for x in (4, 15):                                                # flejes
+        d.line([(x, 3 if not open_ else 8), (x, 17)], fill=IRON)
+        d.line([(x + 1, 3 if not open_ else 8), (x + 1, 17)], fill=IRON_L)
+    for cx, cy in ((1, 8), (18, 8), (1, 17), (18, 17)):              # esquinas doradas
+        d.point((cx, cy), fill=GOLD)
+    if not open_:
+        d.rectangle([8, 7, 11, 11], fill=GOLD)                       # cerradura
+        d.point((9, 9), fill=C("3a2010")); d.point((9, 8), fill=C("fff0a0"))
+    return outline(img)
+
+
 def strip(frames):
     w, h = frames[0].size
     s = Image.new("RGBA", (w * len(frames), h))
@@ -129,7 +180,9 @@ def strip(frames):
 def main():
     strip([candle_frame(k) for k in range(4)]).save(os.path.join(OUT, "candle.png"))
     strip([brazier_frame(k) for k in range(4)]).save(os.path.join(OUT, "brazier.png"))
-    print("Velas y cálices generados")
+    bench().save(os.path.join(OUT, "bench.png"))
+    strip([chest_frame(False), chest_frame(True)]).save(os.path.join(OUT, "chest.png"))
+    print("Velas, cálices, banco y cofre generados")
 
 
 if __name__ == "__main__":
