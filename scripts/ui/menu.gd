@@ -1905,6 +1905,32 @@ class MapView extends Control:
 		var f := UIKit.font(kind)
 		f.draw_string_outline(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, 3, UIKit.INK)
 		f.draw_string(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+	func _flame(p: Vector2, col: Color, lit: bool) -> void:
+		## Brasa: llama con contorno (encendida, parpadea; apagada, gris)
+		var fl := roundf(sin(t * 9.0 + p.x)) if lit else 0.0
+		var outer := PackedVector2Array([p + Vector2(0, -6 - fl), p + Vector2(3, -2), p + Vector2(3, 2), p + Vector2(0, 4), p + Vector2(-3, 2), p + Vector2(-3, -2)])
+		var grown := PackedVector2Array()
+		for q in outer:
+			grown.append(p + (q - p) * 1.35)
+		draw_colored_polygon(grown, UIKit.INK)
+		draw_colored_polygon(outer, col if lit else Color(0.45, 0.38, 0.35))
+		if lit:
+			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -3 - fl), p + Vector2(1.5, 0), p + Vector2(0, 2.5), p + Vector2(-1.5, 0)]), Color(1, 0.97, 0.8))
+			draw_circle(p, 9.0, Color(col, 0.08))
+	func _skull(p: Vector2, col: Color, dead: bool) -> void:
+		## Jefe: calavera con corona (tachada si ya cayó)
+		draw_circle(p + Vector2(0, -1), 5.5, UIKit.INK)
+		draw_rect(Rect2(p + Vector2(-3, 2), Vector2(7, 4)), UIKit.INK)
+		draw_circle(p + Vector2(0, -1), 4.5, col)
+		draw_rect(Rect2(p + Vector2(-2, 2), Vector2(5, 3)), col)
+		draw_rect(Rect2(p + Vector2(-3, -1), Vector2(2, 2)), UIKit.INK)
+		draw_rect(Rect2(p + Vector2(1, -1), Vector2(2, 2)), UIKit.INK)
+		draw_rect(Rect2(p + Vector2(-1, 3), Vector2(1, 2)), UIKit.INK)
+		draw_rect(Rect2(p + Vector2(1, 3), Vector2(1, 2)), UIKit.INK)
+		if not dead:
+			draw_colored_polygon(PackedVector2Array([p + Vector2(-4, -5), p + Vector2(-2, -9), p + Vector2(0, -6), p + Vector2(2, -9), p + Vector2(4, -5)]), UIKit.GOLD)
+		else:
+			draw_line(p + Vector2(-5, -6), p + Vector2(5, 5), UIKit.INK, 2.0)
 	func _seen_bounds() -> Rect2:
 		var b := Rect2()
 		var first := true
@@ -1987,10 +2013,7 @@ class MapView extends Control:
 			var mc: Color = m[2]
 			match m[0]:
 				"brasa":
-					draw_rect(Rect2(mp - Vector2(3, 4), Vector2(7, 8)), UIKit.INK)
-					draw_colored_polygon(PackedVector2Array([mp + Vector2(0, -4), mp + Vector2(3, 2), mp + Vector2(-3, 2)]), mc)
-					if mc == UIKit.GOLD:
-						draw_rect(Rect2(mp + Vector2(-1, -1 - roundf(sin(t * 8.0))), Vector2(2, 2)), Color.WHITE)
+					_flame(mp, mc, mc == UIKit.GOLD)
 				"npc":
 					draw_circle(mp, 4.0, UIKit.INK)
 					draw_circle(mp, 3.0, mc)
@@ -2008,13 +2031,8 @@ class MapView extends Control:
 				"boss", "boss_dead":
 					var dead: bool = m[0] == "boss_dead"
 					var bc := Color(0.45, 0.35, 0.4) if dead else mc
-					var bp := 5.0 + (0.0 if dead else absf(sin(t * 3.0)))
-					UIKit.diamond(self, mp, bp + 1.0, UIKit.INK)
-					UIKit.diamond(self, mp, bp, bc)
-					if dead:
-						draw_line(mp + Vector2(-3, -3), mp + Vector2(3, 3), UIKit.INK, 2.0)
-						draw_line(mp + Vector2(3, -3), mp + Vector2(-3, 3), UIKit.INK, 2.0)
-					else:
+					_skull(mp, bc, dead)
+					if not dead:
 						draw_arc(mp, 9.0 + fmod(t * 8.0, 6.0), 0, TAU, 16, Color(mc, 0.6 - fmod(t * 8.0, 6.0) / 10.0), 1.0)
 				"trial", "trial_done":
 					var done: bool = m[0] == "trial_done"
@@ -2180,9 +2198,9 @@ class MapView extends Control:
 			ly = ly0 + (li % 5) * 12.0
 			var lp2 := Vector2(15 + colx, ly - 3)
 			match lg[0]:
-				"brasa": draw_colored_polygon(PackedVector2Array([lp2 + Vector2(0, -4), lp2 + Vector2(3, 2), lp2 + Vector2(-3, 2)]), UIKit.GOLD)
+				"brasa": _flame(lp2, UIKit.GOLD, true)
 				"npc": draw_circle(lp2, 3.0, UIKit.CYAN)
-				"boss": UIKit.diamond(self, lp2, 4.0, UIKit.RED)
+				"boss": _skull(lp2, UIKit.RED, false)
 				"chest": draw_rect(Rect2(lp2 - Vector2(2, 1), Vector2(5, 3)), UIKit.GOLD)
 				"ecos": UIKit.diamond(self, lp2, 3.0, Color(0.5, 0.85, 1.0))
 				"trial":
