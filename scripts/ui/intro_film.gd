@@ -40,6 +40,21 @@ const SCENES := [
 	{"kind": "title", "dur": 5.0, "zoom": [1.06, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "lines": [["", ""]]},
 ]
 
+## Avance del Estrato II que se ve al terminar la demo
+const TEASER := [
+	{"kind": "spiral", "dur": 6.5, "zoom": [1.0, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "cues": [[0.4, "gate", -8.0]], "lines": [
+		["La Espiral sigue bajando.", "The Spiral keeps descending."],
+		["Noventa y nueve círculos por delante.", "Ninety-nine circles still ahead."]]},
+	{"kind": "forest", "dur": 8.5, "zoom": [1.0, 1.12], "pan": [Vector2(-12, 0), Vector2(12, -6)], "cues": [[4.6, "roar", -8.0]], "lines": [
+		["Abajo crece un bosque con las plumas de los caídos.", "Below, a forest grows from the feathers of the fallen."],
+		["Y algo con astas lo vigila. Orrun, el Ciervo Hueco.", "And something with antlers watches over it. Orrun, the Hollow Stag."]]},
+	{"kind": "throne", "dur": 7.5, "zoom": [1.15, 1.0], "pan": [Vector2(0, 10), Vector2.ZERO], "cues": [[3.8, "glitch", -6.0]], "lines": [
+		["En el fondo, alguien encadenado recuerda tu nombre.", "At the bottom, someone in chains remembers your name."],
+		["Azrahel. El Rey del Abismo.", "Azrahel. The King of the Abyss."]]},
+	{"kind": "title2", "dur": 6.0, "zoom": [1.06, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "lines": [["", ""]]},
+]
+
+var mode := "intro"
 var _i := -1
 var _t := 0.0
 var _scene: FilmPlate
@@ -88,15 +103,18 @@ func _ready() -> void:
 	_fade.size = Vector2(640, 360)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fade)
-	Audio.play_music("memory", 1.0)
+	Audio.play_music("memory" if mode == "intro" else "shadow", 1.0)
 	_next()
 
+func _scenes() -> Array:
+	return TEASER if mode == "teaser" else SCENES
+
 func _speed() -> float:
-	return 0.12 if G.autotest != "" and G.autotest != "film" else 1.0
+	return 0.12 if G.autotest != "" and G.autotest != "film" and G.autotest != "teaser" else 1.0
 
 func _next() -> void:
 	_i += 1
-	if _i >= SCENES.size():
+	if _i >= _scenes().size():
 		_finish()
 		return
 	_enter(_i, 0.0)
@@ -104,7 +122,7 @@ func _next() -> void:
 	tw.tween_property(_fade, "color:a", 0.0, 0.9)
 
 func _enter(i: int, at: float) -> void:
-	var sc: Dictionary = SCENES[i]
+	var sc: Dictionary = _scenes()[i]
 	_i = i
 	_t = at
 	_line = -1
@@ -118,20 +136,20 @@ func _enter(i: int, at: float) -> void:
 	if sc.get("flash", false):
 		_flash.color.a = 0.8
 		create_tween().tween_property(_flash, "color:a", 0.0, 0.8)
-	if sc.kind == "title":
+	if sc.kind == "title" or sc.kind == "title2":
 		Audio.play_music("theme", 2.0)
 		Audio.sfx("hit_heavy", -6.0, 0.0)
 
 ## Para las pruebas: salta a una lámina concreta (fracción de su duración)
 func debug_seek(i: int, frac: float) -> void:
 	_fade.color.a = 0.0
-	_enter(i, SCENES[i].dur * frac)
+	_enter(i, _scenes()[i].dur * frac)
 	_dbg = true
 
 func _process(delta: float) -> void:
-	if _done or _i < 0 or _i >= SCENES.size():
+	if _done or _i < 0 or _i >= _scenes().size():
 		return
-	var sc: Dictionary = SCENES[_i]
+	var sc: Dictionary = _scenes()[_i]
 	var sp := _speed()
 	_t += delta / sp if sp < 1.0 else delta
 	_scene.t = _t
@@ -306,6 +324,9 @@ class FilmPlate extends Control:
 			"ember": _ember()
 			"wake": _wake()
 			"title": _title()
+			"forest": _forest()
+			"throne": _throne()
+			"title2": _title2()
 		draw_set_transform_matrix(Transform2D())
 
 	func _garden() -> void:
@@ -700,4 +721,106 @@ class FilmPlate extends Control:
 		var sw := hf.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 		hf.draw_string(get_canvas_item(), c + Vector2(-sw / 2.0, 30), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, clampf((t - 0.8) / 0.8, 0.0, 1.0)))
 		_motes(50, Color(1, 0.55, 0.3, 0.9), 24.0)
+		_vignette(0.6)
+
+	func _forest() -> void:
+		_sky(Color(0.16, 0.18, 0.22), Color(0.32, 0.3, 0.3))
+		# árboles hechos de plumas gigantes, en tres profundidades
+		for d in 3:
+			_set_cam(0.4 + d * 0.35)
+			var col := Color(0.85, 0.84, 0.8).lerp(Color(0.3, 0.32, 0.36), 0.6 - d * 0.25)
+			for k in 7:
+				var x := 30.0 + k * 100.0 + d * 37.0
+				var base := 300.0 + d * 10.0
+				var h := 150.0 + fmod(x * 1.7, 60.0) + d * 20.0
+				var lean := sin(k + d) * 0.15
+				var top := Vector2(x + lean * h, base - h)
+				draw_line(Vector2(x, base), top, col.darkened(0.3), 3.0 + d)
+				for b in 9:
+					var u := 0.25 + b * 0.08
+					var p := Vector2(x, base).lerp(top, u)
+					var L := (1.0 - u) * 46.0 + 8.0
+					for side in [-1.0, 1.0]:
+						_poly(PackedVector2Array([p, p + Vector2(side * L, -L * 0.35), p + Vector2(side * L * 0.8, -L * 0.15)]), Color(col, 0.85))
+		# niebla baja
+		_set_cam(1.0)
+		for i in 6:
+			var mx := fmod(i * 140.0 + t * 12.0, 780.0) - 70.0
+			draw_set_transform_matrix(_cam * Transform2D(0.0, Vector2(1.0, 0.25), 0.0, Vector2(mx, 296)))
+			draw_circle(Vector2.ZERO, 90.0, Color(0.8, 0.82, 0.85, 0.12))
+			_reset()
+		# Orrun, el Ciervo Hueco: silueta enorme con astas de hueso; los ojos se encienden
+		var appear := _ease(clampf((t - 3.2) / 1.5, 0.0, 1.0))
+		var sp := Vector2(330, 238 + (1.0 - appear) * 30.0)
+		var bk := Color(0.04, 0.03, 0.05, appear)
+		_poly(PackedVector2Array([sp + Vector2(-60, 40), sp + Vector2(-40, -10), sp + Vector2(40, -14), sp + Vector2(70, 40)]), bk)
+		_poly(PackedVector2Array([sp + Vector2(-14, -10), sp + Vector2(-8, -54), sp + Vector2(8, -54), sp + Vector2(14, -10)]), bk)
+		for side in [-1.0, 1.0]:
+			var root := sp + Vector2(side * 6, -54)
+			var prev := root
+			for k2 in 5:
+				var nxt := prev + Vector2(side * (12 - k2), -14)
+				draw_line(prev, nxt, bk, 3.0)
+				draw_line(nxt, nxt + Vector2(side * 9, -4 + k2), bk, 2.0)
+				prev = nxt
+		var eye := clampf((t - 4.6) / 0.4, 0.0, 1.0)
+		draw_circle(sp + Vector2(-5, -42), 2.0, Color(0.6, 1.0, 0.8, eye))
+		draw_circle(sp + Vector2(5, -42), 2.0, Color(0.6, 1.0, 0.8, eye))
+		for i2 in 30:
+			var s2: Array = _seed[i2]
+			var fp := Vector2(s2[0], fmod(s2[1] + t * 18.0 * s2[3], 360.0))
+			_feather(fp, t * s2[3] + s2[2] * 6.0, 1.0, Color(0.9, 0.9, 0.88, 0.6))
+		_vignette(0.7)
+
+	func _throne() -> void:
+		_sky(Color(0.02, 0.0, 0.03), Color(0.1, 0.02, 0.05))
+		_set_cam(1.0)
+		var c := Vector2(320, 200)
+		# trono enorme en la oscuridad
+		_poly(PackedVector2Array([c + Vector2(-70, 110), c + Vector2(-60, -90), c + Vector2(-30, -130), c + Vector2(30, -130), c + Vector2(60, -90), c + Vector2(70, 110)]), Color(0.08, 0.03, 0.06))
+		for k in 5:
+			draw_line(c + Vector2(-60 + k * 30, -90), c + Vector2(-60 + k * 30, -140 - (k % 2) * 16), Color(0.1, 0.04, 0.07), 6.0)
+		# la figura encadenada: alas enormes y rotas
+		var breathe := sin(t * 1.2) * 2.0
+		var bk := Color(0.01, 0.0, 0.02)
+		for side in [-1.0, 1.0]:
+			for k2 in 7:
+				var a = -PI / 2.0 + side * (0.4 + k2 * 0.2)
+				draw_line(c + Vector2(0, -40), c + Vector2(0, -40) + Vector2.from_angle(a) * (110.0 - k2 * 9.0 + breathe), bk, 7.0 - k2 * 0.6)
+		_poly(PackedVector2Array([c + Vector2(-16, -46), c + Vector2(16, -46), c + Vector2(22, 30), c + Vector2(-22, 30)]), bk)
+		draw_circle(c + Vector2(0, -56), 10.0, bk)
+		# cadenas tensas hacia los lados
+		for side2 in [-1.0, 1.0]:
+			for k3 in 14:
+				var p := c + Vector2(side2 * (20 + k3 * 18), -30 + k3 * 6 + sin(t * 2.0 + k3) * 1.5)
+				draw_rect(Rect2(p - Vector2(3, 2), Vector2(6, 4)), Color(0.3, 0.25, 0.3))
+		# abre los ojos
+		var eye := clampf((t - 3.8) / 0.3, 0.0, 1.0)
+		draw_rect(Rect2(c + Vector2(-6, -58), Vector2(4, 2)), Color(1, 0.2, 0.25, eye))
+		draw_rect(Rect2(c + Vector2(2, -58), Vector2(4, 2)), Color(1, 0.2, 0.25, eye))
+		if eye > 0.0:
+			draw_circle(c + Vector2(0, -57), 30.0 * eye, Color(1, 0.1, 0.15, 0.06 * eye))
+		_motes(30, Color(1, 0.3, 0.3, 0.6), -14.0, false)
+		_vignette(0.9)
+
+	func _title2() -> void:
+		_sky(Color(0.06, 0.08, 0.08), Color(0.2, 0.22, 0.2))
+		_set_cam(1.0)
+		var a2 := clampf(t / 1.2, 0.0, 1.0)
+		var f := UIKit.font("logo")
+		var hf := UIKit.font("head")
+		var top := G.L(["ESTRATO II", "STRATUM II"])
+		var tw := hf.get_string_size(top, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		hf.draw_string(get_canvas_item(), Vector2(320 - tw / 2.0, 140), top, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.7, 1.0, 0.85, a2))
+		var txt := G.L(["EL BOSQUE DE PLUMAS MUERTAS", "THE FOREST OF DEAD FEATHERS"])
+		var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+		f.draw_string_outline(get_canvas_item(), Vector2(320 - w / 2.0, 190), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, 8, Color(UIKit.INK, a2))
+		f.draw_string(get_canvas_item(), Vector2(320 - w / 2.0, 190), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(0.92, 0.95, 0.9, a2))
+		var c2 := G.L(["CONTINUARÁ", "TO BE CONTINUED"])
+		var cw := hf.get_string_size(c2, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		hf.draw_string(get_canvas_item(), Vector2(320 - cw / 2.0, 226), c2, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, clampf((t - 1.4) / 0.8, 0.0, 1.0)))
+		for i in 24:
+			var s2: Array = _seed[i]
+			var fp := Vector2(s2[0], fmod(s2[1] + t * 14.0 * s2[3], 360.0))
+			_feather(fp, t * s2[3] + s2[2] * 6.0, 1.0, Color(0.9, 0.95, 0.9, 0.5))
 		_vignette(0.6)

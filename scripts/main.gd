@@ -95,6 +95,17 @@ func _ready() -> void:
 				await get_tree().create_timer(0.35).timeout
 				await _shot(sd2 + "/f%02d.png" % k)
 			get_tree().quit()
+		"teaser":
+			var sd3 := OS.get_environment("SERAPHALL_SHOTS")
+			var tz := preload("res://scripts/ui/intro_film.gd").new()
+			tz.mode = "teaser"
+			add_child(tz)
+			await get_tree().create_timer(1.0).timeout
+			for k in tz.TEASER.size():
+				tz.debug_seek(k, 0.78)
+				await get_tree().create_timer(0.35).timeout
+				await _shot(sd3 + "/t%02d.png" % k)
+			get_tree().quit()
 		"title":
 			_build_title()
 			await get_tree().create_timer(1.2).timeout

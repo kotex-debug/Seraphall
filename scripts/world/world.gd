@@ -2051,6 +2051,11 @@ func _on_seravel_dead(e: Enemy) -> void:
 		Audio.play_music("theme", 2.0)
 		if multiplayer.is_server():
 			Prog.save_game()
+		# avance del Estrato II
+		await get_tree().create_timer(9.5 if G.autotest == "" else 0.5).timeout
+		var tz := preload("res://scripts/ui/intro_film.gd").new()
+		tz.mode = "teaser"
+		add_child(tz)
 	dialog.play(lines, done, true)
 
 # ====================================================================== muerte
