@@ -179,8 +179,47 @@ class Abyss extends Node2D:
 				var kind := rng.randi_range(0, 10)
 				items.append([p, kind, rng.randf_range(0.7, 1.4), rng.randi(), rng.randf() * TAU])
 			layers.append([f, items])
-	func _process(_delta: float) -> void:
+	var _bolt_layer: Node2D
+	var _next_bolt := 9.0
+	var _flash := 0.0
+	var _bolt: PackedVector2Array = PackedVector2Array()
+	var _bolt2: PackedVector2Array = PackedVector2Array()
+	func _process(delta: float) -> void:
+		## Tormenta lejana en el abismo: un relámpago cada 15-30 s ilumina las capas de rocas
+		_next_bolt -= delta
+		if _next_bolt <= 0.0:
+			_next_bolt = randf_range(15.0, 30.0)
+			_make_bolt()
+		_flash = maxf(0.0, _flash - delta * 2.0)
+		if _bolt_layer == null and world != null and world.has_node("Background"):
+			# el rayo vive en la capa del fondo: no lo oscurece la luz ambiente y queda detrás de las rocas
+			_bolt_layer = BoltLayer.new()
+			_bolt_layer.abyss = self
+			world.get_node("Background").add_child(_bolt_layer)
+		if _bolt_layer:
+			_bolt_layer.queue_redraw()
 		queue_redraw()
+	func _make_bolt() -> void:
+		_bolt = PackedVector2Array()
+		_bolt2 = PackedVector2Array()
+		var x := randf_range(110.0, 300.0) * (1.0 if randf() < 0.5 else -1.0)
+		var p := Vector2(x, -270.0)
+		_bolt.append(p)
+		var end_y := randf_range(-40.0, 140.0)
+		var n := 9
+		for i in n:
+			p += Vector2(randf_range(-26, 26), (end_y + 270.0) / n)
+			_bolt.append(p)
+			if i == 3:
+				var q := p
+				_bolt2.append(q)
+				for j in 4:
+					q += Vector2(randf_range(4, 22) * signf(randf() - 0.5), randf_range(14, 26))
+					_bolt2.append(q)
+		_flash = 1.0
+		var tree := get_tree()
+		if tree:
+			tree.create_timer(randf_range(0.5, 1.1)).timeout.connect(func(): Audio.sfx("slam", -24.0, 0.25))
 	func _giant(cam: Vector2, t: float) -> void:
 		## Cada ~45 s un ángel enorme cae muy lejos, por detrás de todo, perdiendo plumas
 		var cycle := fmod(t, 45.0)
@@ -217,8 +256,8 @@ class Abyss extends Node2D:
 				var s: float = it[2] * f
 				var r := RandomNumberGenerator.new()
 				r.seed = it[3]
-				var rock := Color(0.2, 0.13, 0.2).lerp(Color(0.32, 0.12, 0.2), fog * 1.4)
-				var rim := Color(0.62, 0.4, 0.5).lerp(Color(0.5, 0.2, 0.3), fog)
+				var rock := Color(0.2, 0.13, 0.2).lerp(Color(0.32, 0.12, 0.2), fog * 1.4).lerp(Color(0.42, 0.34, 0.55), _flash * 0.45)
+				var rim := Color(0.62, 0.4, 0.5).lerp(Color(0.5, 0.2, 0.3), fog).lerp(Color(0.95, 0.9, 1.0), _flash * 0.7)
 				var alpha := 1.0 - fog * 1.1
 				match it[1]:
 					0, 1, 2, 3, 4:
@@ -630,3 +669,29 @@ class Chandelier extends Node2D:
 				draw_circle(fl, 5.0 * sc2, Color(1, 0.6, 0.2, 0.12))
 				draw_circle(fl, 1.8 * sc2, Color(1, 0.75, 0.3))
 				draw_circle(fl + Vector2(0, 0.6), 0.9 * sc2, Color(1, 1, 0.85))
+
+
+
+class BoltLayer extends Node2D:
+	## Relámpago del abismo dibujado en la capa del fondo (coordenadas de pantalla 640x360)
+	var abyss: Node
+	func _draw() -> void:
+		var fl: float = abyss._flash
+		if fl <= 0.0:
+			return
+		fl *= 0.6 + 0.4 * sin(fl * 40.0)
+		draw_rect(Rect2(Vector2.ZERO, Vector2(640, 360)), Color(0.6, 0.45, 0.9, fl * 0.18))
+		var c := Vector2(320, 180)
+		var b1 := PackedVector2Array()
+		for q in abyss._bolt:
+			b1.append(c + q)
+		if b1.size() > 1:
+			draw_polyline(b1, Color(0.65, 0.5, 1.0, fl * 0.2), 14.0)
+			draw_polyline(b1, Color(0.8, 0.7, 1.0, fl * 0.55), 5.0)
+			draw_polyline(b1, Color(1, 0.97, 1.0, fl), 2.0)
+		var b2 := PackedVector2Array()
+		for q2 in abyss._bolt2:
+			b2.append(c + q2)
+		if b2.size() > 1:
+			draw_polyline(b2, Color(0.8, 0.7, 1.0, fl * 0.4), 3.0)
+			draw_polyline(b2, Color(1, 0.97, 1.0, fl * 0.8), 1.0)

@@ -908,6 +908,18 @@ func _run_autotest() -> void:
 				n += 1
 			print("AUTOTEST_CHAND_OK")
 			get_tree().quit()
+		"storm":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			lp.respawn_at(w.tile_pos(34, 86))
+			await get_tree().create_timer(2.5).timeout
+			var ab = w.get_node("Abyss")
+			ab._next_bolt = 0.01
+			await get_tree().create_timer(0.08).timeout
+			print("STORM flash=", ab._flash, " pts=", ab._bolt.size(), " layer=", ab._bolt_layer, " bg=", w.has_node("Background"), " parent=", ab._bolt_layer.get_parent() if ab._bolt_layer else null)
+			await _shot(out + "/storm.png")
+			print("AUTOTEST_STORM_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

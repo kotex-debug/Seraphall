@@ -273,6 +273,7 @@ func _build_map() -> void:
 	add_child(rim)
 	# v0.7: profundidad 3D (abismo con capas y faldones de roca en perspectiva)
 	var aby := Depth3D.Abyss.new()
+	aby.name = "Abyss"
 	aby.world = self
 	add_child(aby)
 	var cd := Depth3D.CliffDepth.new()
