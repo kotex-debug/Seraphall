@@ -680,6 +680,7 @@ func _build_props() -> void:
 	_build_arena_decor()
 	_build_antechambers()
 	_place_urns()
+	_place_npc_life()
 	_place_webs()
 	_place_fallen()
 	_place_ghost_echoes()
@@ -3362,6 +3363,19 @@ func _place_fallen() -> void:
 					entities.add_child(fa)
 					placed += 1
 
+func _place_npc_life() -> void:
+	## Cada PNJ hace algo propio: Brenna forja en su yunque, Ozias graba runas, Nyx cuenta monedas, Velaria vela,
+	## el Cartógrafo dibuja, Ilse cose... pequeños gestos que dan vida al Santuario y al Nimbo
+	for id in ["brenna", "carto", "ozias", "ilse", "nyx", "velaria"]:
+		if not interactables.has(id):
+			continue
+		var it: Node2D = interactables[id]
+		var nl := NpcLife.new()
+		nl.kind = id
+		nl.world = self
+		nl.position = it.position
+		entities.add_child(nl)
+
 func _place_webs() -> void:
 	## Telarañas en las esquinas de las salas: detalle que da edad a la Espiral
 	var rng := RandomNumberGenerator.new()
@@ -4292,3 +4306,99 @@ class FallenAngel extends Node2D:
 			draw_line(sp, sp + Vector2(0, -12), Color(0.7, 0.72, 0.8), 1.5)
 			draw_line(sp + Vector2(-3, -9), sp + Vector2(3, -9), Color(0.6, 0.48, 0.3), 1.5)
 			draw_line(sp + Vector2(0, -9), sp + Vector2(0, -13), Color(0.45, 0.3, 0.25), 1.5)
+
+
+class NpcLife extends Node2D:
+	## Gesto propio de cada PNJ (y el objeto con el que trabaja)
+	var kind := ""
+	var world: Node
+	var _t := 0.0
+	var _next := 1.0
+	func _ready() -> void:
+		_t = randf() * 3.0
+	func _process(delta: float) -> void:
+		_t += delta
+		_next -= delta
+		if _next <= 0.0:
+			_act()
+		if Engine.get_process_frames() % 2 == 0:
+			queue_redraw()
+	func _near() -> bool:
+		var lp: Node2D = world.local_player() if world else null
+		return lp != null and lp.global_position.distance_to(global_position) < 140.0
+	func _act() -> void:
+		match kind:
+			"brenna":
+				_next = randf_range(1.3, 2.0)
+				Fx.burst(global_position + Vector2(9, 0), Color(1, 0.7, 0.3), 7, 70.0, 0.35, "fx_px", 70.0, Vector2.UP, 0.8, true, Vector2(0, 140))
+				if _near():
+					Audio.sfx("parry", -26.0, 0.2)
+			"ozias":
+				_next = randf_range(2.0, 3.2)
+				Fx.burst(global_position + Vector2(10, -8), Color(0.4, 1.0, 1.0), 3, 14.0, 1.2, "fx_soft", 30.0, Vector2.UP, 0.35, true)
+			"nyx":
+				_next = randf_range(2.5, 4.0)
+				Fx.burst(global_position + Vector2(10, -2), Color(1, 0.85, 0.3), 2, 30.0, 0.5, "fx_px", 40.0, Vector2.UP, 0.8, true, Vector2(0, 160))
+			"velaria":
+				_next = randf_range(3.0, 4.5)
+				Fx.burst(global_position + Vector2(-11, -14), Color(1, 0.5, 0.35), 2, 10.0, 1.0, "fx_soft", 20.0, Vector2.UP, 0.3, true)
+			"carto", "ilse":
+				_next = randf_range(3.0, 5.0)
+	func _draw() -> void:
+		var ink := Color(0.08, 0.04, 0.08)
+		match kind:
+			"brenna":
+				# yunque con la pieza al rojo
+				var a := Vector2(9, 10)
+				draw_set_transform(a + Vector2(0, 2), 0.0, Vector2(1.0, 0.45))
+				draw_circle(Vector2.ZERO, 8.0, Color(0, 0, 0, 0.3))
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				draw_rect(Rect2(a + Vector2(-3, -4), Vector2(6, 5)), ink)
+				draw_rect(Rect2(a + Vector2(-2, -4), Vector2(4, 4)), Color(0.32, 0.3, 0.36))
+				draw_colored_polygon(PackedVector2Array([a + Vector2(-8, -9), a + Vector2(7, -9), a + Vector2(9, -7), a + Vector2(5, -5), a + Vector2(-5, -5), a + Vector2(-8, -7)]), ink)
+				draw_colored_polygon(PackedVector2Array([a + Vector2(-7, -8), a + Vector2(6, -8), a + Vector2(7, -7), a + Vector2(4, -6), a + Vector2(-4, -6), a + Vector2(-7, -7)]), Color(0.42, 0.4, 0.48))
+				draw_line(a + Vector2(-6, -8), a + Vector2(5, -8), Color(0.62, 0.6, 0.7), 1.0)
+				var glow := 0.6 + 0.4 * sin(_t * 3.0)
+				draw_rect(Rect2(a + Vector2(-2, -10), Vector2(5, 2)), Color(1, 0.45 + 0.2 * glow, 0.15))
+			"carto":
+				# mesa con el mapa a medio dibujar
+				var m := Vector2(-15, -2)
+				draw_rect(Rect2(m + Vector2(-7, -6), Vector2(14, 9)), ink)
+				draw_rect(Rect2(m + Vector2(-6, -5), Vector2(12, 7)), Color(0.85, 0.78, 0.6))
+				for k in 4:
+					draw_line(m + Vector2(-5 + k * 3, -4 + (k % 2) * 2), m + Vector2(-3 + k * 3, -2 - (k % 2)), Color(0.45, 0.32, 0.22), 1.0)
+				var tip := m + Vector2(2 + sin(_t * 2.0) * 2.0, -3 + cos(_t * 2.6) * 1.0)
+				draw_line(tip, tip + Vector2(3, -5), Color(0.95, 0.95, 1.0), 1.0)
+			"ozias":
+				# runas que flotan sobre su mano
+				for k in 3:
+					var ph := _t * 0.8 + k * 2.1
+					var rp := Vector2(10 + sin(ph) * 4.0, -16 - fmod(ph * 6.0, 14.0))
+					var al := 1.0 - fmod(ph * 6.0, 14.0) / 14.0
+					draw_rect(Rect2(rp, Vector2(3, 1)), Color(0.4, 1.0, 1.0, al))
+					draw_rect(Rect2(rp + Vector2(1, -1), Vector2(1, 3)), Color(0.4, 1.0, 1.0, al))
+			"nyx":
+				# pila de monedas y una que gira
+				var cpos := Vector2(11, 0)
+				for k in 3:
+					draw_rect(Rect2(cpos + Vector2(-3, -1 - k * 2), Vector2(6, 2)), ink)
+					draw_rect(Rect2(cpos + Vector2(-2, -1 - k * 2), Vector2(4, 1)), Color(1, 0.8, 0.3))
+				var w := absf(cos(_t * 4.0)) * 3.0
+				draw_rect(Rect2(cpos + Vector2(-w / 2.0, -12 - absf(sin(_t * 2.0)) * 3.0), Vector2(maxf(w, 1.0), 3)), Color(1, 0.88, 0.4))
+			"velaria":
+				# vela votiva
+				var v := Vector2(-11, -2)
+				draw_rect(Rect2(v + Vector2(-2, -8), Vector2(4, 8)), ink)
+				draw_rect(Rect2(v + Vector2(-1, -8), Vector2(2, 7)), Color(0.9, 0.86, 0.8))
+				var fl := sin(_t * 11.0) * 0.6
+				draw_circle(v + Vector2(fl, -11), 2.0, Color(1, 0.55, 0.25))
+				draw_circle(v + Vector2(fl, -11), 1.0, Color(1, 0.95, 0.7))
+				draw_circle(v + Vector2(0, -11), 7.0, Color(1, 0.5, 0.25, 0.08))
+			"ilse":
+				# ovillo de hilo dorado y aguja que va y viene
+				var y := Vector2(-12, 0)
+				draw_circle(y, 3.0, ink)
+				draw_circle(y, 2.2, Color(1, 0.85, 0.4))
+				var np := y + Vector2(3 + sin(_t * 3.0) * 4.0, -6 + cos(_t * 3.0) * 2.0)
+				draw_line(y + Vector2(1, -1), np, Color(1, 0.85, 0.4, 0.8), 1.0)
+				draw_line(np, np + Vector2(2, -2), Color(0.9, 0.9, 1.0), 1.0)
