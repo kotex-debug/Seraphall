@@ -1259,36 +1259,73 @@ class DestinyScale extends Control:
 		draw_rect(Rect2(Vector2(8, 0), Vector2(size.x - 16, 1)), Color(1, 1, 1, 0.15))
 		f.draw_string_outline(get_canvas_item(), Vector2(12, 14), G.T("destiny"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
 		f.draw_string(get_canvas_item(), Vector2(12, 14), G.T("destiny"), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
-		var c := Vector2(size.x / 2.0, 40)
-		# pilar y brazo de la balanza
-		draw_rect(Rect2(c + Vector2(-1, 0), Vector2(3, 30)), UIKit.INK)
-		draw_rect(Rect2(c + Vector2(0, 0), Vector2(1, 30)), UIKit.GOLD_DARK)
-		var d := Vector2.from_angle(_ang)
-		var l := c - d * 56.0
-		var r := c + d * 56.0
-		draw_line(l, r, UIKit.INK, 4.0)
-		draw_line(l, r, UIKit.GOLD, 2.0)
-		UIKit.diamond(self, c, 4.0, UIKit.GOLD)
-		# platillo izquierdo: alas abiertas
+		var c := Vector2(size.x / 2.0, 30)
 		var wc := Color(0.75, 0.9, 1.0)
-		var lp := l + Vector2(0, 10)
-		draw_line(l, lp, Color(1, 1, 1, 0.5), 1.0)
-		UIKit.wing(self, lp + Vector2(-2, 0), -1.0, 10.0, wc, 0.8 + 0.1 * sin(t * 4.0))
-		UIKit.wing(self, lp + Vector2(2, 0), 1.0, 10.0, wc, 0.8 + 0.1 * sin(t * 4.0))
-		# platillo derecho: trono
-		var rp := r + Vector2(0, 10)
-		draw_line(r, rp, Color(1, 1, 1, 0.5), 1.0)
 		var tc := Color(1, 0.35, 0.4)
-		draw_rect(Rect2(rp + Vector2(-6, -2), Vector2(12, 12)), UIKit.INK)
-		draw_rect(Rect2(rp + Vector2(-5, -1), Vector2(3, 10)), tc)
-		draw_rect(Rect2(rp + Vector2(-5, 5), Vector2(10, 3)), tc)
-		draw_rect(Rect2(rp + Vector2(2, 4), Vector2(3, 5)), tc.darkened(0.3))
+		# halo de fondo hacia el lado que gana
+		var lean := clampf(-_ang / 0.45, -1.0, 1.0)
+		for k in 4:
+			draw_circle(c + Vector2(-lean * 40.0, 22), 30.0 - k * 6.0, Color(wc if lean > 0 else tc, 0.03 + k * 0.015))
+		# pie, columna con capitel y base escalonada
+		draw_rect(Rect2(c + Vector2(-2, -4), Vector2(5, 46)), UIKit.INK)
+		draw_rect(Rect2(c + Vector2(-1, -4), Vector2(3, 46)), UIKit.GOLD_DARK)
+		draw_rect(Rect2(c + Vector2(0, -4), Vector2(1, 46)), UIKit.GOLD)
+		for k in 3:
+			draw_rect(Rect2(c + Vector2(-10 + k * 3, 42 - k * 2), Vector2(21 - k * 6, 3)), UIKit.GOLD_DARK.darkened(0.2 * k))
+		draw_circle(c + Vector2(0, -7), 4.0, UIKit.INK)
+		draw_circle(c + Vector2(0, -7), 3.0, UIKit.GOLD)
+		draw_circle(c + Vector2(0, -7), 1.2, Color(1, 0.97, 0.85))
+		# brazo con remates
+		var d := Vector2.from_angle(_ang)
+		var l := c - d * 62.0
+		var r := c + d * 62.0
+		draw_line(l, r, UIKit.INK, 5.0)
+		draw_line(l, r, UIKit.GOLD_DARK, 3.0)
+		draw_line(l + Vector2(0, -1), r + Vector2(0, -1), UIKit.GOLD, 1.0)
+		UIKit.diamond(self, c, 5.0, UIKit.INK)
+		UIKit.diamond(self, c, 4.0, UIKit.GOLD)
+		for e in [l, r]:
+			UIKit.diamond(self, e, 3.0, UIKit.GOLD)
+		# platillos colgando de tres cadenas
+		var pans := [[l, wc], [r, tc]]
+		var pan_c: Array = []
+		for pi in 2:
+			var top: Vector2 = pans[pi][0]
+			var pc: Color = pans[pi][1]
+			var bot := top + Vector2(0, 22)
+			for k in [-1, 0, 1]:
+				var bp := bot + Vector2(k * 9, 0)
+				for q in 4:
+					var cp := top.lerp(bp, (q + 0.5) / 4.0)
+					draw_rect(Rect2(cp - Vector2(0.5, 1), Vector2(1, 2)), Color(0.9, 0.8, 0.55, 0.8))
+			var pts := PackedVector2Array([bot + Vector2(-13, 0), bot + Vector2(13, 0), bot + Vector2(9, 5), bot + Vector2(-9, 5)])
+			draw_colored_polygon(pts, UIKit.INK)
+			draw_colored_polygon(PackedVector2Array([bot + Vector2(-12, 1), bot + Vector2(12, 1), bot + Vector2(8, 4), bot + Vector2(-8, 4)]), UIKit.GOLD_DARK)
+			draw_line(bot + Vector2(-12, 1), bot + Vector2(12, 1), UIKit.GOLD, 1.0)
+			draw_circle(bot + Vector2(0, -6), 9.0, Color(pc, 0.1 + 0.05 * sin(t * 3.0 + pi)))
+			pan_c.append(bot)
+		# alas abiertas sobre el platillo izquierdo; trono vacío sobre el derecho
+		var lp: Vector2 = pan_c[0] + Vector2(0, -3)
+		UIKit.wing(self, lp + Vector2(-2, 0), -1.0, 11.0, wc, 0.8 + 0.1 * sin(t * 4.0))
+		UIKit.wing(self, lp + Vector2(2, 0), 1.0, 11.0, wc, 0.8 + 0.1 * sin(t * 4.0))
+		var rp: Vector2 = pan_c[1] + Vector2(0, -12)
+		draw_rect(Rect2(rp + Vector2(-6, -4), Vector2(12, 15)), UIKit.INK)
+		draw_rect(Rect2(rp + Vector2(-5, -3), Vector2(3, 12)), tc)
+		draw_rect(Rect2(rp + Vector2(-5, 4), Vector2(10, 3)), tc)
+		draw_rect(Rect2(rp + Vector2(2, 3), Vector2(3, 6)), tc.darkened(0.3))
+		draw_rect(Rect2(rp + Vector2(-5, -6), Vector2(1, 2)), UIKit.GOLD)
+		draw_rect(Rect2(rp + Vector2(-3, -6), Vector2(1, 2)), UIKit.GOLD)
+		# rótulos de los dos finales
+		var a1 := G.T("route_wings")
+		var a2 := G.T("route_throne")
+		tf.draw_string(get_canvas_item(), Vector2(4, 96), a1, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(wc, 0.55))
+		tf.draw_string(get_canvas_item(), Vector2(size.x - 4 - tf.get_string_size(a2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, 96), a2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(tc, 0.55))
 		var sc := Prog.route_score()
 		var wn := G.T("route_wings") if sc >= 0 else G.T("route_throne")
 		var col := wc if sc >= 0 else tc
 		var w := tf.get_string_size(wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-		tf.draw_string_outline(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 86), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
-		tf.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 86), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+		tf.draw_string_outline(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 84), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
+		tf.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - w / 2.0, 84), wn, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 class NpcBust extends Control:
 	## Retrato grande animado del PNJ del servicio
