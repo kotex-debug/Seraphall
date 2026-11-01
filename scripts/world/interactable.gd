@@ -185,6 +185,49 @@ func prompt() -> String:
 			return G.T("interact") % G.T("read")
 	return ""
 
+## PNJ que recorre un camino en bucle (Sael sube la Escalinata, se desvanece arriba y reaparece abajo)
+var _walk_k := 0.0
+var _walk_wait := 2.0
+var _walk_fade := 1.0
+var _walk_phase := "up"
+func _walk_tick(delta: float) -> void:
+	var a: Vector2 = data.walk[0]
+	var b: Vector2 = data.walk[1]
+	var w := get_tree().get_first_node_in_group("world")
+	var lp: Node2D = w.local_player() if w else null
+	var near := lp != null and lp.global_position.distance_to(global_position) < 46.0
+	var talking: bool = w != null and w.dialog.is_open() and near
+	if near or talking:
+		# se detiene y te mira
+		if lp:
+			spr.flip_h = lp.global_position.x < global_position.x
+		_walk_fade = move_toward(_walk_fade, 1.0, delta * 2.0)
+		spr.modulate.a = _walk_fade
+		return
+	match _walk_phase:
+		"up":
+			_walk_k = minf(1.0, _walk_k + delta * 7.0 / maxf(a.distance_to(b), 1.0))
+			global_position = a.lerp(b, _walk_k) + Vector2(0, -absf(sin(_t * 7.0)) * 1.0)
+			spr.flip_h = b.x < a.x
+			if _walk_k >= 1.0:
+				_walk_phase = "fade"
+				_walk_wait = 2.5
+		"fade":
+			_walk_wait -= delta
+			if _walk_wait <= 0.0:
+				_walk_fade = move_toward(_walk_fade, 0.0, delta * 0.8)
+				if _walk_fade <= 0.0:
+					_walk_k = 0.0
+					global_position = a
+					_walk_phase = "appear"
+		"appear":
+			_walk_fade = move_toward(_walk_fade, 1.0, delta * 0.8)
+			if _walk_fade >= 1.0:
+				_walk_phase = "up"
+	spr.modulate.a = _walk_fade
+	if light:
+		light.energy = 0.7 * _walk_fade
+
 var _ring_t := 0.0
 var _bark_t := 6.0
 var _bark := ""
@@ -218,6 +261,8 @@ func _process(delta: float) -> void:
 		"npc":
 			var f2 := int(_t * 4.0) % _frames
 			spr.region_rect = Rect2(f2 * _fw, 0, _fw, 32)
+			if data.has("walk"):
+				_walk_tick(delta)
 			# comentarios sueltos cuando pasas cerca
 			_bark_t -= delta
 			_bark_a = move_toward(_bark_a, 1.0 if _bark_t > 2.2 else 0.0, delta * 3.0)

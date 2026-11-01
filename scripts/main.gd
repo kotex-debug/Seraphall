@@ -954,6 +954,20 @@ func _run_autotest() -> void:
 			await _shot(out + "/endcard.png")
 			print("AUTOTEST_ENDCARD_OK")
 			get_tree().quit()
+		"sael":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			Prog.flags["escala_seen"] = true
+			Prog.flags["thought_area_juicio"] = true
+			lp.respawn_at(w.tile_pos(66, 29.2))
+			await get_tree().create_timer(4.0).timeout
+			await _shot(out + "/s1.png")
+			lp.respawn_at(w.tile_pos(60.5, 29.0))
+			await get_tree().create_timer(4.0).timeout
+			await _shot(out + "/s2.png")
+			print("SAEL pos ", w.interactables["peregrina"].global_position / 16.0)
+			print("AUTOTEST_SAEL_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

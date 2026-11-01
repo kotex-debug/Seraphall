@@ -3412,7 +3412,8 @@ func _build_antechambers() -> void:
 	for x3 in [62, 66, 70]:
 		_prop("candle", tile_pos(x3, 29.4), 4, x3 % 4, 0.0, Color(1, 0.8, 0.45), 1.1)
 	_add_inter("brasa", "umbral", tile_pos(59.5, 28.4))
-	_add_inter("npc", "peregrina", tile_pos(67.5, 27.6), {"sheet": "npc_peregrina", "name": ["Sael, la Peregrina", "Sael, the Pilgrim"], "flip": true, "light": Color(1, 0.85, 0.55)})
+	_add_inter("npc", "peregrina", tile_pos(62.0, 27.9), {"sheet": "npc_peregrina", "name": ["Sael, la Peregrina", "Sael, the Pilgrim"], "flip": true, "light": Color(1, 0.85, 0.55),
+		"walk": [tile_pos(62.0, 27.9), tile_pos(72.5, 27.9)]})
 	_add_inter("lore", "lore_juicio", tile_pos(73, 28.6), {"lines": [["lore_title", ["«Quien suba esta escalera será pesado en la balanza. Las plumas que te queden hablarán por ti.»", "\"Whoever climbs these stairs shall be weighed on the scales. Your remaining feathers will speak for you.\""]]]})
 	# --- antorchas de pared (celdas, escalinata, antesala, pasillo)
 	for tp in [Vector2(20.5, 45.7), Vector2(24.5, 45.7), Vector2(28.5, 45.7), Vector2(34.5, 45.7),
