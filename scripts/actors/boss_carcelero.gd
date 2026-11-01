@@ -15,6 +15,9 @@ var _ball_rot := 0.3
 var _stomp := 0.0
 var _last_attack := ""
 var _chain_line: Line2D
+var _orbit_chain: Line2D
+var _orbit_a := 0.0
+var _kick := 0.0
 
 const SC := 0.55
 
@@ -55,6 +58,11 @@ func _ready() -> void:
 	_chain_line.default_color = Color(0.7, 0.68, 0.75)
 	_chain_line.visible = false
 	add_child(_chain_line)
+	_orbit_chain = Line2D.new()
+	_orbit_chain.width = 2.0
+	_orbit_chain.default_color = Color(0.6, 0.58, 0.66)
+	_orbit_chain.visible = false
+	rig.add_child(_orbit_chain)
 
 func _animate(delta: float) -> void:
 	_t += delta
@@ -88,10 +96,35 @@ func _animate(delta: float) -> void:
 		tilt = 0.18
 	var k: float = clamp(delta * (22.0 if pose == "slam" else 8.0), 0.0, 1.0)
 	_ball_rot = target_ball if pose == "spin" else lerp_angle(_ball_rot, target_ball, k)
-	r_ball.rotation = _ball_rot
+	if pose == "spin":
+		# la bola gira alrededor del cuerpo en una elipse 3D: delante es más grande, detrás queda tapada
+		_orbit_a += delta * 11.0
+		var bp := Vector2(cos(_orbit_a) * 46.0, 18.0 + sin(_orbit_a) * 15.0)
+		r_ball.rotation = 0.0
+		r_ball.offset = Vector2.ZERO
+		r_ball.position = Vector2(bp.x * float(facing), bp.y)
+		r_ball.scale = Vector2(SC, SC) * (1.0 + 0.28 * sin(_orbit_a))
+		r_ball.z_index = 1 if sin(_orbit_a) > 0.0 else -1
+		r_ball.modulate = Color.WHITE.lerp(Color(0.55, 0.5, 0.6), clampf(-sin(_orbit_a), 0.0, 1.0) * 0.6)
+		_orbit_chain.visible = true
+		_orbit_chain.points = PackedVector2Array([Vector2(12 * facing, -8), r_ball.position])
+		_orbit_chain.z_index = r_ball.z_index
+		if randf() < 0.5:
+			Fx.burst(global_position + Vector2(r_ball.position.x, rig.position.y + r_ball.position.y), Color(1, 0.6, 0.3, 0.7), 1, 20.0, 0.3, "fx_soft", 40.0, Vector2.UP, 0.25)
+	else:
+		r_ball.offset = Vector2(0, 30)
+		r_ball.position = r_ball.position.lerp(Vector2(23, -12), clamp(delta * 12.0, 0.0, 1.0))
+		r_ball.scale = Vector2(SC, SC)
+		r_ball.z_index = 0
+		r_ball.modulate = Color.WHITE
+		r_ball.rotation = _ball_rot
+		_orbit_chain.visible = false
 	rig.position.y = lerpf(rig.position.y, target_y, clamp(delta * 10.0, 0.0, 1.0))
 	rig.rotation = lerpf(rig.rotation, tilt, clamp(delta * 10.0, 0.0, 1.0))
 	rig.scale.x = float(facing)
+	_kick = lerpf(_kick, 0.0, clamp(delta * 12.0, 0.0, 1.0))
+	Depth3D.lean_rig(rig, global_position, Depth3D.cam_center(self), -rig.position.y)
+	rig.position.x += _kick
 	r_eyes.modulate = Color(1, 0.5, 0.2, 0.7 + 0.3 * sin(_t * 6.0)) if phase == 1 else Color(1, 0.15, 0.1, 0.9 + 0.1 * sin(_t * 20.0))
 	var tint := Color.WHITE if phase == 1 else Color(1.15, 0.8, 0.75)
 	if slow_t > 0.0:
@@ -255,25 +288,24 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 	_end_attack(my_id)
 
 func _cage_fall(p: Vector2) -> void:
-	var c := Sprite2D.new()
-	c.texture = Fx.tex("cage")
-	c.region_enabled = true
-	c.region_rect = Rect2(0, 0, 18, 30)
+	# la jaula cae desde lo alto hacia la cámara: grande y desplazada, con su sombra creciendo en el suelo
+	var c := Depth3D.Faller.new()
+	c.tex = Fx.tex("cage")
+	c.region = Rect2(0, 0, 18, 30)
 	c.offset = Vector2(0, -15)
-	c.position = p + Vector2(0, -160)
+	c.height = 190.0
+	c.dur = 0.34
+	c.linger = 1.2
+	c.position = p
+	c.on_land = _cage_impact.bind(p)
 	world.get_node("FX").add_child(c)
-	var tw := c.create_tween()
-	tw.tween_property(c, "position", p, 0.22).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	tw.tween_callback(_cage_impact.bind(p))
-	tw.tween_interval(1.2)
-	tw.tween_property(c, "modulate:a", 0.0, 0.5)
-	tw.tween_callback(c.queue_free)
 
 func _cage_impact(p: Vector2) -> void:
 	Audio.sfx("hit_heavy", -2.0)
 	G.shake(2.0, 0.15)
 	Fx.burst(p, Color(0.6, 0.55, 0.6), 12, 80.0, 0.5, "fx_soft", 180.0, Vector2.UP, 0.4, false)
 	Fx.sparks(p, Vector2.UP, Color(1, 0.8, 0.4), 8, 140.0, 160.0)
+	world.get_node("FX").add_child(Depth3D.Debris.new().setup(p, 5, Color(0.4, 0.36, 0.4), 0.6))
 	for pl in world.local_players():
 		if pl.is_alive() and pl.global_position.distance_to(p) < 22.0:
 			var res: String = pl.take_hit(cfg.dmg * 0.8 * dmg_mult, Vector2.ZERO, idx)

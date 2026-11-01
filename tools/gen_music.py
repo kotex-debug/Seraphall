@@ -362,6 +362,26 @@ def boss_seravel(p3=False):
         s.seq(organ, VOZ * 4, 64, 0.6)
     return reverb(s.loop(), 0.22, 2.0)
 
+def trial():
+    """Pruebas de las antesalas: tensión creciente. Ostinato de cuerdas en Re menor, taikos a contratiempo,
+    el riff CADENA en pizzicato grave y la PLUMA en metales cuando la prueba se pone seria."""
+    s = Song(132, 64)
+    for bar in range(16):
+        b = bar * 4
+        s.add(taiko(0.9), b); s.add(taiko(0.6), b + 1.5); s.add(taiko(0.8), b + 2.5)
+        s.add(snare(0.45), b + 3)
+        for k in range(8):
+            s.add(hat(0.25 if k % 2 else 0.4), b + k * 0.5)
+        if bar >= 8 and bar % 2 == 1:
+            s.add(chain(0.6), b + 3.5)
+    for i, ch in enumerate([Dm, Dm, Bb, A] * 4):
+        for k in range(8):
+            s.add(strings(mf(ch[1 + (k % 3)] + 12), 0.45 * Song(132, 1).spb, 0.35, att=0.01, bright=2600), i * 4 + k * 0.5)
+        s.add(bass(mf(ch[0] - 12), 3.5 * Song(132, 1).spb, 0.7, dist=0.3), i * 4)
+    s.seq(brass, [(m - 12, d) for m, d in PLUMA], 32, 0.5)
+    s.seq(bass, CADENA * 4, 16, 0.45, dist=0.5)
+    return reverb(s.loop(), 0.22, 1.8)
+
 def shadow():
     """La Sombra: PLUMA al revés, desafinada y triturada, con latido."""
     s = Song(84, 32)
@@ -427,6 +447,8 @@ def sfx_all():
     t3 = T(0.35)
     save_sfx("shatter", sum(np.sin(2 * np.pi * f * t3) * np.exp(-t3 * (14 + i * 4)) for i, f in enumerate((2100, 2900, 3700, 4900))) + hp(RNG.normal(0, 1, len(t3)), 4000) * np.exp(-t3 * 30))
     save_sfx("spark", np.pad(mbox(mf(93), 0.3), (0, 0))[:int(0.4 * SR)], 0.5)
+    for i, m in enumerate((84, 79, 74)):   # campanas del Atrio: 0 aguda, 1 media, 2 grave
+        save_sfx("bell_%d" % i, reverb(np.pad(bell(mf(m), 2.4, 1.0), (0, int(0.6 * SR))), 0.35, 2.4), 0.7)
     t4 = T(1.2)  # evento del mundo: trueno lejano
     save_sfx("event", lp(RNG.normal(0, 1, len(t4)), 400) * np.exp(-t4 * 2.5) * (1 + np.sin(2 * np.pi * 7 * t4)))
 

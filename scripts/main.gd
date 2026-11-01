@@ -574,6 +574,251 @@ func _run_autotest() -> void:
 			await _shot(out + "/p14_seravel_fase2.png")
 			print("AUTOTEST_PROMO_OK")
 			get_tree().quit()
+		"v7":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			var kill_trial := func():
+				for e in w.enemies:
+					if e.is_alive() and (e.get_meta("trial", false) or e.get_meta("extra", false)):
+						w._server_damage(e.idx, 99999.0, Vector2.RIGHT, 0.0, false)
+			# --- Celdas de Espera
+			lp.respawn_at(w.tile_pos(35, 54))
+			await get_tree().create_timer(1.0).timeout
+			await _shot(out + "/a00_entrada_celdas.png")
+			lp.respawn_at(w.tile_pos(30, 50))
+			await get_tree().create_timer(2.6).timeout
+			await _shot(out + "/a01_celdas_oleada1.png")
+			for wv in 3:
+				kill_trial.call()
+				await get_tree().create_timer(2.4).timeout
+				if wv == 1:
+					await _shot(out + "/a02_celdas_oleada3.png")
+			await get_tree().create_timer(1.2).timeout
+			await _shot(out + "/a03_celdas_superada.png")
+			print("V7 celdas=", w.trial_done("celdas"))
+			lp.respawn_at(w.tile_pos(18.5, 50.5))
+			await get_tree().create_timer(0.6).timeout
+			w._talk("preso")
+			await get_tree().create_timer(1.2).timeout
+			await _shot(out + "/a04_tobias.png")
+			for q in 6:
+				if w.dialog.is_open():
+					w.dialog._advance()
+					await get_tree().create_timer(0.1).timeout
+			# --- Atrio de las Voces
+			lp.respawn_at(w.tile_pos(82, 53))
+			await get_tree().create_timer(1.6).timeout
+			await _shot(out + "/a05_atrio.png")
+			for b in ["bell_2", "bell_1", "bell_0"]:
+				w._ring_bell(b)
+				await get_tree().create_timer(0.4).timeout
+			await get_tree().create_timer(0.8).timeout
+			await _shot(out + "/a06_atrio_fallo.png")
+			kill_trial.call()
+			for b2 in ["bell_0", "bell_1", "bell_2"]:
+				w._ring_bell(b2)
+				await get_tree().create_timer(0.4).timeout
+			await get_tree().create_timer(1.0).timeout
+			await _shot(out + "/a07_atrio_resuelto.png")
+			print("V7 atrio=", w.trial_done("atrio"))
+			# --- Escalinata y Antesala del Juicio
+			Prog.flags["carcelero_dead"] = true; w.wflags["carcelero_dead"] = true
+			w.set_gate(true, true)
+			lp.respawn_at(w.tile_pos(63, 28))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/a08_escalinata.png")
+			lp.respawn_at(w.tile_pos(69, 25))
+			await get_tree().create_timer(2.6).timeout
+			await _shot(out + "/a09_antesala.png")
+			kill_trial.call()
+			await get_tree().create_timer(2.6).timeout
+			await _shot(out + "/a10_custodio.png")
+			for e in w.enemies:
+				if e.type == "custodio":
+					w._server_damage(e.idx, e.max_hp * 0.35, Vector2.RIGHT, 30.0, false)
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/a11_custodio_golpe.png")
+			kill_trial.call()
+			await get_tree().create_timer(3.5).timeout
+			await _shot(out + "/a12_juicio_abierto.png")
+			print("V7 umbral=", w.trial_done("umbral"))
+			# --- barras de jefe
+			for bt in ["carcelero", "choir", "seravel"]:
+				w.start_ascension(bt, 1)
+				await get_tree().create_timer(0.9).timeout
+				await _shot(out + "/b_%s_entrada.png" % bt)
+				await get_tree().create_timer(3.0).timeout
+				var bb: Enemy = w.active_boss
+				if bb:
+					w._server_damage(bb.idx, bb.max_hp * 0.55, Vector2.RIGHT, 10.0, false)
+					await get_tree().create_timer(0.35).timeout
+					await _shot(out + "/b_%s_fase.png" % bt)
+				w._end_ascension(false)
+				await get_tree().create_timer(5.0).timeout
+			print("AUTOTEST_V7_OK")
+			get_tree().quit()
+		"promo7":
+			# capturas promocionales de la ALFA 0.7 (1920x1080)
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			G.look = Look.sane({"body": "f", "hair": 1, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": "Aurel"})
+			w.send_look()
+			Prog.level = 14
+			Prog.weapons = {"sword": 6, "seravel": 3, "choir": 2, "scythe": 4}
+			Prog.equipped = "seravel"
+			Prog.infusions = {"seravel": "brasa"}
+			for sk in ["f1", "f2", "f3", "a1", "a2", "l1", "l2", "l4", "c1", "c2"]:
+				Prog.skills[sk] = true
+			Prog.grant_ability("lance"); Prog.grant_ability("wrath")
+			Prog.wing_feathers = 8
+			for rid in w.ROOMS:
+				Prog.flags["seen_" + rid.id] = true
+			Prog.add_item("map_carto", 1, true)
+			lp.refresh_stats(true)
+			lp._update_weapon_sprite()
+			var mate = w._spawn_player(424242, 2)
+			mate.set_look({"body": "m", "hair": 1, "hair_col": 1, "skin": 3, "eye": 1, "cloak": 1, "armor": 1, "wing": 4, "halo": 1, "name": "Kael"}, 10)
+			mate.iframes = 9999.0
+			w.camera.zoom = Vector2(1.35, 1.35)
+			var kill_extra := func():
+				for e in w.enemies:
+					if e.is_alive() and e.get_meta("extra", false):
+						w._server_damage(e.idx, 99999.0, Vector2.RIGHT, 0.0, false)
+			# 1. Las Celdas se abren
+			lp.respawn_at(w.tile_pos(27, 50.5))
+			mate.position = lp.position + Vector2(-22, 6); mate._net_pos = mate.position
+			await get_tree().create_timer(3.2).timeout
+			for i in 3:
+				lp.state = "move"
+				lp.aim = Vector2(0, -1)
+				lp._start_attack()
+				await get_tree().create_timer(0.18).timeout
+			_promo_clean(w)
+			await _shot(out + "/q01_celdas.png")
+			for wv in 3:
+				kill_extra.call()
+				await get_tree().create_timer(2.3).timeout
+			await get_tree().create_timer(1.5).timeout
+			# 2. Pozo de castigo con cadenas (3D)
+			lp.respawn_at(w.tile_pos(30, 51))
+			mate.position = lp.position + Vector2(18, 4); mate._net_pos = mate.position
+			await get_tree().create_timer(2.0).timeout
+			_promo_clean(w)
+			await _shot(out + "/q02_pozo_cadenas.png")
+			# 3. Atrio de las Voces
+			lp.respawn_at(w.tile_pos(80.5, 52.6))
+			mate.position = lp.position + Vector2(26, 2); mate._net_pos = mate.position
+			for e in w.enemies:
+				if e.type == "acolito" and w.room_at(e.global_position) == "atrio":
+					e.position = w.tile_pos(86, 52)
+			w._ring_bell("bell_0")
+			await get_tree().create_timer(1.6).timeout
+			_promo_clean(w)
+			await _shot(out + "/q03_atrio.png")
+			# 4. El Custodio del Umbral
+			Prog.flags["carcelero_dead"] = true; w.wflags["carcelero_dead"] = true
+			w.set_gate(true, true)
+			lp.respawn_at(w.tile_pos(69, 25))
+			await get_tree().create_timer(2.4).timeout
+			kill_extra.call()
+			await get_tree().create_timer(2.8).timeout
+			lp.respawn_at(w.tile_pos(68, 15))
+			mate.position = lp.position + Vector2(24, 4); mate._net_pos = mate.position
+			for e in w.enemies:
+				if e.type == "custodio":
+					e.cooldown = 99.0
+					e.position = w.tile_pos(69.5, 10.5); e._net_pos = e.position
+					w._server_damage(e.idx, e.max_hp * 0.3, Vector2.UP, 20.0, false)
+			await get_tree().create_timer(1.0).timeout
+			for i in 3:
+				lp.state = "move"
+				lp.aim = Vector2(0.2, -1).normalized()
+				lp._start_attack()
+				await get_tree().create_timer(0.18).timeout
+			_promo_clean(w)
+			await _shot(out + "/q04_custodio.png")
+			kill_extra.call()
+			await get_tree().create_timer(3.5).timeout
+			Prog.flags["carcelero_dead"] = false; w.wflags["carcelero_dead"] = false
+			# 5. Jefes con barra épica y detalles 3D
+			for bt in ["carcelero", "choir", "seravel"]:
+				Prog.flags[bt + "_intro"] = true; w.wflags[bt + "_intro"] = true
+				w.start_ascension(bt, 1)
+				await get_tree().create_timer(5.5).timeout
+				var bb: Enemy = w.active_boss
+				if bb:
+					bb.cooldown = 99.0
+					lp.global_position = bb.global_position + Vector2(-60, 62)
+					mate.position = bb.global_position + Vector2(56, 54); mate._net_pos = mate.position
+					await get_tree().create_timer(0.4).timeout
+					w._server_damage(bb.idx, bb.max_hp * (0.3 if bt != "seravel" else 0.56), Vector2.RIGHT, 10.0, false)
+					var act: String = {"carcelero": "sweep", "choir": "rings", "seravel": "orbit"}[bt]
+					bb.perform(act, lp.global_position, 7)
+					await get_tree().create_timer(0.8 if bt != "seravel" else 2.0).timeout
+					lp.state = "move"
+					lp.aim = (bb.global_position - lp.global_position).normalized()
+					lp._start_attack()
+					await get_tree().create_timer(0.15).timeout
+					_promo_clean(w)
+					await _shot(out + "/q05_%s.png" % bt)
+				w._end_ascension(false)
+				await get_tree().create_timer(5.0).timeout
+			# 6. Mapa
+			w.menu.open("map", {})
+			await get_tree().create_timer(0.8).timeout
+			await _shot(out + "/q06_mapa.png")
+			w.menu.close()
+			print("AUTOTEST_PROMO7_OK")
+			get_tree().quit()
+		"d3":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			for rid in w.ROOMS:
+				Prog.flags["seen_" + rid.id] = true
+			var spots := [[Vector2(44, 58), "d01_cadenas_izq"], [Vector2(58, 67), "d02_cadenas_der"], [Vector2(48, 69), "d03_borde_sur"],
+				[Vector2(25, 52), "d04_celdas_pozo"], [Vector2(69, 22), "d05_antesala"], [Vector2(80, 66), "d06_galeria"]]
+			Prog.flags["carcelero_dead"] = true; w.wflags["carcelero_dead"] = true
+			w.set_gate(true, true)
+			for sp in spots:
+				lp.respawn_at(w.tile_pos(sp[0].x, sp[0].y))
+				await get_tree().create_timer(1.4).timeout
+				await _shot(out + "/" + sp[1] + ".png")
+			Prog.flags["carcelero_dead"] = false; w.wflags["carcelero_dead"] = false
+			# jefes con detalles 3D
+			w.start_ascension("carcelero", 1)
+			await get_tree().create_timer(4.2).timeout
+			var bb: Enemy = w.active_boss
+			if bb:
+				bb.cooldown = 99.0
+				lp.global_position = bb.global_position + Vector2(-70, 40)
+				bb.perform("sweep", lp.global_position, 1)
+				await get_tree().create_timer(0.75).timeout
+				await _shot(out + "/d07_carcelero_bola.png")
+				bb.perform("cages", lp.global_position, 2)
+				await get_tree().create_timer(0.9).timeout
+				await _shot(out + "/d08_carcelero_jaulas.png")
+			w._end_ascension(false)
+			await get_tree().create_timer(5.0).timeout
+			w.start_ascension("choir", 1)
+			await get_tree().create_timer(4.2).timeout
+			await _shot(out + "/d09_coro_carrusel.png")
+			w._end_ascension(false)
+			await get_tree().create_timer(5.0).timeout
+			w.start_ascension("seravel", 1)
+			await get_tree().create_timer(4.2).timeout
+			bb = w.active_boss
+			if bb:
+				bb.cooldown = 99.0
+				lp.global_position = bb.global_position + Vector2(60, 70)
+				await get_tree().create_timer(0.5).timeout
+				await _shot(out + "/d10_seravel_aureola.png")
+				bb.perform("judgment", lp.global_position, 3)
+				await get_tree().create_timer(1.6).timeout
+				await _shot(out + "/d11_seravel_asciende.png")
+				await get_tree().create_timer(1.3).timeout
+				await _shot(out + "/d12_seravel_impacto.png")
+			print("AUTOTEST_D3_OK")
+			get_tree().quit()
 		"pit":
 			var lp: Player = w.local_player()
 			w.camera.zoom = Vector2(1.5, 1.5)
@@ -623,7 +868,7 @@ func _run_autotest() -> void:
 			var lp: Player = w.local_player()
 			Prog.ecos = 5000
 			Prog.add_item("iron", 3, true); Prog.add_item("tear", 6, true)
-			for rid in ["sanct", "hall1", "chains", "hall2", "east", "gallery", "yard", "nim_link", "nimbo", "mirador", "mir_link", "choir_link", "choir", "gatehall", "alcove", "alc_link"]:
+			for rid in ["sanct", "hall1", "chains", "hall2", "east", "gallery", "yard", "nim_link", "nimbo", "mirador", "mir_link", "choir_link", "choir", "alcove", "alc_link", "celdas", "cel_link", "cel_up", "atrio", "atr_link", "esc_link", "escala", "antesala", "jui_link"]:
 				Prog.flags["seen_" + rid] = true
 			Prog.add_item("map_carto", 1, true)
 			Prog.spark = true

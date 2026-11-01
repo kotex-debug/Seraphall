@@ -73,8 +73,8 @@ func _ready() -> void:
 	root.add_child(progress)
 	boss_panel = BossPanel.new()
 	boss_panel.hud = self
-	boss_panel.position = Vector2(140, 316)
-	boss_panel.size = Vector2(360, 36)
+	boss_panel.position = Vector2(92, 250)
+	boss_panel.size = Vector2(456, 64)
 	boss_panel.visible = false
 	root.add_child(boss_panel)
 	big_layer = Control.new()
@@ -85,7 +85,7 @@ func _ready() -> void:
 	lb_bot = ColorRect.new(); lb_bot.color = Color.BLACK; lb_bot.position = Vector2(0, 360); lb_bot.size = Vector2(640, 0); root.add_child(lb_bot)
 	sub_label = UIKit.label("", 15, UIKit.WHITE)
 	sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub_label.position = Vector2(40, 292)
+	sub_label.position = Vector2(40, 240)
 	sub_label.size = Vector2(560, 16)
 	sub_label.modulate.a = 0.0
 	root.add_child(sub_label)
@@ -219,16 +219,31 @@ func subtitle(speaker: String, text: String, dur := 3.0) -> void:
 	tw.tween_property(sub_label, "modulate:a", 0.0, 0.5)
 
 func show_boss(e: Enemy) -> void:
+	if _boss == e and boss_panel.visible:
+		return
 	_boss = e
-	boss_panel.boss = e
-	boss_panel.title = G.T(e.cfg.get("title", "boss_carcelero"))
-	boss_panel.visible = true
-	boss_panel.intro = 0.0
-	create_tween().tween_property(boss_panel, "intro", 1.0, 0.9).set_trans(Tween.TRANS_CUBIC)
+	boss_panel.setup(e)
 
 func hide_boss() -> void:
 	_boss = null
-	boss_panel.visible = false
+	boss_panel.outro()
+
+var trial_banner: TrialBanner
+func show_trial(title: String, wave: int, total: int) -> void:
+	if trial_banner == null:
+		trial_banner = TrialBanner.new()
+		trial_banner.size = Vector2(640, 30)
+		root.add_child(trial_banner)
+		root.move_child(trial_banner, boss_panel.get_index())
+	trial_banner.title = title
+	trial_banner.wave = wave
+	trial_banner.total = total
+	trial_banner._hide = false
+	trial_banner.visible = true
+
+func hide_trial() -> void:
+	if trial_banner:
+		trial_banner._hide = true
 
 func letterbox(on: bool) -> void:
 	var h := 38.0 if on else 0.0
@@ -343,8 +358,15 @@ class StatusCluster extends Control:
 	var _jit := []
 	var _jit_t := 0.0
 	var _rows := {}           # posiciones calculadas de cada fila
+	# retrato animado
+	var _bust: Texture2D
+	var _bust_key := ""
+	var _blink_t := 3.0
+	var _expr_hold := 0.0
+	var _expr := 0
+	var _shake_p := 0.0
 
-	const HX := 54.0          # x de inicio de las filas
+	const HX := 64.0          # x de inicio de las filas
 	const HEART_W := 10.0
 	const FLAME_W := 9.0
 	const CRYS_W := 9.0
@@ -424,6 +446,7 @@ class StatusCluster extends Control:
 				for q2 in 4:
 					_parts.append([cp, Vector2(randf_range(-60, 60), randf_range(-70, -10)), 0.5, Color(0.6, 0.95, 1.0), 200.0, 1.0 if q2 % 2 else 2.0])
 		_last = {"hp": hu, "st": su, "li": lu}
+		_update_expr(lp, delta)
 		_hurt_t = max(0.0, _hurt_t - delta)
 		_heal_t = max(0.0, _heal_t - delta)
 		for k5 in _ignite.keys():
@@ -449,6 +472,96 @@ class StatusCluster extends Control:
 			_wrath_full_t = 0.0
 		queue_redraw()
 
+	# ------------------------------------------------------------ retrato
+	func _update_expr(lp: Player, delta: float) -> void:
+		## 0 normal, 1 parpadeo, 2 dolor, 3 apurado (poca vida), 4 sonrisa (curación), 5 furia (Ira llena)
+		_blink_t -= delta
+		_expr_hold = max(0.0, _expr_hold - delta)
+		_shake_p = max(0.0, _shake_p - delta)
+		if _hurt_t > 0.3:
+			_expr = 2
+			_expr_hold = 0.45
+			_shake_p = 0.3
+			return
+		if _expr_hold > 0.0:
+			return
+		if _heal_t > 0.2:
+			_expr = 4
+			_expr_hold = 0.6
+			return
+		if lp.wrath >= 100.0:
+			_expr = 5
+		elif lp.hp / Prog.max_hp() <= 0.25:
+			_expr = 3
+		else:
+			_expr = 0
+		if _blink_t <= 0.0:
+			_expr = 1
+			if _blink_t < -0.12:
+				_blink_t = randf_range(2.5, 4.5)
+
+	func _draw_portrait(lp: Player, c: Vector2, full: bool) -> void:
+		var key := JSON.stringify(G.look) + str(Prog.wing_feathers)
+		if key != _bust_key:
+			_bust_key = key
+			_bust = Look.bust_texture(G.look, Prog.wing_feathers)
+		var ratio := lp.hp / Prog.max_hp()
+		var jit := Vector2(randf_range(-1, 1), randf_range(-1, 1)).round() * (1.0 if _shake_p > 0.0 else 0.0)
+		var ctr := c + jit
+		var area_col: Color = hud.world.AREA_COLORS.get(hud.world.current_area(), Color(0.6, 0.5, 0.8)) if hud.world else Color(0.6, 0.5, 0.8)
+		var rim := UIKit.RED if not full else UIKit.GOLD.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(_t * 8.0))
+		if _heal_t > 0.0:
+			rim = rim.lerp(Color(1, 0.75, 0.85), _heal_t / 0.8)
+		# octógono del marco con fondo del color de la zona (cielo del retrato)
+		var pts := PackedVector2Array()
+		var pts_in := PackedVector2Array()
+		for k in 8:
+			var a := TAU * k / 8.0 + PI / 8.0
+			pts.append(ctr + Vector2(cos(a), sin(a)) * 25.0)
+			pts_in.append(ctr + Vector2(cos(a), sin(a)) * 21.0)
+		draw_colored_polygon(pts, UIKit.INK)
+		var inner := PackedVector2Array()
+		for k2 in 8:
+			var a2 := TAU * k2 / 8.0 + PI / 8.0
+			inner.append(ctr + Vector2(cos(a2), sin(a2)) * 23.0)
+		draw_colored_polygon(inner, rim.darkened(0.25))
+		draw_colored_polygon(pts_in, area_col.darkened(0.72))
+		for k3 in 5:
+			var band := ctr + Vector2(-20, -18 + k3 * 8)
+			draw_rect(Rect2(band, Vector2(40, 4)), Color(area_col.darkened(0.55), 0.35 + 0.08 * k3))
+		# el busto (recortado al octógono aproximando con un rectángulo interior)
+		if _bust:
+			var fr := _expr
+			var bob := roundf(sin(_t * 2.2)) if _expr != 2 else 0.0
+			var breathe := 1.0 + (0.03 * sin(_t * 9.0) if _expr == 3 else 0.0)
+			var src := Rect2(fr * 40, 2, 40, 37)
+			var dst := Rect2(ctr + Vector2(-19, -19 + bob) - Vector2(0, 1) * (breathe - 1.0) * 20.0, Vector2(38, 36.0 * breathe))
+			var mod := Color.WHITE
+			if _hurt_t > 0.0 and int(_hurt_t * 20.0) % 2 == 0:
+				mod = Color(1.6, 0.5, 0.5)
+			elif Prog.is_desplumado():
+				mod = Color(0.82, 0.78, 0.9)
+			draw_texture_rect_region(_bust, dst, src, mod)
+		# viñeta roja que late con poca vida
+		if ratio <= 0.25 and lp.is_alive():
+			var pa := 0.18 + 0.14 * sin(_t * 7.0)
+			draw_polyline(pts_in + PackedVector2Array([pts_in[0]]), Color(1, 0.1, 0.2, pa * 2.0), 3.0)
+		# grietas en el marco si estás Desplumado
+		if Prog.is_desplumado():
+			draw_line(ctr + Vector2(14, -18), ctr + Vector2(9, -11), UIKit.INK, 1.0)
+			draw_line(ctr + Vector2(9, -11), ctr + Vector2(12, -6), UIKit.INK, 1.0)
+		# bisel brillante y remaches
+		draw_polyline(pts + PackedVector2Array([pts[0]]), rim.lightened(0.25), 1.0)
+		for k4 in 4:
+			var a4 := TAU * k4 / 4.0 + PI / 4.0
+			UIKit.diamond(self, ctr + Vector2(cos(a4), sin(a4)) * 24.0, 2.5, UIKit.INK)
+			UIKit.diamond(self, ctr + Vector2(cos(a4), sin(a4)) * 24.0, 1.5, rim.lightened(0.4))
+		# destello de curación que cruza el retrato
+		if _heal_t > 0.0:
+			var hk := 1.0 - _heal_t / 0.8
+			var sx := ctr.x - 22.0 + hk * 44.0
+			draw_line(Vector2(sx, ctr.y - 20), Vector2(sx - 8, ctr.y + 20), Color(1, 1, 1, 0.55 * (1.0 - hk)), 3.0)
+
 	# ------------------------------------------------------------ dibujo
 	func _icon(tex: Texture2D, frame: int, w: int, h: int, pos: Vector2, mod := Color.WHITE) -> void:
 		draw_texture_rect_region(tex, Rect2(pos.round(), Vector2(w, h)), Rect2(frame * w, 0, w, h), mod)
@@ -457,14 +570,14 @@ class StatusCluster extends Control:
 		var lp: Player = hud.world.local_player() if hud.world else null
 		if lp == null or _rows.is_empty():
 			return
-		var c := Vector2(24, 24)
+		var c := Vector2(30, 30)
 		# anillo de Ira: bloques alrededor del medallón
-		var n := 20
+		var n := 24
 		var filled := int(lp.wrath / 100.0 * n)
 		var full := lp.wrath >= 100.0
 		for i in n:
 			var a := -PI / 2.0 + TAU * i / n + (_t * 1.5 if full else 0.0)
-			var rr := 25.0 + (sin(_t * 12.0 + i) * 1.5 if full else 0.0)
+			var rr := 29.0 + (sin(_t * 12.0 + i) * 1.5 if full else 0.0)
 			var p := (c + Vector2(cos(a), sin(a)) * rr).round()
 			var col := Color(0.2, 0.1, 0.25)
 			if i < filled:
@@ -473,14 +586,11 @@ class StatusCluster extends Control:
 					col = UIKit.GOLD.lerp(UIKit.RED, 0.5 + 0.5 * sin(_t * 10.0 + i * 0.6))
 			draw_rect(Rect2(p - Vector2(2, 2), Vector2(4, 4)), UIKit.INK)
 			draw_rect(Rect2(p - Vector2(1, 1), Vector2(3, 3)), col)
-		# medallón
-		UIKit.frame(self, Rect2(c - Vector2(17, 17), Vector2(34, 34)), UIKit.RED if not full else UIKit.GOLD, Color(0.16, 0.06, 0.2), 4.0)
-		var tex: Texture2D = lp.sprite.texture
-		var bob := roundf(sin(_t * 3.0))
-		draw_texture_rect_region(tex, Rect2(c + Vector2(-14, -16 + bob), Vector2(28, 26)), Rect2(9, 1, 14, 13))
+		# medallón con el retrato animado
+		_draw_portrait(lp, c, full)
 		var lv := "LV%d" % Prog.level
 		var f := UIKit.font("head")
-		var tag := Rect2(c + Vector2(-17, 12), Vector2(f.get_string_size(lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 6, 10))
+		var tag := Rect2(c + Vector2(-22, 16), Vector2(f.get_string_size(lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 6, 10))
 		draw_rect(tag.grow(1), UIKit.INK)
 		draw_rect(tag, UIKit.RED)
 		f.draw_string(get_canvas_item(), tag.position + Vector2(3, 8), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
@@ -887,84 +997,352 @@ class BigMessage extends Control:
 		UIKit.slash_band(self, Rect2(Vector2(640 * (1.0 - g), 176 + h / 2 - 2), Vector2(640 * g, 2)), color, 0.0)
 
 class BossPanel extends Control:
+	## Barra de jefe épica: marco propio de cada Arconte (hierro y cadenas, tubos de órgano, plumas de oro),
+	## entrada animada, daño acumulado, muescas de fase que se rompen, postura y estallido al morir.
 	var hud: Node
 	var boss: Enemy
 	var title := ""
+	var sub := ""
+	var bstyle := "carcelero"
 	var intro := 1.0
 	var _trail := 1.0
 	var _last := -1.0
 	var _shake := 0.0
 	var _t := 0.0
+	var _dmg_acc := 0.0
+	var _dmg_t := 0.0
+	var _phase := 1
+	var _phase_t := 0.0
+	var _out := -1.0
+	var _parts: Array = []
+	var _letters := 0.0
 	var bar: ColorRect
+	var over: Control
+	var BW := 400.0
+	var BX := 28.0
+	const BY := 32.0
+	const BH := 11.0
+	const THEMES := {
+		"carcelero": {"deep": Color(0.32, 0.05, 0.02), "bright": Color(1.0, 0.38, 0.1), "frame": Color(0.36, 0.33, 0.38), "accent": Color(1.0, 0.55, 0.2), "glow": Color(1, 0.45, 0.15)},
+		"choir": {"deep": Color(0.16, 0.03, 0.28), "bright": Color(0.78, 0.42, 1.0), "frame": Color(0.36, 0.25, 0.5), "accent": Color(0.85, 0.7, 1.0), "glow": Color(0.7, 0.45, 1.0)},
+		"seravel": {"deep": Color(0.4, 0.26, 0.04), "bright": Color(1.0, 0.86, 0.42), "frame": Color(0.85, 0.66, 0.25), "accent": Color(1.0, 0.95, 0.75), "glow": Color(1, 0.85, 0.5)},
+		"custodio": {"deep": Color(0.3, 0.27, 0.22), "bright": Color(0.95, 0.88, 0.62), "frame": Color(0.72, 0.7, 0.68), "accent": Color(1.0, 0.85, 0.45), "glow": Color(1, 0.9, 0.6)},
+	}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bar = ColorRect.new()
-		bar.size = Vector2(340, 10)
-		bar.position = Vector2(10, 16)
 		var m := UIKit.mat("liquid_bar")
-		m.set_shader_parameter("col_deep", Color(0.35, 0.0, 0.08))
-		m.set_shader_parameter("col_bright", Color(1.0, 0.15, 0.25))
-		m.set_shader_parameter("size", bar.size)
 		m.set_shader_parameter("tip", 5.0)
 		m.set_shader_parameter("flow_speed", 1.6)
 		bar.material = m
 		add_child(bar)
+		over = Control.new()
+		over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		over.draw.connect(_draw_over)
+		add_child(over)
+	func setup(e: Enemy) -> void:
+		boss = e
+		bstyle = e.type if THEMES.has(e.type) else "carcelero"
+		title = G.T(e.cfg.get("title", "boss_carcelero"))
+		sub = G.T("sub_" + e.type) if G.TXT.has("sub_" + e.type) else ""
+		var elite: bool = e.cfg.get("elite", false)
+		BW = 300.0 if elite else 380.0
+		BX = (size.x - BW) / 2.0
+		bar.size = Vector2(BW, BH)
+		bar.position = Vector2(BX, BY)
+		over.size = size
+		var th: Dictionary = THEMES[bstyle]
+		var m: ShaderMaterial = bar.material
+		m.set_shader_parameter("size", bar.size)
+		m.set_shader_parameter("col_deep", th.deep)
+		m.set_shader_parameter("col_bright", th.bright)
+		intro = 0.0
+		_letters = 0.0
+		_out = -1.0
+		_phase = e.phase
+		_trail = 1.0
+		_last = -1.0
+		_dmg_acc = 0.0
+		modulate.a = 1.0
+		visible = true
+		var tw := create_tween()
+		tw.tween_property(self, "intro", 1.0, 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		Audio.sfx("charge", -8.0, 0.0)
+	func outro() -> void:
+		if _out >= 0.0 or not visible:
+			return
+		_out = 0.0
+		var r := Rect2(Vector2(BX, BY), Vector2(BW, BH))
+		var th: Dictionary = THEMES[bstyle]
+		for k in 46:
+			var p := r.position + Vector2(randf() * r.size.x, randf() * r.size.y)
+			_parts.append([p, Vector2(randf_range(-60, 60), randf_range(-90, -10)), randf_range(0.6, 1.3), th.bright if k % 3 else th.frame, 240.0, randf_range(1.0, 3.0)])
 	func _process(delta: float) -> void:
 		_t += delta
+		for pp in _parts:
+			pp[1].y += pp[4] * delta
+			pp[0] += pp[1] * delta
+			pp[2] -= delta
+		_parts = _parts.filter(func(pp): return pp[2] > 0.0)
+		if _out >= 0.0:
+			_out += delta
+			modulate.a = clampf(1.0 - _out / 1.1, 0.0, 1.0)
+			bar.visible = false
+			queue_redraw(); over.queue_redraw()
+			if _out > 1.4:
+				visible = false
+				bar.visible = true
+				_out = -1.0
+				_parts.clear()
+			return
 		if boss == null or not is_instance_valid(boss):
 			return
+		_letters += delta * 22.0
 		var r: float = clamp(boss.hp / boss.max_hp, 0.0, 1.0)
 		if _last >= 0.0 and boss.hp < _last - 0.5:
-			_shake = 0.2
+			var d := _last - boss.hp
+			_shake = 0.22
+			_dmg_acc += d
+			_dmg_t = 1.4
+			var th: Dictionary = THEMES[bstyle]
+			var px := BX + BW * r
+			for k in clampi(int(d / 8.0) + 2, 2, 10):
+				_parts.append([Vector2(px + randf_range(-2, 6), BY + randf() * BH), Vector2(randf_range(10, 70), randf_range(-70, -10)), randf_range(0.4, 0.8), th.bright.lightened(0.3), 220.0, randf_range(1.0, 2.0)])
 		_last = boss.hp
+		_dmg_t = max(0.0, _dmg_t - delta)
+		if _dmg_t <= 0.0:
+			_dmg_acc = 0.0
 		_shake = max(0.0, _shake - delta)
-		_trail = max(r, lerpf(_trail, r, delta * 1.5))
+		_trail = max(r, lerpf(_trail, r, delta * (0.8 if _dmg_t > 0.6 else 2.5)))
+		if boss.phase != _phase:
+			_phase = boss.phase
+			_phase_t = 1.6
+			var th2: Dictionary = THEMES[bstyle]
+			for k2 in 30:
+				_parts.append([Vector2(BX + randf() * BW, BY + BH / 2), Vector2(randf_range(-80, 80), randf_range(-100, -20)), randf_range(0.5, 1.0), th2.accent, 200.0, 2.0])
+		_phase_t = max(0.0, _phase_t - delta)
+		var th3: Dictionary = THEMES[bstyle]
+		var bright: Color = th3.bright
+		if bstyle == "seravel" and boss.phase == 2:
+			bright = Color(1.0, 0.25, 0.32)
+		elif bstyle == "seravel" and boss.phase >= 3:
+			bright = Color(1.0, 0.97, 0.9)
+		elif boss.phase >= 2:
+			bright = bright.lerp(Color(1, 0.3, 0.2), 0.35)
 		var m: ShaderMaterial = bar.material
-		m.set_shader_parameter("fill", r * intro)
-		m.set_shader_parameter("trail", _trail * intro)
-		m.set_shader_parameter("pulse", 0.4 if boss.phase == 2 else 0.0)
-		m.set_shader_parameter("col_bright", Color(1.0, 0.15, 0.25) if boss.phase == 1 else Color(1.0, 0.45, 0.1))
-		bar.position = Vector2(10, 16) + (Vector2(randf_range(-2, 2), randf_range(-1, 1)) * (_shake / 0.2)).round()
+		var fill_in: float = clamp((intro - 0.25) / 0.75, 0.0, 1.0)
+		m.set_shader_parameter("fill", r * fill_in)
+		m.set_shader_parameter("trail", _trail * fill_in)
+		m.set_shader_parameter("pulse", (0.4 if boss.phase >= 2 else 0.0) + (0.5 + 0.5 * sin(_t * 9.0) if r < 0.25 else 0.0) * 0.4)
+		m.set_shader_parameter("col_bright", bright.lerp(Color.WHITE, _phase_t / 1.6 * 0.7))
+		bar.position = Vector2(BX, BY) + (Vector2(randf_range(-2, 2), randf_range(-1, 1)) * (_shake / 0.22)).round()
 		queue_redraw()
+		over.queue_redraw()
+
+	func _txt(f: Font, pos: Vector2, text: String, fs: int, col: Color, outline := 3) -> void:
+		f.draw_string_outline(get_canvas_item(), pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, outline, UIKit.INK)
+		f.draw_string(get_canvas_item(), pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
 	func _draw() -> void:
 		if boss == null or not is_instance_valid(boss):
 			return
+		var th: Dictionary = THEMES[bstyle]
+		var fr: Color = th.frame
+		var acc: Color = th.accent
+		var k: float = clamp(intro / 0.35, 0.0, 1.0)
+		var cx := BX + BW / 2.0
+		var hw := (BW / 2.0 + 10.0) * k
+		var outer := Rect2(Vector2(cx - hw, BY - 5), Vector2(hw * 2.0, BH + 10))
+		# sombra y resplandor bajo la barra
+		draw_rect(outer.grow(3), Color(0, 0, 0, 0.45))
+		var glow: Color = th.glow
+		draw_rect(outer.grow(1), Color(glow, 0.12 + 0.06 * sin(_t * 3.0)))
+		# marco principal (bisel)
+		draw_rect(outer, UIKit.INK)
+		draw_rect(Rect2(outer.position + Vector2(1, 1), outer.size - Vector2(2, 2)), fr.darkened(0.45))
+		draw_rect(Rect2(outer.position + Vector2(1, 1), Vector2(outer.size.x - 2, 1)), fr.lightened(0.35))
+		draw_rect(Rect2(outer.position + Vector2(1, outer.size.y - 2), Vector2(outer.size.x - 2, 1)), fr.darkened(0.2))
+		draw_rect(Rect2(Vector2(BX - 2, BY - 2), Vector2(BW + 4, BH + 4)), UIKit.INK)
+		if k < 1.0:
+			return
+		match bstyle:
+			"carcelero":
+				# remaches y cadenas colgando de los extremos
+				var x := BX + 8.0
+				while x < BX + BW - 4:
+					draw_rect(Rect2(Vector2(x, BY - 4), Vector2(2, 2)), fr.lightened(0.5))
+					draw_rect(Rect2(Vector2(x, BY + BH + 2), Vector2(2, 2)), fr.lightened(0.2))
+					x += 24.0
+				for side in [-1.0, 1.0]:
+					var ex = cx + side * (BW / 2.0 + 12.0)
+					for i in 5:
+						var sway := sin(_t * 2.0 + i * 0.7) * i * 0.6
+						var cp := Vector2(ex + sway, BY - 2 + i * 5)
+						draw_rect(Rect2(cp - Vector2(2, 2), Vector2(4, 5)), UIKit.INK)
+						draw_rect(Rect2(cp - Vector2(1, 1), Vector2(2, 3)), fr.lightened(0.3) if i % 2 == 0 else fr)
+					# grillete
+					var gp := Vector2(ex + sin(_t * 2.0 + 3.5) * 3.0, BY + 24)
+					draw_arc(gp, 4.0, 0, TAU, 12, UIKit.INK, 3.0)
+					draw_arc(gp, 4.0, 0, TAU, 12, fr.lightened(0.2), 1.0)
+				# llave en el centro superior
+				var kc := Vector2(cx, BY - 7)
+				draw_circle(kc, 3.5, UIKit.INK); draw_circle(kc, 2.5, acc); draw_circle(kc, 1.0, UIKit.INK)
+			"choir":
+				# tubos de órgano a los lados que vibran con la música
+				for side2 in [-1.0, 1.0]:
+					for i2 in 5:
+						var h := 10.0 + i2 * 4.0 + sin(_t * 6.0 + i2) * (2.0 if boss.phase >= 2 else 1.0)
+						var px = cx + side2 * (BW / 2.0 + 6.0 + i2 * 4.0)
+						draw_rect(Rect2(Vector2(px - 2, BY + BH + 4 - h), Vector2(5, h)), UIKit.INK)
+						draw_rect(Rect2(Vector2(px - 1, BY + BH + 5 - h), Vector2(3, h - 2)), fr.lightened(0.15))
+						draw_rect(Rect2(Vector2(px - 1, BY + BH + 5 - h), Vector2(1, h - 2)), acc)
+						draw_rect(Rect2(Vector2(px - 1, BY + BH - 2), Vector2(3, 1)), UIKit.INK)
+				# notas que suben
+				for i3 in 6:
+					var ph := fmod(_t * 0.4 + i3 * 0.17, 1.0)
+					var np := Vector2(BX + BW * fmod(i3 * 0.37 + 0.1, 1.0), BY - ph * 22.0)
+					var a := 1.0 - ph
+					draw_rect(Rect2(np, Vector2(2, 2)), Color(acc, a))
+					draw_rect(Rect2(np + Vector2(1, -4), Vector2(1, 4)), Color(acc, a))
+			"seravel":
+				# plumas de oro a los lados y aureola sobre el nombre
+				for side3 in [-1.0, 1.0]:
+					var root := Vector2(cx + side3 * (BW / 2.0 + 8.0), BY + BH / 2.0)
+					UIKit.wing(self, root, side3, 18.0, Color(acc, 0.95), 0.85 + 0.15 * sin(_t * 3.0))
+				var hc := Vector2(cx, BY - 27)
+				var hr := 14.0 + sin(_t * 2.0)
+				draw_arc(hc, hr, 0, TAU, 32, Color(glow, 0.25), 4.0)
+				draw_arc(hc, hr, 0, TAU, 32, Color(acc, 0.8) if boss.phase != 2 else Color(1, 0.3, 0.35, 0.9), 1.0)
+			"custodio":
+				for side4 in [-1.0, 1.0]:
+					var sp := Vector2(cx + side4 * (BW / 2.0 + 10.0), BY + BH / 2.0)
+					UIKit.diamond(self, sp, 6.0, UIKit.INK)
+					UIKit.diamond(self, sp, 5.0, fr)
+					UIKit.diamond(self, sp, 2.0, acc)
+		# nombre (se escribe letra a letra) y epíteto
 		var f := UIKit.font("head")
-		var tw := f.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-		var x := size.x / 2 - tw / 2
-		UIKit.slash_band(self, Rect2(Vector2(x - 12, 2), Vector2(tw + 24, 12)), UIKit.RED_DARK, 5.0)
-		f.draw_string_outline(get_canvas_item(), Vector2(x, 12), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
-		f.draw_string(get_canvas_item(), Vector2(x, 12), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
-		var r := Rect2(bar.position - Vector2(2, 2), bar.size + Vector2(4, 4))
-		draw_rect(r.grow(1), UIKit.INK)
-		draw_rect(r, Color(1, 1, 1, 0.9), false, 1.0)
-		# muesca de fase
-		var nx := bar.position.x + bar.size.x * 0.5
-		draw_rect(Rect2(Vector2(nx - 1, bar.position.y - 3), Vector2(2, bar.size.y + 6)), UIKit.GOLD)
-		# alas a los lados
-		UIKit.wing(self, Vector2(4, 20), -1.0, 14.0, Color(1, 1, 1, 0.9), 0.8 + 0.1 * sin(_t * 4.0))
-		UIKit.wing(self, Vector2(size.x - 6, 20), 1.0, 14.0, Color(1, 1, 1, 0.9), 0.8 + 0.1 * sin(_t * 4.0))
-		# rango del Arconte (rombos) y Ascensión
-		var rk: int = Prog.BOSS_INFO.get(boss.type, {}).get("rank", 1)
+		var shown := title.substr(0, int(_letters))
+		var fs := 16 if bstyle != "custodio" and title.length() <= 18 else 12
+		var tw := f.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var tx := cx - tw / 2.0
+		var ty := BY - (12.0 if bstyle != "seravel" else 14.0)
+		UIKit.slash_band(self, Rect2(Vector2(tx - 16, ty - 13), Vector2(tw + 32, 15)), Color(0, 0, 0, 0.55), 6.0)
+		_txt(f, Vector2(tx, ty), shown, fs, UIKit.WHITE, 4)
+		if sub != "" and _letters > title.length() + 4:
+			var fs2 := UIKit.font("body")
+			var sw := fs2.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			_txt(fs2, Vector2(cx - sw / 2.0, BY + BH + 15), sub, 12, Color(acc, clampf((_letters - title.length() - 4) / 10.0, 0.0, 1.0)), 3)
+		# rango (rombos) y Ascensión
+		var rk: int = Prog.BOSS_INFO.get(boss.type, {}).get("rank", 0)
 		for i in rk:
-			var dp := Vector2(x + tw + 20 + i * 9, 8)
+			var dp := Vector2(tx + tw + 12 + i * 9, ty - 5)
 			UIKit.diamond(self, dp, 4.0, UIKit.INK)
 			UIKit.diamond(self, dp, 3.0, UIKit.GOLD)
 		if boss.asc > 0:
 			var at: String = G.T("ascension") + " " + ["I", "II", "III"][clampi(boss.asc - 1, 0, 2)]
 			var aw := f.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-			UIKit.slash_band(self, Rect2(Vector2(x - aw - 34, 2), Vector2(aw + 14, 12)), UIKit.PINK, 4.0)
-			f.draw_string_outline(get_canvas_item(), Vector2(x - aw - 27, 12), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
-			f.draw_string(get_canvas_item(), Vector2(x - aw - 27, 12), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+			var ay := ty - 19.0 if bstyle != "seravel" else ty - 36.0
+			UIKit.slash_band(self, Rect2(Vector2(cx - aw / 2.0 - 7, ay - 10), Vector2(aw + 14, 12)), UIKit.PINK, 4.0)
+			_txt(f, Vector2(cx - aw / 2.0, ay), at, 8, UIKit.WHITE)
+
+	func _draw_over() -> void:
+		var ci := over
+		for pp in _parts:
+			ci.draw_rect(Rect2(pp[0].round(), Vector2(pp[5], pp[5])), Color(pp[3], clampf(pp[2] * 2.0, 0.0, 1.0)))
+		if boss == null or not is_instance_valid(boss) or _out >= 0.0 or intro < 0.4:
+			return
+		var th: Dictionary = THEMES[bstyle]
+		var r: float = clamp(boss.hp / boss.max_hp, 0.0, 1.0)
+		# barrido de luz durante la entrada
+		if intro < 1.0:
+			var sx = BX + BW * clamp((intro - 0.25) / 0.75, 0.0, 1.0)
+			ci.draw_rect(Rect2(Vector2(sx - 3, BY - 1), Vector2(6, BH + 2)), Color(1, 1, 1, 0.8))
+		# muescas de fase: rombo entero si aún no se ha cruzado, roto si ya
+		var notches := [0.5]
 		if hud.world and (hud.world.diff().phase3 or boss.asc >= 1) and boss.type in ["seravel", "choir"]:
-			var nx3 := bar.position.x + bar.size.x * (0.25 if boss.type == "seravel" else 0.2)
-			draw_rect(Rect2(Vector2(nx3 - 1, bar.position.y - 3), Vector2(2, bar.size.y + 6)), UIKit.PINK)
+			notches.append(0.25 if boss.type == "seravel" else 0.2)
+		for nt in notches:
+			var nx: float = BX + BW * nt
+			var crossed: bool = r < nt
+			ci.draw_rect(Rect2(Vector2(nx - 1, BY - 3), Vector2(2, BH + 6)), UIKit.INK)
+			var dc := Vector2(nx, BY - 5)
+			UIKit.diamond(ci, dc, 4.0, UIKit.INK)
+			if crossed:
+				UIKit.diamond(ci, dc + Vector2(-1, 1), 2.0, Color(th.frame, 0.7))
+				ci.draw_line(dc + Vector2(-2, -2), dc + Vector2(2, 2), UIKit.INK, 1.0)
+			else:
+				UIKit.diamond(ci, dc, 3.0, th.accent)
+		# brillo de la punta del líquido
+		var tipx := BX + BW * r
+		if r > 0.0:
+			ci.draw_rect(Rect2(Vector2(tipx - 1, BY), Vector2(1, BH)), Color(1, 1, 1, 0.55 + 0.3 * sin(_t * 12.0)))
+		# número de daño acumulado
+		if _dmg_acc > 0.5:
+			var f := UIKit.font("num")
+			var txt := "-%d" % int(round(_dmg_acc))
+			var a := clampf(_dmg_t / 0.4, 0.0, 1.0)
+			var pos := Vector2(minf(tipx + 4, BX + BW - 10), BY - 2 - (1.4 - _dmg_t) * 4.0)
+			f.draw_string_outline(ci.get_canvas_item(), pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, Color(UIKit.INK, a))
+			f.draw_string(ci.get_canvas_item(), pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 0.95, 0.8, a))
 		# postura
 		var pr: float = clamp(boss.poise / boss.max_poise, 0.0, 1.0)
-		var pw := bar.size.x * 0.6
-		var pp := Vector2(size.x / 2 - pw / 2, bar.position.y + bar.size.y + 4)
-		draw_rect(Rect2(pp - Vector2(1, 1), Vector2(pw + 2, 4)), UIKit.INK)
-		draw_rect(Rect2(pp + Vector2(pw / 2 * (1.0 - pr), 0), Vector2(pw * pr, 2)), UIKit.GOLD.lerp(UIKit.WHITE, pr))
+		var pw := BW * 0.5
+		var pp2 := Vector2(BX + BW / 2.0 - pw / 2.0, BY + BH + 3)
+		ci.draw_rect(Rect2(pp2 - Vector2(1, 1), Vector2(pw + 2, 4)), UIKit.INK)
+		var pc: Color = UIKit.GOLD.lerp(UIKit.WHITE, pr)
+		if boss.is_staggered():
+			pc = Color(1, 1, 1) if int(_t * 12.0) % 2 == 0 else UIKit.GOLD
+			pr = 1.0
+		ci.draw_rect(Rect2(pp2 + Vector2(pw / 2.0 * (1.0 - pr), 0), Vector2(pw * pr, 2)), pc)
+		# rótulo de cambio de fase
+		if _phase_t > 0.0:
+			var f2 := UIKit.font("head")
+			var roman = ["I", "II", "III", "IV"][clampi(_phase - 1, 0, 3)]
+			var pt := G.T("boss_phase") % roman
+			var pw2 := f2.get_string_size(pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			var a2 := clampf(_phase_t / 0.5, 0.0, 1.0)
+			var sc := 1.0 + (1.6 - _phase_t) * 0.1
+			var ppos := Vector2(BX + BW / 2.0 - pw2 * sc / 2.0, BY + BH - 1)
+			ci.draw_set_transform(ppos, 0.0, Vector2(sc, sc))
+			f2.draw_string_outline(ci.get_canvas_item(), Vector2.ZERO, pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, Color(UIKit.INK, a2))
+			f2.draw_string(ci.get_canvas_item(), Vector2.ZERO, pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(th.accent, a2))
+			ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+class TrialBanner extends Control:
+	## Rótulo de prueba arriba en el centro: nombre y oleadas (rombos que se llenan)
+	var title := ""
+	var wave := 0
+	var total := 1
+	var _t := 0.0
+	var _in := 0.0
+	var _hide := false
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		_t += delta
+		_in = move_toward(_in, 0.0 if _hide else 1.0, delta * 3.0)
+		if _hide and _in <= 0.0:
+			visible = false
+		queue_redraw()
+	func _draw() -> void:
+		var f := UIKit.font("head")
+		var lab := G.T("trial_label") + " · " + title
+		var w := f.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 24 + total * 10
+		var y := -20.0 + 26.0 * _in
+		var r := Rect2(Vector2(size.x / 2.0 - w / 2.0, y), Vector2(w, 16))
+		UIKit.slash_band(self, r.grow(1), UIKit.INK, 6.0)
+		UIKit.slash_band(self, r, Color(0.35, 0.08, 0.1, 0.92), 6.0)
+		f.draw_string_outline(get_canvas_item(), r.position + Vector2(10, 12), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), r.position + Vector2(10, 12), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 0.8, 0.6))
+		for i in total:
+			var dp := Vector2(r.end.x - 10 - (total - 1 - i) * 10, r.position.y + 8)
+			UIKit.diamond(self, dp, 4.0, UIKit.INK)
+			if i < wave - 1:
+				UIKit.diamond(self, dp, 3.0, UIKit.GOLD)
+			elif i == wave - 1:
+				UIKit.diamond(self, dp, 3.0, UIKit.RED.lerp(UIKit.GOLD, 0.5 + 0.5 * sin(_t * 8.0)))
+			else:
+				UIKit.diamond(self, dp, 2.0, Color(0.4, 0.3, 0.35))
 
 class FloatingPrompt extends Control:
 	## Tecla [F] flotante sobre el objeto interactuable.

@@ -39,6 +39,13 @@ Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar
 - **Amigo:** *Unirse con código* → escribe el código.
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
 
+## 🧪 Versión ALFA 0.7
+- **Salas antes de cada jefe**: *Las Celdas de Espera* (tres oleadas que salen de las celdas, el preso Tobías y un atajo), *El Atrio de las Voces* (puzle de campanas que hay que tañer «al revés») y *La Escalinata y la Antesala del Juicio* (Brasa nueva y el mini-jefe **El Custodio del Umbral**).
+- **Barras de jefe épicas** con marco propio (cadenas, tubos de órgano, plumas de oro), nombre que se escribe letra a letra, daño acumulado, muescas de fase que se rompen y estallido final.
+- **Más 3D**: pilares y estatuas que se inclinan en perspectiva, abismo con capas de paralaje, faldones de roca con profundidad, pozos con cadenas y de luz, escombros con altura.
+- **Jefes en 3D**: jaulas y espadas que caen desde la cámara, aureola-anillo 3D de Seravel (que se acerca al elevarse), bola del Carcelero orbitando su cuerpo y carrusel de cantores del Coro.
+- **Retrato animado** en la interfaz (parpadea, se queja, se apura con poca vida, sonríe al curarse) y **mapa** con grosor, pozos, pruebas y cierres.
+
 ## 🧪 Versión ALFA 0.6
 - **Corto de introducción** que cuenta la historia antes de empezar, y **Prólogo opcional** que enseña la interfaz, el combate, el dash, el parry y la curación.
 - **Giros de guion** a medida que avanzas: lo que de verdad guardaban las celdas, por qué el Coro canta al revés y quién arrancó la primera pluma de Seravel.

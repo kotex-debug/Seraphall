@@ -22,6 +22,9 @@ var pose := "idle"
 var _wing_base := 0.15
 var _sword_rot := 2.8
 var _rig_y := -44.0
+var _kick := 0.0
+var halo_back: HaloRing
+var halo_front: HaloRing
 
 const SC := 0.6
 
@@ -45,6 +48,17 @@ func _ready() -> void:
 	r_sword.offset = Vector2(0, -36)
 	r_eyes = _part("res://assets/sprites/cinematic/seravel_eyes.png", Vector2.ZERO, true)
 	r_halo = _part("res://assets/sprites/cinematic/seravel_halo.png", Vector2(0, -61), true)
+	r_halo.visible = false
+	# aureola 3D: un anillo inclinado que gira; la mitad de atrás va detrás del cuerpo y la de delante, delante
+	halo_back = HaloRing.new()
+	halo_back.back = true
+	halo_back.position = Vector2(0, -60)
+	halo_back.z_index = -1
+	rig.add_child(halo_back)
+	rig.move_child(halo_back, 0)
+	halo_front = HaloRing.new()
+	halo_front.position = Vector2(0, -60)
+	rig.add_child(halo_front)
 	for s in [r_wl, r_wr, r_body, r_sword]:
 		s.material = _flash_mat
 	_halo_light = PointLight2D.new()
@@ -111,7 +125,18 @@ func _animate(delta: float) -> void:
 	r_wr.scale = r_wl.scale
 	r_sword.rotation = _sword_rot
 	rig.position.y = _rig_y
-	rig.scale.x = float(facing) * (1.0 if pose != "slash" else 1.05)
+	# perspectiva: al elevarse se acerca a la cámara (más grande y desplazada hacia fuera de la pantalla)
+	var up := clampf((-_rig_y - 44.0) / 216.0, 0.0, 1.0)
+	var near := 1.0 + up * 0.45
+	rig.scale = Vector2(float(facing) * (1.0 if pose != "slash" else 1.05), 1.0) * near
+	_kick = lerpf(_kick, 0.0, clamp(delta * 12.0, 0.0, 1.0))
+	Depth3D.lean_rig(rig, global_position, Depth3D.cam_center(self), -_rig_y)
+	rig.position.x += _kick
+	shadow.scale = Vector2(4.0, 1.2) * (1.0 - up * 0.6)
+	for hr in [halo_back, halo_front]:
+		hr.t = t
+		hr.phase = phase
+		hr.queue_redraw()
 	r_halo.rotation = sin(t * 0.8) * 0.06
 	r_halo.scale = Vector2(SC, SC) * (1.0 + 0.06 * sin(t * 3.0))
 	r_eyes.modulate.a = 0.4 + 0.3 * sin(t * 5.0) + (0.4 if phase >= 2 else 0.0)
@@ -367,6 +392,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			G.chroma(2.0, 0.5)
 			Fx.impact(global_position, Color(1, 0.9, 0.5), 50.0, 10)
 			Fx.scorch(global_position, 50.0)
+			world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position, 22, Color(0.55, 0.45, 0.35), 1.5))
 			Fx.burst(global_position, Color(1, 0.85, 0.5), 60, 220.0, 1.0, "fx_feather", 180.0, Vector2.UP, 1.5, false, Vector2(0, 40))
 			_hit_circle(global_position, 56.0, cfg.dmg * 1.6, Vector2.ZERO)
 			Haz.ring_wave(global_position, 20.0, 230.0, 1.3, cfg.dmg * 0.8 * dm, Color(1, 0.8, 0.4), 10.0, idx)
@@ -405,17 +431,17 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 	_end_attack(my_id)
 
 func _sword_fall(p: Vector2) -> void:
-	var s := Sprite2D.new()
-	s.texture = Fx.tex("proj_sword")
-	s.rotation = PI / 2.0
-	s.position = p + Vector2(0, -90)
-	s.material = Fx.add_material()
-	world.get_node("FX").add_child(s)
-	var tw := s.create_tween()
-	tw.tween_property(s, "position", p, 0.12).set_ease(Tween.EASE_IN)
-	tw.tween_callback(_sword_impact.bind(p))
-	tw.tween_property(s, "modulate:a", 0.0, 0.4)
-	tw.tween_callback(s.queue_free)
+	# espada de luz que cae del cielo en perspectiva (empieza enorme, cerca de la cámara)
+	var f := Depth3D.Faller.new()
+	f.tex = Fx.tex("proj_sword")
+	f.rot = PI / 2.0
+	f.height = 150.0
+	f.dur = 0.2
+	f.linger = 0.3
+	f.additive = true
+	f.position = p
+	f.on_land = _sword_impact.bind(p)
+	world.get_node("FX").add_child(f)
 
 func _sword_impact(p: Vector2) -> void:
 	Audio.sfx("hit_heavy", -6.0)
@@ -426,8 +452,7 @@ func _sword_impact(p: Vector2) -> void:
 
 func on_hurt(new_hp: float, dmg: float, dir: Vector2, crit: bool, broke: bool) -> void:
 	super.on_hurt(new_hp, dmg, dir, crit, broke)
-	rig.position.x = dir.x * 3.0
-	create_tween().tween_property(rig, "position:x", 0.0, 0.15)
+	_kick = dir.x * 3.0
 	if not multiplayer.is_server() or _transitioning:
 		return
 	if phase == 1 and hp < max_hp * 0.5:
@@ -460,3 +485,35 @@ func reset_state() -> void:
 	if rig:
 		rig.visible = true
 		r_halo.modulate.a = 1.0
+
+
+class HaloRing extends Node2D:
+	## Aureola de Seravel como anillo en 3D: elipse inclinada con runas que giran a su alrededor.
+	## Se dibuja en dos mitades (atrás / delante) para que el cuerpo quede "dentro" del anillo.
+	var back := false
+	var t := 0.0
+	var phase := 1
+	func _draw() -> void:
+		var col := Color(1, 0.85, 0.4) if phase == 1 else (Color(1, 0.25, 0.3) if phase == 2 else Color(1, 0.98, 0.9))
+		var rx := 22.0
+		var ry := 6.0 + sin(t * 0.9) * 1.5
+		var tilt := sin(t * 0.7) * 0.12
+		var n := 28
+		var a0 := PI if back else 0.0
+		var pts := PackedVector2Array()
+		for i in n + 1:
+			var a := a0 + PI * i / n
+			pts.append(Vector2(cos(a) * rx, sin(a) * ry).rotated(tilt))
+		var k := 0.55 if back else 1.0
+		draw_polyline(pts, Color(col.darkened(0.5), 0.6 * k), 4.0)
+		draw_polyline(pts, Color(col, 0.9 * k), 2.0)
+		draw_polyline(pts, Color(1, 1, 0.95, 0.7 * k), 1.0)
+		# runas que recorren el anillo (solo las de esta mitad)
+		for j in 8:
+			var a2 := fmod(t * 1.4 + TAU * j / 8.0, TAU)
+			var front := sin(a2) > 0.0
+			if front == back:
+				continue
+			var rp := Vector2(cos(a2) * rx, sin(a2) * ry).rotated(tilt)
+			var sz := 1.0 + (sin(a2) * 0.8 if not back else 0.0)
+			draw_rect(Rect2(rp - Vector2(sz, sz), Vector2(sz * 2.0, sz * 2.0)), Color(1, 1, 0.9, k))

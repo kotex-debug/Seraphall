@@ -391,7 +391,139 @@ def back(body, hair):
     d.line([(cx + 9, 18), (cx + 13, 38)], fill=(224, 228, 240, 255), width=2)
     return img
 
+# ====================================================================== v0.7: retrato del HUD (busto 40x40)
+BW_, BH_ = 40, 40
+EXPRS = ["neutral", "blink", "hurt", "strain", "smile", "fierce"]
+
+def bust(body, hair, expr):
+    """Busto de 3/4 mirando a la derecha para el medallón del HUD. Mismas partes recoloreables."""
+    img = canvas(BW_, BH_); d = ImageDraw.Draw(img)
+    fem = body == "f"
+    # ---- alas asomando detrás de los hombros
+    d.polygon([(10, 30), (1, 18), (0, 24), (2, 33), (7, 39), (12, 39)], fill=P(8, 0.85))
+    for k in range(4):
+        d.line([(2 + k, 20 + k * 4), (8 + k, 26 + k * 3)], fill=P(10 + k, 0.7))
+    d.polygon([(31, 31), (38, 20), (39, 27), (36, 39), (31, 39)], fill=P(8, 0.68))
+    for k in range(3):
+        d.line([(37 - k, 23 + k * 4), (33 - k, 28 + k * 3)], fill=P(15 + k, 0.55))
+    # ---- pelo largo por detrás (melena y coleta baja)
+    if fem and hair == 0:
+        d.polygon([(10, 10), (6, 22), (5, 36), (12, 39), (17, 30), (16, 14)], fill=P(2, 0.62))
+        d.polygon([(27, 14), (31, 16), (32, 30), (29, 34), (28, 24)], fill=P(2, 0.7))
+    if fem and hair == 1:
+        d.polygon([(9, 6), (4, 3), (2, 8), (3, 18), (6, 28), (9, 31), (11, 22), (12, 10)], fill=P(2, 0.78))
+        d.line([(4, 5), (4, 17)], fill=P(2, 1.15))
+    if not fem and hair == 2:
+        d.polygon([(11, 16), (8, 22), (7, 33), (10, 36), (13, 28), (14, 19)], fill=P(2, 0.66))
+        d.rectangle([9, 21, 12, 22], fill=P(6, 1.0))
+    # ---- hombros y armadura
+    d.polygon([(7, 39), (9, 33), (14, 30), (28, 30), (33, 33), (35, 39)], fill=P(4, 0.95))
+    d.polygon([(7, 39), (9, 33), (14, 30), (17, 30), (15, 39)], fill=P(4, 0.72))
+    d.line([(15, 32), (27, 32)], fill=P(4, 1.25))
+    d.polygon([(21, 33), (23, 35), (21, 37), (19, 35)], fill=P(6, 1.25))          # emblema
+    d.point((21, 35), fill=P(6, 1.6))
+    d.ellipse([25, 29, 35, 36], fill=P(6, 1.05))                                    # hombrera delantera
+    d.line([(26, 30), (33, 30)], fill=P(6, 1.45))
+    d.ellipse([7, 30, 14, 35], fill=P(6, 0.7))
+    # ---- cuello y bufanda
+    d.rectangle([18, 23, 24, 29], fill=P(1, 0.8))
+    d.line([(18, 26), (24, 26)], fill=P(1, 0.66))
+    d.polygon([(13, 29), (16, 26), (27, 26), (29, 29), (27, 31), (15, 31)], fill=P(7, 1.0))
+    d.line([(16, 27), (27, 27)], fill=P(7, 1.3))
+    d.polygon([(14, 30), (11, 35), (13, 37), (17, 31)], fill=P(7, 0.78))            # punta de la bufanda
+    # ---- cabeza
+    d.ellipse([12, 4, 30, 25], fill=P(1, 1.0))
+    d.polygon([(13, 17), (21, 27), (28, 22), (30, 15)], fill=P(1, 1.0))             # mandíbula
+    d.polygon([(13, 10), (12, 18), (15, 23), (16, 12)], fill=P(1, 0.82))            # lado en sombra
+    d.ellipse([12, 13, 15, 18], fill=P(1, 0.86))                                     # oreja
+    d.point((13, 15), fill=P(1, 0.7))
+    d.line([(29, 12), (30, 16)], fill=P(1, 1.12))                                    # luz en la mejilla
+    d.point((30, 18), fill=P(1, 0.82)); d.point((30, 19), fill=P(1, 0.86))          # nariz
+    d.point((31, 18), fill=P(1, 1.0))
+    # ---- ojos
+    def eye(x0, w, far):
+        if expr == "blink":
+            d.line([(x0, 16), (x0 + w, 16)], fill=P(2, 0.4)); return
+        if expr == "smile":
+            d.line([(x0, 16), (x0 + 1, 15)], fill=P(2, 0.4)); d.line([(x0 + 1, 15), (x0 + w, 16)], fill=P(2, 0.4)); return
+        if expr == "hurt":
+            d.line([(x0, 14), (x0 + w, 16)], fill=P(2, 0.4)); d.line([(x0, 18), (x0 + w, 16)], fill=P(2, 0.4)); return
+        top = 15 if expr in ("fierce", "strain") else 14
+        d.rectangle([x0, top, x0 + w, 17], fill=P(21, 1.0))
+        ix = x0 + w - 2 if not far else x0 + w - 1
+        glow = 1.4 if expr == "fierce" else 1.0
+        d.rectangle([ix, top, ix + 1, 17], fill=P(3, glow))
+        d.point((ix, 17), fill=P(3, 0.6))
+        if expr != "fierce":
+            d.point((ix + 1, top), fill=P(21, 1.0))                                  # brillo
+        d.line([(x0 - (1 if not far else 0), top - 1), (x0 + w + (1 if fem and not far else 0), top - 1)], fill=P(2, 0.35))   # pestañas
+        if fem and not far:
+            d.point((x0 + w + 1, top), fill=P(2, 0.35))
+    eye(23, 4, False)
+    eye(16, 2, True)
+    # ---- cejas según la expresión
+    if expr in ("strain", "fierce"):
+        d.line([(23, 11), (27, 12)], fill=P(2, 0.5)); d.line([(16, 12), (18, 11)], fill=P(2, 0.5))
+    elif expr == "hurt":
+        d.line([(23, 12), (27, 10)], fill=P(2, 0.5)); d.line([(16, 10), (18, 12)], fill=P(2, 0.5))
+    else:
+        d.line([(23, 11), (27, 11)], fill=P(2, 0.5)); d.line([(16, 11), (18, 11)], fill=P(2, 0.5))
+    # ---- boca
+    if expr == "smile":
+        d.line([(24, 21), (25, 22)], fill=P(20, 1.0)); d.line([(25, 22), (27, 21)], fill=P(20, 1.0))
+    elif expr == "hurt":
+        d.rectangle([24, 21, 26, 23], fill=P(20, 1.0)); d.point((25, 23), fill=P(22, 1.0))
+    elif expr == "strain":
+        d.rectangle([23, 21, 27, 22], fill=P(21, 1.0)); d.line([(23, 21), (27, 21)], fill=P(20, 1.0)); d.line([(25, 21), (25, 22)], fill=P(20, 0.8))
+    elif expr == "fierce":
+        d.line([(24, 22), (27, 21)], fill=P(20, 1.0))
+    else:
+        d.line([(24, 22), (26, 22)], fill=P(20, 1.0))
+    # ---- rubor
+    if fem or expr in ("smile", "hurt"):
+        d.point((26, 19), fill=P(22, 1.0)); d.point((27, 19), fill=P(22, 1.0)); d.point((17, 19), fill=P(22, 1.0))
+    # ---- sudor con poca vida
+    if expr == "strain":
+        d.point((29, 9), fill=P(21, 1.0)); d.point((29, 10), fill=P(21, 0.85)); d.point((30, 10), fill=P(21, 0.7))
+    # ---- pelo delantero (casquete y flequillo)
+    d.chord([11, 2, 31, 20], 180, 360, fill=P(2, 1.0))
+    d.polygon([(11, 11), (11, 18), (14, 22), (16, 12)], fill=P(2, 0.8))               # patilla / lado
+    fringe = {("m", 0): [(15, 8), (18, 13), (20, 9), (23, 12), (25, 9), (28, 12), (30, 9), (31, 7)],
+              ("m", 1): [(14, 8), (17, 14), (19, 8), (22, 13), (24, 8), (27, 13), (29, 8), (32, 10)],
+              ("m", 2): [(15, 8), (19, 12), (21, 9), (25, 12), (27, 9), (30, 11), (31, 7)],
+              ("f", 0): [(14, 8), (17, 14), (20, 9), (22, 13), (24, 9), (27, 12), (30, 10), (31, 13), (31, 7)],
+              ("f", 1): [(15, 8), (18, 12), (21, 9), (24, 12), (27, 9), (30, 12), (31, 7)],
+              ("f", 2): [(14, 8), (16, 13), (19, 9), (22, 13), (25, 9), (28, 13), (31, 11), (32, 15), (31, 7)]}[(body, hair)]
+    d.polygon([(12, 8)] + fringe + [(30, 4), (21, 2), (13, 4)], fill=P(2, 1.0))
+    d.arc([12, 2, 30, 18], 200, 290, fill=P(2, 1.32))                                # brillo
+    d.line([(22, 3), (27, 5)], fill=P(2, 1.25))
+    if hair == 1 and not fem:
+        for x, y in ((13, 3), (17, 0), (21, 1), (25, 0), (29, 3)):                    # puntas
+            d.polygon([(x - 2, y + 4), (x, y), (x + 2, y + 4)], fill=P(2, 1.05))
+    if fem and hair == 2:
+        d.polygon([(11, 10), (10, 24), (14, 25), (15, 13)], fill=P(2, 0.9))
+        d.polygon([(30, 12), (32, 22), (29, 23), (29, 15)], fill=P(2, 0.95))
+    if fem and hair == 0:
+        d.polygon([(11, 10), (9, 26), (13, 30), (15, 14)], fill=P(2, 0.9))
+        d.polygon([(30, 11), (32, 24), (30, 28), (29, 16)], fill=P(2, 0.95))
+    if fem and hair == 1:
+        d.ellipse([8, 4, 13, 9], fill=P(6, 1.0))                                      # lazo de la coleta
+    # ---- aureola (anillo flotante, sin contorno en el juego)
+    d.ellipse([13, 0, 29, 3], outline=P(9, 1.0))
+    d.point((15, 0), fill=P(9, 1.4)); d.point((16, 0), fill=P(9, 1.4))
+    return img
+
+def bust_sheet(body, hair):
+    s = canvas(BW_ * len(EXPRS), BH_)
+    for i, e in enumerate(EXPRS):
+        f = bust(body, hair, e)
+        s.paste(f, (i * BW_, 0), f)
+    return s
+
 if __name__ == "__main__":
+    for body in ("f", "m"):
+        for hair in range(3):
+            bust_sheet(body, hair).save(f"{OUT}/bu_{body}{hair}.png")
     for body in ("f", "m"):
         for hair in range(3):
             anim(body, hair).save(f"{OUT}/pl_{body}{hair}.png")

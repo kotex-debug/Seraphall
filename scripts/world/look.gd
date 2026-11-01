@@ -95,8 +95,8 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 				out.set_pixel(x, y, c)
 				solid[y * w + x] = 1
 	# contorno (sin cruzar de un fotograma a otro)
-	var fw := 32 if kind == "pl" else w
-	var fh := 32 if kind == "pl" else h
+	var fw := 32 if kind == "pl" else (40 if kind == "bu" else w)
+	var fh := 32 if kind == "pl" else (40 if kind == "bu" else h)
 	for y in h:
 		for x in w:
 			if solid[y * w + x] == 1 or out.get_pixel(x, y).a > 0.5:
@@ -117,6 +117,9 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 	var tex := ImageTexture.create_from_image(out)
 	_cache[key] = tex
 	return tex
+
+static func bust_texture(look: Dictionary, feathers := 10) -> ImageTexture:
+	return texture(look, feathers, "bu")
 
 static func back_texture(look: Dictionary, feathers := 10) -> ImageTexture:
 	return texture(look, feathers, "pb")

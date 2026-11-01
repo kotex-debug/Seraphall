@@ -7,14 +7,13 @@ const MAPH := 96
 
 const ROOMS := [
 	{"id": "circle", "c": Vector2i(49, 14), "r": 13},
-	{"id": "gatehall", "rect": Rect2i(48, 26, 3, 7)},
 	{"id": "yard", "rect": Rect2i(38, 32, 23, 14)},
 	{"id": "alcove", "rect": Rect2i(29, 36, 8, 7)},
 	{"id": "alc_link", "rect": Rect2i(36, 38, 3, 3)},
 	{"id": "hall2", "rect": Rect2i(47, 45, 4, 10)},
 	{"id": "chains", "rect": Rect2i(35, 54, 28, 16)},
 	{"id": "east", "rect": Rect2i(62, 59, 11, 4)},
-	{"id": "gallery", "rect": Rect2i(72, 48, 20, 24)},
+	{"id": "gallery", "rect": Rect2i(72, 57, 20, 15)},
 	{"id": "hall1", "rect": Rect2i(47, 69, 4, 12)},
 	{"id": "sanct", "rect": Rect2i(40, 80, 18, 13)},
 	{"id": "mir_link", "rect": Rect2i(38, 85, 3, 3)},
@@ -23,13 +22,26 @@ const ROOMS := [
 	{"id": "nimbo", "c": Vector2i(66, 86), "r": 7},
 	{"id": "choir_link", "rect": Rect2i(81, 45, 3, 4)},
 	{"id": "choir", "c": Vector2i(82, 37), "r": 8},
+	# v0.7: salas previas a cada jefe
+	{"id": "celdas", "rect": Rect2i(16, 46, 20, 7)},
+	{"id": "cel_link", "rect": Rect2i(34, 52, 3, 3)},
+	{"id": "cel_up", "rect": Rect2i(31, 42, 3, 5)},
+	{"id": "atrio", "rect": Rect2i(73, 48, 18, 6)},
+	{"id": "atr_link", "rect": Rect2i(81, 53, 3, 5)},
+	{"id": "esc_link", "rect": Rect2i(57, 29, 3, 4)},
+	{"id": "escala", "rect": Rect2i(58, 27, 16, 3)},
+	{"id": "antesala", "rect": Rect2i(65, 6, 9, 22)},
+	{"id": "jui_link", "rect": Rect2i(61, 12, 5, 3)},
 ]
 const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
-	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "gatehall": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
-	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_gallery"}
+	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
+	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_atrio",
+	"celdas": "area_celdas", "cel_link": "area_celdas", "cel_up": "area_celdas", "atrio": "area_atrio", "atr_link": "area_atrio",
+	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio"}
 const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo"]
 
 var main: Node
+var leaner: Depth3D.Leaner
 var grid := PackedByteArray()
 var room_of := PackedInt32Array()
 var entities: Node2D
@@ -71,6 +83,8 @@ func setup(p_main: Node, mode: String) -> void:
 func _ready() -> void:
 	y_sort_enabled = false
 	_build_map()
+	leaner = Depth3D.Leaner.new()
+	add_child(leaner)
 	entities = Node2D.new()
 	entities.name = "Entities"
 	entities.y_sort_enabled = true
@@ -190,16 +204,22 @@ func _build_map() -> void:
 				var room := room_of[y * MAPW + x]
 				var rid: String = ROOMS[room].id if room >= 0 else ""
 				var t := rng.randi_range(0, 3)
-				if rid == "gallery":
+				if rid == "gallery" or rid == "atrio" or rid == "atr_link":
 					t = 13 + rng.randi_range(0, 1)
+				elif rid == "antesala" or rid == "escala" or rid == "jui_link":
+					t = 15 if rng.randf() < 0.55 else rng.randi_range(0, 3)
 				elif rid == "circle":
 					t = 15 if rng.randf() < 0.7 else rng.randi_range(0, 3)
 				if rng.randf() < 0.1 and rid != "gallery":
 					t = 4 + rng.randi_range(0, 1)
 				if rid == "sanct" and x >= 48 and x <= 50 and y >= 81:
 					t = 10
-				if rid == "chains" and rng.randf() < 0.04:
+				if (rid == "chains" or rid == "celdas") and rng.randf() < 0.05:
 					t = 11
+				if rid == "escala" and y == 28:
+					t = 10
+				if rid == "antesala" and (x == 69) and y >= 7:
+					t = 10
 				if rid == "mirador" or rid == "alcove":
 					t = 19 if rng.randf() < 0.6 else t
 				floor_layer.set_cell(c, 0, Vector2i(t, 0))
@@ -231,6 +251,13 @@ func _build_map() -> void:
 	rim.world = self
 	rim.z_index = -9
 	add_child(rim)
+	# v0.7: profundidad 3D (abismo con capas y faldones de roca en perspectiva)
+	var aby := Depth3D.Abyss.new()
+	aby.world = self
+	add_child(aby)
+	var cd := Depth3D.CliffDepth.new()
+	cd.world = self
+	add_child(cd)
 
 func _build_tileset() -> TileSet:
 	var ts := TileSet.new()
@@ -254,7 +281,7 @@ func _scatter_decor() -> void:
 	## Escombros, huesos y plumas repartidos por las salas (decoración sin colisión)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
-	var skip := ["yard", "circle", "choir", "nimbo", "gatehall"]
+	var skip := ["yard", "circle", "choir", "nimbo", "escala", "antesala"]
 	for r in ROOMS:
 		if r.id in skip:
 			continue
@@ -275,7 +302,8 @@ func _scatter_decor() -> void:
 				var c := _prop("candle", p, 4, rng.randi_range(0, 3), 0.0, Color(1, 0.65, 0.3), 0.7)
 				c.set_meta("anim", 4)
 
-const PITS := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"]]
+const PITS := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"],
+	[Rect2i(24, 48, 4, 3), "chains"], [Rect2i(65, 16, 2, 6), "light"], [Rect2i(72, 16, 2, 6), "light"], [Rect2i(75, 49, 2, 3), "void"]]
 
 func is_pit_at(p: Vector2) -> bool:
 	var x := int(floor(p.x / TS))
@@ -293,19 +321,33 @@ func is_wall_at(p: Vector2) -> bool:
 	var y := int(floor(p.y / TS))
 	if x < 0 or y < 0 or x >= MAPW or y >= MAPH:
 		return true
-	if not gate_open and gate_body and Rect2(48 * TS, 31 * TS, 3 * TS, TS).has_point(p):
+	if not gate_open and gate_body and Rect2(57 * TS, 31 * TS, 3 * TS, TS).has_point(p):
 		return true
 	return grid[y * MAPW + x] != 1
 
 # ====================================================================== cartografía (mapa y minimapa)
 const AREA_COLORS := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
 	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
-	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0)}
+	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0), "area_celdas": Color(0.85, 0.45, 0.35),
+	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55)}
 var _map_tex: ImageTexture
 var _map_seen := -1
 
 func current_area() -> String:
 	return _area
+
+func _room_corner(id: String) -> Vector2:
+	for r in ROOMS:
+		if r.id == id:
+			return Vector2(_rect_of(r).position) + Vector2(1.6, 1.4)
+	return Vector2.ZERO
+
+func _room_center(id: String) -> Vector2:
+	for r in ROOMS:
+		if r.id == id:
+			var rc := _rect_of(r)
+			return Vector2(rc.position) + Vector2(rc.size) / 2.0
+	return Vector2.ZERO
 
 func map_texture() -> ImageTexture:
 	var n := 0
@@ -320,6 +362,25 @@ func map_texture() -> ImageTexture:
 	for y in MAPH:
 		for x in MAPW:
 			var i := y * MAPW + x
+			# muros (caras norte) de las salas vistas: dan grosor al mapa
+			if grid[i] == 2:
+				for dy in [1, 2]:
+					if y + dy < MAPH and grid[(y + dy) * MAPW + x] == 1 and room_of[(y + dy) * MAPW + x] >= 0:
+						var wr: String = ROOMS[room_of[(y + dy) * MAPW + x]].id
+						if Prog.flags.get("seen_" + wr, false):
+							var wc: Color = AREA_COLORS.get(AREAS.get(wr, ""), Color.WHITE)
+							img.set_pixel(x, y, wc.darkened(0.78 if dy == 1 else 0.68))
+							break
+				continue
+			# pozos: agujero oscuro con brasa o vacío en el fondo
+			if grid[i] == 5 and room_of[i] >= 0 and Prog.flags.get("seen_" + ROOMS[room_of[i]].id, false):
+				var core := false
+				for pit in PITS:
+					var pr: Rect2i = pit[0]
+					if pr.has_point(Vector2i(x, y)) and absf(x - pr.get_center().x + 0.5) <= 1.0 and absf(y - pr.get_center().y + 0.5) <= 1.0:
+						core = true
+				img.set_pixel(x, y, Color(1, 0.55, 0.25) if core else Color(0.05, 0.02, 0.06))
+				continue
 			if grid[i] != 1 or room_of[i] < 0:
 				continue
 			var rid: String = ROOMS[room_of[i]].id
@@ -357,6 +418,17 @@ func map_markers() -> Array:
 				out.append(["ecos", tp, Color(0.5, 0.85, 1.0), ""])
 			"bench":
 				out.append(["bench", tp, Color(0.7, 0.9, 1.0), ""])
+			"lore":
+				out.append(["lore", tp, Color(0.6, 0.85, 1.0), ""])
+	# pruebas de las antesalas, cierres e inscripciones
+	for tid in ["celdas", "atrio", "umbral"]:
+		var room: String = TRIALS[tid].room if TRIALS.has(tid) else "atrio"
+		if Prog.flags.get("seen_" + room, false):
+			out.append(["trial_done" if trial_done(tid) else "trial", _room_corner(room), UIKit.GOLD if trial_done(tid) else UIKit.RED, ""])
+	for L in LOCKS:
+		var lr: Rect2i = L[1]
+		if not trial_done(L[0]) and Prog.flags.get("seen_" + room_at(tile_pos(lr.position.x, lr.position.y + 1)), false) or (not trial_done(L[0]) and Prog.flags.get("seen_" + room_at(tile_pos(lr.position.x, lr.position.y - 1)), false)):
+			out.append(["lock", Vector2(lr.get_center()), Color(0.75, 0.7, 0.8), ""])
 	for e in enemies:
 		if e.is_boss and Prog.flags.get("seen_" + room_at(e.spawn_pos), false):
 			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false)
@@ -385,6 +457,8 @@ func _prop(tex: String, pos: Vector2, frames := 1, frame := 0, collide := 0.0, l
 	s.position = pos
 	s.offset = Vector2(0, -s.texture.get_height() / 2.0 + 2)
 	entities.add_child(s)
+	if tex in ["pillar", "statue", "organ"]:
+		leaner.add(s, 1.5 if tex != "organ" else 1.1)
 	if collide > 0.0:
 		var b := StaticBody2D.new()
 		b.collision_layer = 1
@@ -393,7 +467,8 @@ func _prop(tex: String, pos: Vector2, frames := 1, frame := 0, collide := 0.0, l
 		sh.radius = collide
 		cs.shape = sh
 		b.add_child(cs)
-		s.add_child(b)
+		b.position = pos
+		entities.add_child(b)
 	if light_col.a > 0.0:
 		var l := PointLight2D.new()
 		l.texture = Fx.tex("light")
@@ -430,11 +505,11 @@ func _build_props() -> void:
 		_prop("candle", tile_pos(p.x, p.y), 4, 1, 0.0, Color(1, 0.6, 0.3), 1.0)
 	_prop("rubble", tile_pos(50, 64), 3, 1); _prop("rubble", tile_pos(40, 63), 3, 2)
 	# Galería Rota (luz fría)
-	for p in [Vector2(75, 51), Vector2(89, 53), Vector2(80, 60), Vector2(86, 62), Vector2(76, 68), Vector2(90, 68)]:
+	for p in [Vector2(75, 59), Vector2(89, 59), Vector2(77, 65), Vector2(87, 64), Vector2(76, 68), Vector2(90, 68)]:
 		_prop("pillar", tile_pos(p.x, p.y), 2, 1, 5.0)
-	for p in [Vector2(73, 49), Vector2(90, 49), Vector2(73, 70), Vector2(82, 55)]:
+	for p in [Vector2(73, 58), Vector2(90, 58), Vector2(73, 70), Vector2(82, 70)]:
 		_prop("candle", tile_pos(p.x, p.y), 4, 2, 0.0, Color(0.55, 0.65, 1.0), 1.4)
-	_prop("statue", tile_pos(82, 50))
+	_prop("statue", tile_pos(90, 63))
 	_prop("rubble", tile_pos(78, 64), 3, 0); _prop("rubble", tile_pos(87, 58), 3, 1)
 	# Patio del Carcelero
 	for p in [Vector2(39, 33), Vector2(59, 33), Vector2(39, 44), Vector2(59, 44)]:
@@ -465,6 +540,7 @@ func _build_props() -> void:
 	for zone in [Rect2(29 * TS, 82 * TS, 10 * TS, 8 * TS), Rect2(29 * TS, 36 * TS, 8 * TS, 7 * TS), Rect2(40 * TS, 80 * TS, 18 * TS, 13 * TS), Rect2(59 * TS, 79 * TS, 14 * TS, 14 * TS)]:
 		_fireflies(zone)
 	_build_arena_decor()
+	_build_antechambers()
 
 var arena_lights: Array[PointLight2D] = []
 
@@ -559,7 +635,7 @@ func _build_gate() -> void:
 	gate_spr.texture = Fx.tex("gate")
 	gate_spr.region_enabled = true
 	gate_spr.region_rect = Rect2(0, 0, 48, 40)
-	gate_spr.position = Vector2(49.5 * TS, 32 * TS - 20)
+	gate_spr.position = Vector2(58.5 * TS, 32 * TS - 20)
 	gate_spr.z_index = -8
 	add_child(gate_spr)
 	var gl := PointLight2D.new()
@@ -575,7 +651,7 @@ func _build_gate() -> void:
 	sh.size = Vector2(3 * TS, TS)
 	cs.shape = sh
 	gate_body.add_child(cs)
-	gate_body.position = Vector2(49.5 * TS, 31.5 * TS)
+	gate_body.position = Vector2(58.5 * TS, 31.5 * TS)
 	add_child(gate_body)
 
 func set_gate(open: bool, instant := false) -> void:
@@ -708,8 +784,9 @@ func _spawn_enemies() -> void:
 	var list := [
 		["hueco", 40, 58], ["hueco", 45, 64], ["hueco", 53, 57], ["hueco", 58, 63], ["hueco", 42, 67], ["hueco", 56, 67],
 		["hueco", 49, 49],
-		["acolito", 78, 52], ["acolito", 87, 56], ["acolito", 82, 67],
-		["bestia", 76, 60], ["bestia", 88, 64], ["hueco", 84, 70], ["hueco", 74, 55],
+		["acolito", 78, 52], ["acolito", 87, 60], ["acolito", 82, 67],
+		["bestia", 76, 61], ["bestia", 88, 66], ["hueco", 84, 70], ["hueco", 74, 59],
+		["acolito", 70, 28], ["hueco", 63, 28], ["hueco", 35, 54],
 		["carcelero", 49, 38],
 		["choir", 82, 35],
 		["seravel", 49, 10],
@@ -743,7 +820,7 @@ func _spawn_interactables() -> void:
 	_add_inter("npc", "brenna", tile_pos(43.5, 84), {"sheet": "npc_brenna", "name": ["Brenna, la herrera", "Brenna, the smith"], "light": Color(1, 0.5, 0.25)})
 	_add_inter("npc", "carto", tile_pos(55, 84), {"sheet": "npc_carto", "name": ["El Cartógrafo Ciego", "The Blind Cartographer"], "flip": true, "light": Color(0.6, 0.7, 1.0)})
 	_add_inter("chest", "chest_chains", tile_pos(61, 55), {"feathers": 2, "ecos": 120, "items": {"bomb": 2}})
-	_add_inter("chest", "chest_gallery", tile_pos(90, 50), {"weapon": "spear", "items": {"amulet_wing": 1, "ointment": 1}})
+	_add_inter("chest", "chest_gallery", tile_pos(90, 59), {"weapon": "spear", "items": {"amulet_wing": 1, "ointment": 1}})
 	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250, "items": {"iron": 1, "incense": 1}})
 	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150})
 	_add_inter("bench", "bench_mirador", tile_pos(34, 85.5), {"memory": "m1"})
@@ -755,7 +832,7 @@ func _spawn_interactables() -> void:
 	_add_inter("pickup", "f1", tile_pos(36, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f2", tile_pos(62, 68), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "f3", tile_pos(74, 70), {"icon": "feather", "feathers": 1})
-	_add_inter("pickup", "f4", tile_pos(85, 49), {"icon": "feather", "feathers": 1})
+	_add_inter("pickup", "f4", tile_pos(89.5, 49.3), {"icon": "feather", "feathers": 1})
 	_add_inter("pickup", "map", tile_pos(90, 70), {"icon": "quest", "quest": "map"})
 
 func _add_inter(kind: String, id: String, pos: Vector2, data := {}) -> Interactable:
@@ -772,6 +849,7 @@ func _apply_world_flags(instant: bool) -> void:
 		elif wflags.get("used_" + id, false):
 			it.set_opened()
 	set_gate(wflags.get("carcelero_dead", false) and not _boss_started, true)
+	_refresh_locks(instant)
 	for e in enemies:
 		if e.type == "carcelero" and wflags.get("carcelero_dead", false):
 			e.die(); e.visible = false
@@ -853,6 +931,7 @@ func _process(delta: float) -> void:
 		_photo_tick()
 		return
 	_v04_tick(delta, lp)
+	_trial_tick(delta)
 	if lp:
 		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
 		if active_boss and active_boss.is_alive() and active_boss.active:
@@ -935,8 +1014,12 @@ func _check_area(lp: Player) -> void:
 			target = Color(0.62, 0.62, 0.75)
 		elif a == "area_nimbo":
 			target = Color(0.64, 0.56, 0.56)
-		elif a == "area_choir":
+		elif a == "area_choir" or a == "area_atrio":
 			target = Color(0.46, 0.42, 0.64)
+		elif a == "area_celdas":
+			target = Color(0.52, 0.42, 0.46)
+		elif a == "area_juicio":
+			target = Color(0.62, 0.55, 0.52)
 		create_tween().tween_property(canvas_mod, "color", target, 1.5)
 		var peaceful := a in PEACE_AREAS
 		create_tween().tween_property(self, "_calm", 1.0 if peaceful else 0.0, 2.0)
@@ -952,6 +1035,7 @@ func _check_area(lp: Player) -> void:
 			_server_start_choir()
 		else:
 			_request_choir.rpc_id(1)
+	_check_trials(lp, r)
 	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive() and asc_fight.is_empty():
 		if multiplayer.is_server():
 			_server_start_boss()
@@ -1018,6 +1102,13 @@ func try_interact(p: Player) -> void:
 			bcast("_open_chest", [it.id])
 		"bench":
 			_contemplate(it)
+		"bell":
+			bcast("_ring_bell", [it.id])
+		"lore":
+			var ll := []
+			for l in it.data.lines:
+				ll.append([G.T(l[0]), l[1]])
+			dialog.play(ll, Callable())
 
 func _physics_process(_delta: float) -> void:
 	var lp := local_player()
@@ -1434,6 +1525,8 @@ func _rest_at(id: String) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func _reset_enemies() -> void:
 	unseal_arena()
+	_trial_reset()
+	_bell_seq.clear()
 	for e in enemies.duplicate():
 		if e.get_meta("extra", false):
 			enemies.erase(e)
@@ -1508,6 +1601,17 @@ func _grant(d: Dictionary) -> void:
 func _talk(id: String) -> void:
 	var lines := []
 	match id:
+		"preso":
+			var lp0 := [
+				["Tobías", ["¿Eres de carne? Hace tanto que solo me hablan las cadenas...", "Are you flesh? It's been so long since anything but the chains spoke to me..."]],
+				["Tobías", ["No abras las celdas. Por favor. Él nos metió aquí para que estuviéramos a salvo, no para castigarnos.", "Don't open the cells. Please. He put us here to keep us safe, not to punish us."]],
+				["Tobías", ["Cuando la Voz habla, los de las celdas se vuelven... huecos. Escúchame: si oyes que te llaman por tu nombre, no contestes.", "When the Voice speaks, those in the cells turn... hollow. Listen: if you hear your name being called, don't answer."]],
+			]
+			if trial_done("celdas"):
+				lp0 = [["Tobías", ["Han salido todos. Ya no queda nadie a quien proteger... salvo tú. Ten cuidado con la llave.", "They're all out now. There's no one left to protect... except you. Be careful with that key."]]]
+			if wflags.get("carcelero_dead", false):
+				lp0 = [["Tobías", ["El Carcelero ha caído. Lo noto: las cadenas pesan menos. Y algo, ahí fuera, se ha despertado.", "The Jailer has fallen. I can feel it: the chains weigh less. And something, out there, has woken up."]]]
+			dialog.play(lp0, Callable())
 		"brenna":
 			if not Prog.quests.has("feathers"):
 				lines = [
@@ -2671,8 +2775,11 @@ class ArenaSeal extends Node2D:
 	var k := 0.0
 	var body: StaticBody2D
 	var _closing := true
+	var instant := false
 	func _ready() -> void:
 		z_index = 2
+		if instant:
+			k = 1.0
 		body = StaticBody2D.new()
 		body.collision_layer = 1
 		var cs := CollisionShape2D.new()
@@ -2687,7 +2794,8 @@ class ArenaSeal extends Node2D:
 		l.texture_scale = 0.6
 		l.energy = 0.7
 		add_child(l)
-		Fx.burst(global_position + Vector2(0, 4), Color(0.6, 0.55, 0.6), 8, 50.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.4)
+		if not instant:
+			Fx.burst(global_position + Vector2(0, 4), Color(0.6, 0.55, 0.6), 8, 50.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.4)
 	func open_and_free() -> void:
 		_closing = false
 		if body:
@@ -2743,7 +2851,7 @@ class DepthPit extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var l := PointLight2D.new()
 		l.texture = Fx.tex("light")
-		l.color = Color(1, 0.5, 0.2) if style == "ember" else Color(0.6, 0.35, 1.0)
+		l.color = {"ember": Color(1, 0.5, 0.2), "chains": Color(1, 0.4, 0.15), "light": Color(1, 0.85, 0.5)}.get(style, Color(0.6, 0.35, 1.0))
 		l.texture_scale = 1.6
 		l.energy = 0.9
 		l.position = size / 2.0
@@ -2763,9 +2871,14 @@ class DepthPit extends Control:
 	func _draw() -> void:
 		var vp := get_viewport()
 		var cam: Vector2 = (vp.get_camera_2d().get_screen_center_position() - global_position) if vp.get_camera_2d() else size / 2.0
-		var hot := Color(1, 0.55, 0.15) if style == "ember" else Color(0.65, 0.35, 1.0)
-		var deep := Color(0.05, 0.015, 0.02) if style == "ember" else Color(0.03, 0.01, 0.07)
-		var wall := Color(0.2, 0.09, 0.08) if style == "ember" else Color(0.12, 0.08, 0.2)
+		var warm := style == "ember" or style == "chains"
+		var hot := Color(1, 0.55, 0.15) if warm else Color(0.65, 0.35, 1.0)
+		var deep := Color(0.05, 0.015, 0.02) if warm else Color(0.03, 0.01, 0.07)
+		var wall := Color(0.2, 0.09, 0.08) if warm else Color(0.12, 0.08, 0.2)
+		if style == "light":
+			hot = Color(1, 0.88, 0.55)
+			deep = Color(0.16, 0.11, 0.05)
+			wall = Color(0.42, 0.34, 0.24)
 		draw_rect(Rect2(Vector2.ZERO, size), deep)
 		var tl := Vector2.ZERO
 		var tr := Vector2(size.x, 0)
@@ -2776,7 +2889,7 @@ class DepthPit extends Control:
 		for k in 10:
 			var a := TAU * k / 10.0 + t * 0.4
 			var r1 := 10.0 + 4.0 * sin(t * 3.0 + k)
-			draw_colored_polygon(PackedVector2Array([bc + Vector2.from_angle(a - 0.12) * 4.0, bc + Vector2.from_angle(a) * (r1 + 26.0), bc + Vector2.from_angle(a + 0.12) * 4.0]), Color(hot, 0.22))
+			Depth3D.poly(self, PackedVector2Array([bc + Vector2.from_angle(a - 0.12) * 4.0, bc + Vector2.from_angle(a) * (r1 + 26.0), bc + Vector2.from_angle(a + 0.12) * 4.0]), Color(hot, 0.22))
 		for k2 in 4:
 			draw_circle(bc, 16.0 - k2 * 3.5 + sin(t * 4.0) * 1.0, Color(hot.lerp(Color(1, 1, 0.8), k2 * 0.25), 0.25 + k2 * 0.18))
 		# chispas que suben desde el fondo hacia la boca (cada una a su profundidad)
@@ -2791,11 +2904,27 @@ class DepthPit extends Control:
 			var b2: Vector2 = w[1]
 			var shade: float = w[2]
 			var q := PackedVector2Array([a2, b2, _proj(b2, cam, DEPTH), _proj(a2, cam, DEPTH)])
-			draw_colored_polygon(q, wall.lerp(Color.BLACK, 1.0 - shade))
+			Depth3D.poly(self, q, wall.lerp(Color.BLACK, 1.0 - shade))
 			for s in 4:
 				var kk := 1.0 - (1.0 - DEPTH) * (s + 1) / 5.0
 				draw_line(_proj(a2, cam, kk), _proj(b2, cam, kk), Color(hot, 0.08 + 0.05 * (3 - s)), 1.0)
 			draw_line(_proj(a2, cam, DEPTH), _proj(b2, cam, DEPTH), Color(hot, 0.35), 1.0)
+		# cadenas que bajan desde el borde hasta el fondo (cada eslabón a su profundidad)
+		if style == "chains":
+			for ci in 3:
+				var top := Vector2(size.x * (0.25 + ci * 0.25), 0.0)
+				var sway := sin(t * 1.3 + ci) * 3.0
+				for li in 9:
+					var kk2 := 1.0 - (1.0 - DEPTH) * li / 8.0
+					var lp2 := _proj(top + Vector2(sway * li / 8.0, size.y * 0.45 * li / 8.0), cam, kk2)
+					var lc := Color(0.55, 0.5, 0.55).lerp(Color(0.2, 0.1, 0.08), li / 9.0)
+					draw_rect(Rect2(lp2 - Vector2(1, 1), Vector2(2 + (li % 2), 3)), lc)
+		# haces de luz que suben desde el fondo
+		if style == "light":
+			for ri in 4:
+				var rx := size.x * (0.2 + ri * 0.2)
+				var a3 := 0.12 + 0.08 * sin(t * 2.0 + ri)
+				Depth3D.poly(self, PackedVector2Array([_proj(Vector2(rx - 2, size.y * 0.5), cam, DEPTH), _proj(Vector2(rx + 2, size.y * 0.5), cam, DEPTH), Vector2(rx + 4, 0), Vector2(rx - 4, 0)]), Color(hot, a3))
 		# niebla del fondo y borde de la boca con "dientes" de roca que cuelgan
 		draw_rect(Rect2(Vector2.ZERO, size), Color(deep, 0.25))
 		var rimc := Color(0.32, 0.27, 0.36)
@@ -2807,7 +2936,7 @@ class DepthPit extends Control:
 		var i := 0
 		while x < size.x - 3:
 			var h := 3.0 + float((i * 7) % 5)
-			draw_colored_polygon(PackedVector2Array([Vector2(x - 2, 2), Vector2(x + 2, 2), Vector2(x, 2 + h)]), rimc.darkened(0.2))
+			Depth3D.poly(self, PackedVector2Array([Vector2(x - 2, 2), Vector2(x + 2, 2), Vector2(x, 2 + h)]), rimc.darkened(0.2))
 			x += 5.0
 			i += 1
 
@@ -2855,3 +2984,298 @@ class FloorDecals extends Node2D:
 				4:  # runa gastada
 					draw_arc(p, 5.0 * s, 0, TAU, 12, Color(0.85, 0.7, 0.35, 0.12), 1.0)
 					draw_line(p + Vector2(0, -3), p + Vector2(0, 3), Color(0.85, 0.7, 0.35, 0.12), 1.0)
+
+
+# ====================================================================== v0.7: antesalas de los jefes
+## Antes de cada jefe hay una sala con su propia prueba: oleadas que salen de las celdas, un puzle de
+## campanas que hay que tañer como lo cantaba el Coro (al revés) y el Custodio del Umbral.
+const TRIALS := {
+	"celdas": {"room": "celdas", "seal": "celda", "title": "trial_celdas",
+		"waves": [[["hueco", 18.5, 47.3], ["hueco", 22.5, 47.3], ["hueco", 26.5, 47.3]],
+			[["hueco", 18.5, 47.3], ["acolito", 31, 51], ["hueco", 30.5, 47.3], ["hueco", 22.5, 47.3]],
+			[["bestia", 22.5, 47.3], ["hueco", 18.5, 47.3], ["acolito", 33, 50], ["hueco", 26.5, 47.3]]],
+		"reward": {"feathers": 1, "ecos": 300, "items": {"tear": 1}}, "chest": Vector2(19.5, 51.3)},
+	"umbral": {"room": "antesala", "seal": "luz", "title": "trial_umbral",
+		"waves": [[["acolito", 67, 9], ["acolito", 71, 9], ["hueco", 69, 13]],
+			[["custodio", 69, 10]]],
+		"reward": {"feathers": 2, "ecos": 600, "items": {"iron": 1}}, "chest": Vector2(69, 7.4)},
+}
+## Cierres que siguen puestos hasta superar la prueba: [prueba, casillas, estilo]
+const LOCKS := [["celdas", Rect2i(47, 46, 4, 1), "celda"], ["atrio", Rect2i(81, 47, 3, 1), "coro"], ["umbral", Rect2i(64, 12, 1, 3), "luz"]]
+const BELL_ORDER := [0, 1, 2]       # orden correcto (aguda, media, grave): el himno escrito era grave-media-aguda
+const CELL_DOORS := [18.5, 22.5, 26.5, 30.5]
+var _trial := ""
+var _trial_wave := -1
+var _trial_wait := 0.0
+var _locks := {}
+var _bell_seq: Array = []
+var _cell_doors: Array = []
+
+func trial_done(id: String) -> bool:
+	return wflags.get("trial_" + id, false)
+
+func _refresh_locks(instant: bool) -> void:
+	for L in LOCKS:
+		var id: String = L[0]
+		if trial_done(id):
+			if _locks.has(id):
+				for sl in _locks[id]:
+					if is_instance_valid(sl):
+						sl.open_and_free()
+				_locks.erase(id)
+		elif not _locks.has(id):
+			var arr := []
+			var r: Rect2i = L[1]
+			for y in range(r.position.y, r.end.y):
+				for x in range(r.position.x, r.end.x):
+					var sl := ArenaSeal.new()
+					sl.style = L[2]
+					sl.instant = instant
+					sl.position = tile_pos(x, y)
+					entities.add_child(sl)
+					arr.append(sl)
+			_locks[id] = arr
+	for id2 in TRIALS:
+		if trial_done(id2):
+			_ensure_trial_chest(id2, false)
+
+func _ensure_trial_chest(id: String, fx: bool) -> void:
+	var cid := "chest_trial_" + id
+	if interactables.has(cid):
+		return
+	var it := _add_inter("chest", cid, tile_pos(TRIALS[id].chest.x, TRIALS[id].chest.y), TRIALS[id].reward)
+	if wflags.get("used_" + cid, false):
+		it.set_opened()
+	elif fx:
+		Fx.burst(it.global_position + Vector2(0, -6), Color(1, 0.85, 0.4), 30, 90.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.4)
+		Fx.ring(it.global_position, 4.0, 40.0, Color(1, 0.85, 0.4), 0.6, 3.0)
+
+func _build_antechambers() -> void:
+	# --- Las Celdas de Espera: puertas de celda en el muro norte, cadenas, el preso Tobías y el pozo de castigo
+	for x in CELL_DOORS:
+		var dsp := Sprite2D.new()
+		dsp.texture = Fx.tex("celldoor")
+		dsp.region_enabled = true
+		dsp.region_rect = Rect2(0, 0, 24, 30)
+		dsp.position = Vector2(x * TS, 46 * TS - 13)
+		dsp.z_index = -8
+		add_child(dsp)
+		_cell_doors.append(dsp)
+		var dl := PointLight2D.new()
+		dl.texture = Fx.tex("light")
+		dl.color = Color(1, 0.4, 0.2)
+		dl.energy = 0.0
+		dl.texture_scale = 0.8
+		dl.position = Vector2(0, 6)
+		dsp.add_child(dl)
+	for x in [20, 28, 34]:
+		var c := Sprite2D.new()
+		c.texture = Fx.tex("chains")
+		c.position = tile_pos(x, 45) + Vector2(0, 6)
+		c.z_index = -8
+		add_child(c)
+	for p in [Vector2(17, 47), Vector2(35, 47), Vector2(17, 52), Vector2(29, 52)]:
+		_prop("candle", tile_pos(p.x, p.y), 4, int(p.x) % 4, 0.0, Color(1, 0.55, 0.25), 1.0)
+	for k in 5:
+		_prop("bones", tile_pos(19 + k * 3.4, 49 + (k % 2) * 2.5), 3, k % 3)
+	for c2 in [Vector2(21, 46.8), Vector2(32, 46.6)]:
+		var cg := _prop("cage", tile_pos(c2.x, c2.y), 2, k_frame(c2))
+		cg.set_meta("sway", c2.x)
+	_add_inter("npc", "preso", tile_pos(16.6, 49.2), {"sheet": "npc_preso", "name": ["Tobías, el último preso", "Tobias, the last prisoner"], "light": Color(1, 0.6, 0.35)})
+	var bars := _prop("cellbars", tile_pos(17.2, 49.9), 1, 0)
+	bars.z_index = 1
+	_add_inter("lore", "lore_celdas", tile_pos(34.5, 51.6), {"lines": [["lore_title", ["«Aquí esperan los que no deben salir. Que nadie abra las celdas. Que nadie escuche lo que llama desde fuera.»", "\"Here wait those who must not leave. Let no one open the cells. Let no one heed what calls from outside.\""]]]})
+	# --- Atrio de las Voces: tres campanas y la inscripción del himno
+	# 0 = aguda (pequeña), 1 = media, 2 = grave (grande). De izquierda a derecha suenan grave-media-aguda:
+	# el himno tal y como está escrito... que es justo lo que NO hay que hacer.
+	var bell_pos := [Vector2(85.5, 50.2), Vector2(82.0, 51.6), Vector2(78.5, 50.2)]
+	for i in 3:
+		_add_inter("bell", "bell_%d" % i, tile_pos(bell_pos[i].x, bell_pos[i].y), {"note": i})
+	_add_inter("lore", "lore_atrio", tile_pos(88.5, 52.6), {"lines": [["lore_title", ["«El Himno de la Vigilia: la voz grave, la voz media, la voz aguda.»", "\"The Hymn of the Vigil: the low voice, the middle voice, the high voice.\""]],
+		["lore_title", ["Debajo, alguien ha rayado con las uñas: «EL CORO LO CANTA AL REVÉS».", "Below, someone has scratched with their nails: \"THE CHOIR SINGS IT BACKWARDS\"."]]]})
+	for p2 in [Vector2(74, 48.6), Vector2(90, 48.6)]:
+		_prop("organ", tile_pos(p2.x, p2.y), 1, 0, 8.0)
+	for p3 in [Vector2(77, 53), Vector2(87, 53), Vector2(80, 48.5), Vector2(84, 48.5)]:
+		_prop("candle", tile_pos(p3.x, p3.y), 4, int(p3.x) % 4, 0.0, Color(0.6, 0.5, 1.0), 1.2)
+	# --- Escalinata del Juicio: estatuas arrodilladas, alfombra y la Brasa del Umbral
+	for x2 in [60, 64, 68, 72]:
+		_prop("statue", tile_pos(x2, 27.2))
+	for x3 in [62, 66, 70]:
+		_prop("candle", tile_pos(x3, 29.4), 4, x3 % 4, 0.0, Color(1, 0.8, 0.45), 1.1)
+	_add_inter("brasa", "umbral", tile_pos(59.5, 28.4))
+	_add_inter("lore", "lore_juicio", tile_pos(73, 28.6), {"lines": [["lore_title", ["«Quien suba esta escalera será pesado en la balanza. Las plumas que te queden hablarán por ti.»", "\"Whoever climbs these stairs shall be weighed on the scales. Your remaining feathers will speak for you.\""]]]})
+	# --- Antesala del Juicio: estandartes y luz que cae
+	for b in [Vector2(66.5, 5.5), Vector2(71.5, 5.5)]:
+		_prop("banner", tile_pos(b.x, b.y), 2, 0)
+	var shafts := LightShafts.new()
+	shafts.position = tile_pos(69, 15)
+	shafts.col = Color(1, 0.9, 0.6)
+	add_child(shafts)
+
+func k_frame(v: Vector2) -> int:
+	return int(v.x) % 2
+
+func _check_trials(lp: Player, r: String) -> void:
+	if _trial != "" or lp == null or not lp.is_alive() or active_boss != null or not asc_fight.is_empty():
+		return
+	for id in TRIALS:
+		if TRIALS[id].room == r and not trial_done(id):
+			if multiplayer.is_server():
+				_server_start_trial(id)
+			else:
+				_request_trial.rpc_id(1, id)
+			return
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_trial(id: String) -> void:
+	if multiplayer.is_server():
+		_server_start_trial(id)
+
+func _server_start_trial(id: String) -> void:
+	if _trial != "" or trial_done(id):
+		return
+	bcast("_trial_begin", [id])
+	_trial_wave = -1
+	_trial_wait = 1.8
+
+@rpc("any_peer", "call_remote", "reliable")
+func _trial_begin(id: String) -> void:
+	_trial = id
+	var T: Dictionary = TRIALS[id]
+	seal_arena(T.room, T.seal)
+	hud.big_message(G.T(T.title), Color(1, 0.55, 0.4), 2.4)
+	hud.show_trial(G.T(T.title), 0, T.waves.size())
+	Audio.play_music("trial", 0.6)
+
+func _trial_tick(delta: float) -> void:
+	if _trial == "" or not multiplayer.is_server():
+		return
+	var T: Dictionary = TRIALS[_trial]
+	if _trial_wait > 0.0:
+		_trial_wait -= delta
+		if _trial_wait <= 0.0:
+			_trial_wave += 1
+			if _trial_wave >= T.waves.size():
+				bcast("_trial_complete", [_trial])
+				return
+			bcast("_trial_wave_fx", [_trial, _trial_wave])
+			for w in T.waves[_trial_wave]:
+				bcast("_spawn_trial_enemy", [w[0], tile_pos(w[1], w[2])])
+		return
+	var alive := 0
+	for e in enemies:
+		if e.is_alive() and e.get_meta("trial", false):
+			alive += 1
+	if alive == 0:
+		_trial_wait = 1.5
+
+@rpc("any_peer", "call_remote", "reliable")
+func _trial_wave_fx(id: String, n: int) -> void:
+	var T: Dictionary = TRIALS[id]
+	hud.show_trial(G.T(T.title), n + 1, T.waves.size())
+	if n > 0:
+		hud.big_message(G.T("trial_wave") % [n + 1, T.waves.size()], Color(1, 0.75, 0.5), 1.4)
+	if id == "celdas":
+		Audio.sfx("gate", -2.0)
+		G.shake(2.5, 0.4)
+		for d in _cell_doors:
+			_open_cell_door(d)
+	if id == "umbral" and n == T.waves.size() - 1:
+		hud.big_message(G.T("custodio_title"), Color(1, 0.85, 0.5), 2.6, true)
+		Audio.sfx("slam", -2.0)
+		G.flash(Color(1, 0.9, 0.6, 0.35), 0.4)
+
+func _open_cell_door(d: Sprite2D) -> void:
+	d.region_rect = Rect2(24, 0, 24, 30)
+	var l: PointLight2D = d.get_child(0)
+	var tw := d.create_tween()
+	tw.tween_property(l, "energy", 1.2, 0.2)
+	tw.tween_interval(1.6)
+	tw.tween_property(l, "energy", 0.0, 0.8)
+	tw.tween_callback(func(): d.region_rect = Rect2(0, 0, 24, 30))
+	Fx.burst(d.global_position + Vector2(0, 10), Color(0.3, 0.25, 0.3, 0.8), 10, 50.0, 0.8, "fx_soft", 120.0, Vector2.DOWN, 0.5, false)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _spawn_trial_enemy(type: String, pos: Vector2) -> void:
+	var e := _add_enemy(type, pos, true)
+	e.set_meta("trial", true)
+	e.state = "chase"
+	if e.cfg.get("elite", false):
+		hud.show_boss(e)
+	var col := Color(1, 0.85, 0.5) if type == "custodio" else Color(0.9, 0.3, 0.3)
+	Fx.burst(pos + Vector2(0, -8), col, 22, 70.0, 0.7, "fx_soft", 180.0, Vector2.UP, 0.5)
+	Fx.ring(pos, 4.0, 30.0, col, 0.4, 2.0)
+	if type == "custodio":
+		G.shake(6.0, 0.6)
+		Fx.light_flash(pos, Color(1, 0.85, 0.5), 3.0, 1.6, 0.8)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _trial_complete(id: String) -> void:
+	_trial = ""
+	_trial_wave = -1
+	wflags["trial_" + id] = true
+	Prog.flags["trial_" + id] = true
+	unseal_arena()
+	_refresh_locks(false)
+	_ensure_trial_chest(id, true)
+	hud.hide_trial()
+	hud.big_message(G.T("trial_done"), Color(1, 0.85, 0.4), 2.6)
+	Audio.sfx("levelup")
+	Audio.play_music("explore", 2.0)
+	Prog.quest_step("main1", "trial_" + id)
+	if id == "celdas":
+		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("shortcut_open"), Color(0.9, 0.8, 0.7)))
+	if id == "umbral":
+		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("judgement_open"), Color(1, 0.9, 0.6)))
+	if multiplayer.is_server():
+		Prog.save_game()
+
+func _trial_reset() -> void:
+	_trial = ""
+	_trial_wave = -1
+	_trial_wait = 0.0
+	if hud:
+		hud.hide_trial()
+
+# ---------------------------------------------------------------- campanas del Atrio
+@rpc("any_peer", "call_remote", "reliable")
+func _ring_bell(id: String) -> void:
+	var it: Interactable = interactables.get(id)
+	if it == null or trial_done("atrio"):
+		return
+	var n: int = it.data.note
+	it.ring()
+	Audio.sfx("bell_%d" % n, -3.0, 0.0)
+	Fx.ring(it.global_position + Vector2(0, -14), 4.0, 46.0 + n * 10.0, Color(0.75, 0.6, 1.0), 0.7, 2.0)
+	_bell_seq.append(n)
+	if not multiplayer.is_server() or _bell_seq.size() < 3:
+		return
+	if _bell_seq == BELL_ORDER:
+		bcast("_atrio_solved", [])
+	else:
+		bcast("_atrio_fail", [])
+		for k in 2:
+			spawn_extra_enemy("acolito", tile_pos(76 + k * 12, 50))
+
+@rpc("any_peer", "call_remote", "reliable")
+func _atrio_solved() -> void:
+	_bell_seq.clear()
+	wflags["trial_atrio"] = true
+	Prog.flags["trial_atrio"] = true
+	_refresh_locks(false)
+	hud.big_message(G.T("atrio_solved"), Color(0.8, 0.65, 1.0), 2.6)
+	Audio.sfx("levelup")
+	for i in 3:
+		var it: Interactable = interactables.get("bell_%d" % i)
+		if it:
+			get_tree().create_timer(0.25 * i).timeout.connect(func(): Audio.sfx("bell_%d" % (2 - i), -6.0, 0.0))
+	Prog.quest_step("main1", "trial_atrio")
+	if multiplayer.is_server():
+		Prog.save_game()
+
+@rpc("any_peer", "call_remote", "reliable")
+func _atrio_fail() -> void:
+	_bell_seq.clear()
+	hud.big_message(G.T("atrio_fail"), Color(1, 0.4, 0.5), 1.8)
+	Audio.sfx("glitch", -4.0)
+	G.shake(3.0, 0.3)

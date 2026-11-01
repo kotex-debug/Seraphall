@@ -2,7 +2,7 @@ class_name Interactable
 extends Node2D
 ## Objeto con el que se interactúa: Brasa, PNJ, cofre, recogible, puerta, ecos caídos.
 
-var kind := "chest"      # brasa | npc | chest | pickup | ecos
+var kind := "chest"      # brasa | npc | chest | pickup | ecos | bell | lore
 var id := ""
 var data := {}
 var used := false
@@ -100,6 +100,40 @@ func _ready() -> void:
 			light.energy = 0.9
 			add_child(light)
 			radius = 14.0
+		"bell":
+			spr.texture = Fx.tex("bells")
+			spr.region_enabled = true
+			var n: int = data.get("note", 0)
+			spr.region_rect = Rect2(72, 0, 24, 32)
+			spr.offset = Vector2(0, -14)
+			_bell = Sprite2D.new()
+			_bell.texture = spr.texture
+			_bell.region_enabled = true
+			_bell.region_rect = Rect2(n * 24, 0, 24, 32)
+			_bell.position = Vector2(0, -24)
+			_bell.offset = Vector2(0, 10)
+			add_child(_bell)
+			radius = 22.0
+			light = PointLight2D.new()
+			light.texture = Fx.tex("light")
+			light.color = Color(0.7, 0.55, 1.0)
+			light.texture_scale = 0.9
+			light.energy = 0.35
+			light.position = Vector2(0, -14)
+			add_child(light)
+		"lore":
+			spr.texture = Fx.tex("stele")
+			spr.region_enabled = true
+			spr.region_rect = Rect2(0, 0, 16, 26)
+			spr.offset = Vector2(0, -11)
+			radius = 22.0
+			light = PointLight2D.new()
+			light.texture = Fx.tex("light")
+			light.color = Color(0.6, 0.85, 1.0)
+			light.texture_scale = 0.7
+			light.energy = 0.5
+			light.position = Vector2(0, -12)
+			add_child(light)
 		"ecos":
 			spr.texture = Fx.tex("icon_eco")
 			spr.offset = Vector2(0, -8)
@@ -142,7 +176,18 @@ func prompt() -> String:
 			return "" if used else G.T("interact") % G.T("open")
 		"bench":
 			return G.T("interact") % G.T("contemplate")
+		"bell":
+			return G.T("interact") % G.T("ring_bell")
+		"lore":
+			return G.T("interact") % G.T("read")
 	return ""
+
+var _ring_t := 0.0
+var _bell: Sprite2D
+func ring() -> void:
+	_ring_t = 1.0
+	if light:
+		light.energy = 1.4
 
 func _process(delta: float) -> void:
 	_t += delta
@@ -157,6 +202,15 @@ func _process(delta: float) -> void:
 		"npc":
 			var f2 := int(_t * 4.0) % _frames
 			spr.region_rect = Rect2(f2 * _fw, 0, _fw, 32)
+		"bell":
+			_ring_t = max(0.0, _ring_t - delta * 0.8)
+			_bell.rotation = sin(_t * 14.0) * 0.35 * _ring_t
+			if light:
+				light.energy = lerpf(light.energy, 0.35, delta * 2.0)
+		"lore":
+			spr.region_rect = Rect2(16 if int(_t * 1.5) % 4 == 0 else 0, 0, 16, 26)
+			if light:
+				light.energy = 0.45 + 0.15 * sin(_t * 2.0)
 		"pickup", "ecos":
 			spr.position.y = sin(_t * 3.0) * 2.0
 			if randf() < 0.08:

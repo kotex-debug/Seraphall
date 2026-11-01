@@ -20,6 +20,7 @@ const PORTRAITS := {
 	"Madre Ilse": ["npc_ilse", Rect2(9, 1, 16, 16)],
 	"Nyx": ["npc_nyx", Rect2(9, 1, 16, 16)],
 	"Sor Velaria": ["npc_velaria", Rect2(9, 1, 16, 16)],
+	"Tobías": ["npc_preso", Rect2(9, 1, 16, 16)],
 	"El Coro": ["boss_singer", Rect2(0, 0, 26, 36)],
 }
 

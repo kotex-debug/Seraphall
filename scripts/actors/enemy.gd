@@ -13,6 +13,9 @@ const TYPES := {
 	"bestia": {"sheet": "enemy_bestia", "fw": 38, "fh": 28, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
 		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -12.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
+	"custodio": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 560.0, "speed": 60.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
+		"ecos": 650, "aggro": 260.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "custodio_title",
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"carcelero": {"sheet": "enemy_carcelero", "fw": 40, "fh": 40, "hp": 680.0, "speed": 46.0, "radius": 14.0, "dmg": 28.0, "poise": 130.0,
 		"ecos": 650, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",
 		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
@@ -101,14 +104,18 @@ func _ready() -> void:
 		var el := PointLight2D.new()
 		el.texture = Fx.tex("light")
 		el.color = Color(1, 0.45, 0.3) if type != "acolito" else Color(0.7, 0.45, 1)
+		if type == "custodio":
+			el.color = Color(1, 0.85, 0.5)
+			el.texture_scale = 1.4
 		el.texture_scale = 0.5
 		el.energy = 0.5
 		el.position = Vector2(0, cfg.off)
 		add_child(el)
-		_hp_bar = HpBar.new()
-		_hp_bar.position = Vector2(0, cfg.off * 2 - 6)
-		_hp_bar.visible = false
-		add_child(_hp_bar)
+		if not cfg.get("elite", false):
+			_hp_bar = HpBar.new()
+			_hp_bar.position = Vector2(0, cfg.off * 2 - 6)
+			_hp_bar.visible = false
+			add_child(_hp_bar)
 	reset_state()
 
 func reset_state() -> void:
@@ -220,6 +227,13 @@ func _choose_attack(d: float) -> String:
 			if phase == 2 and randf() < 0.4:
 				return "triple"
 			return "sweep" if d < 50.0 else "slam"
+		"custodio":
+			if d < 55.0:
+				return "sweep" if randf() < 0.6 else "slam"
+			var r := randf()
+			if r < 0.4:
+				return "charge"
+			return "fan" if r < 0.7 else "slam"
 	return "slash"
 
 func _trigger(act: String, tpos: Vector2) -> void:
@@ -288,7 +302,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			if not await _wait(0.6, my_id): return
 			_play("attack", 2)
 			Audio.sfx("enemy_shot")
-			var n := 3 if phase == 1 else 5
+			var n := 5 if type == "custodio" else (3 if phase == 1 else 5)
 			for i in n:
 				var a := dir.angle() + (i - (n - 1) / 2.0) * 0.26
 				world.spawn_projectile_local(global_position + Vector2(0, -12), Vector2.from_angle(a) * 125.0, cfg.dmg, "orb", "enemy", 1, 5.0, 3.0, 0)
@@ -394,6 +408,7 @@ func _slam_at(p: Vector2, r: float, dmg: float) -> void:
 	Fx.burst(p, Color(1, 0.55, 0.25), 22, 130.0, 0.6, "fx_px", 180.0)
 	Fx.burst(p, Color(0.5, 0.45, 0.5, 0.8), 10, 60.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6, false)
 	Fx.light_flash(p, Color(1, 0.6, 0.3), 1.6, 1.0, 0.35)
+	world.get_node("FX").add_child(Depth3D.Debris.new().setup(p, 10 if is_boss else 6, Color(0.42, 0.34, 0.38), 1.0 if is_boss else 0.7))
 	_hit_circle(p, r, dmg, Vector2.ZERO)
 
 func _wait(t: float, my_id: int) -> bool:

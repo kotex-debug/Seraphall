@@ -71,13 +71,17 @@ func _animate(delta: float) -> void:
 		s.z_index = 1 if sin(a) > 0 else -1
 		var f := int(_t * 6.0 + i) % 4
 		s.region_rect = Rect2(f * 26, i * 36, 26, 36)
-		s.scale = Vector2(1.0, 1.0) * (1.0 + (0.12 * sin(_t * 12.0 + i) if pose == "sing" else 0.0))
+		# carrusel 3D: los cantores de delante son más grandes y claros; los de atrás, pequeños y en sombra
+		var depth := sin(a) if pose != "merge" else 0.0
+		s.scale = Vector2(1.0, 1.0) * (1.0 + 0.2 * depth) * (1.0 + (0.12 * sin(_t * 12.0 + i) if pose == "sing" else 0.0))
+		s.self_modulate = Color.WHITE.lerp(Color(0.5, 0.45, 0.62), clampf(-depth, 0.0, 1.0) * 0.7)
 	if merged:
 		var gf := int(_t * 5.0) % 4
 		giant.region_rect = Rect2(gf * 72, (1 if phase >= 3 else 0) * 92, 72, 92)
 		giant.position.y = sin(_t * 2.0) * 3.0
 		giant.scale = Vector2(1, 1) * (1.0 + (0.05 * sin(_t * 16.0) if pose == "sing" else 0.0))
 	rig.scale.x = 1.0
+	Depth3D.lean_rig(rig, global_position, Depth3D.cam_center(self), 22.0 + (40.0 if merged else 0.0))
 	_light.energy = 1.0 + 0.3 * sin(_t * 4.0) + (0.6 if pose == "sing" else 0.0)
 	if randf() < 0.25:
 		var nc := Color(0.8, 0.6, 1.0) if phase < 3 else Color(1, 0.5, 0.6)

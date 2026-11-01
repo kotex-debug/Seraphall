@@ -1575,8 +1575,11 @@ class MapView extends Control:
 			draw_rect(Rect2(Vector2(0, gy), Vector2(size.x, 1)), Color(1, 1, 1, 0.025))
 		var cur: String = world.current_area()
 		var tex: ImageTexture = world.map_texture()
-		# sombra y mapa
-		draw_texture_rect(tex, Rect2(OFF + Vector2(2, 2), Vector2(96, 96) * SC), false, Color(0, 0, 0, 0.6))
+		# sombra, grosor de las plataformas (extrusión hacia abajo) y mapa
+		draw_texture_rect(tex, Rect2(OFF + Vector2(5, 9), Vector2(96, 96) * SC), false, Color(0, 0, 0, 0.45))
+		for k in range(6, 0, -1):
+			var ek := float(k) / 6.0
+			draw_texture_rect(tex, Rect2(OFF + Vector2(0, k), Vector2(96, 96) * SC), false, Color(0.32 - 0.2 * ek, 0.2 - 0.14 * ek, 0.28 - 0.18 * ek, 1.0))
 		draw_texture_rect(tex, Rect2(OFF, Vector2(96, 96) * SC), false)
 		# borde punteado de salas vecinas sin explorar
 		for r in world.ROOMS:
@@ -1673,6 +1676,22 @@ class MapView extends Control:
 						draw_line(mp + Vector2(3, -3), mp + Vector2(-3, 3), UIKit.INK, 2.0)
 					else:
 						draw_arc(mp, 9.0 + fmod(t * 8.0, 6.0), 0, TAU, 16, Color(mc, 0.6 - fmod(t * 8.0, 6.0) / 10.0), 1.0)
+				"trial", "trial_done":
+					var done: bool = m[0] == "trial_done"
+					var tcol := UIKit.GOLD if done else UIKit.RED.lerp(UIKit.PINK, 0.5 + 0.5 * sin(t * 5.0))
+					draw_line(mp + Vector2(-4, -4), mp + Vector2(4, 4), UIKit.INK, 4.0)
+					draw_line(mp + Vector2(4, -4), mp + Vector2(-4, 4), UIKit.INK, 4.0)
+					draw_line(mp + Vector2(-4, -4), mp + Vector2(4, 4), tcol, 2.0)
+					draw_line(mp + Vector2(4, -4), mp + Vector2(-4, 4), tcol, 2.0)
+					if not done:
+						draw_arc(mp, 7.0 + fmod(t * 6.0, 5.0), 0, TAU, 14, Color(tcol, 0.5 - fmod(t * 6.0, 5.0) / 10.0), 1.0)
+				"lock":
+					draw_rect(Rect2(mp - Vector2(4, 1), Vector2(8, 6)), UIKit.INK)
+					draw_rect(Rect2(mp - Vector2(3, 0), Vector2(6, 4)), mc)
+					draw_arc(mp + Vector2(0, -1), 3.0, PI, TAU, 8, UIKit.INK, 2.0)
+				"lore":
+					draw_rect(Rect2(mp - Vector2(2, 4), Vector2(5, 8)), UIKit.INK)
+					draw_rect(Rect2(mp - Vector2(1, 3), Vector2(3, 6)), mc)
 				"ally":
 					draw_rect(Rect2(mp - Vector2(3, 3), Vector2(6, 6)), UIKit.INK)
 					draw_rect(Rect2(mp - Vector2(2, 2), Vector2(4, 4)), mc)
@@ -1697,7 +1716,7 @@ class MapView extends Control:
 		# panel de leyenda (izquierda)
 		UIKit.frame(self, Rect2(4, 4, 136, size.y - 8), UIKit.RED_DARK, Color(0.08, 0.03, 0.1, 0.85), 3.0, -1.0)
 		_str(Vector2(12, 18), G.T("stratum1"), UIKit.GOLD, 8)
-		var ly := 34.0
+		var ly := 31.0
 		for a in world.AREA_COLORS:
 			var seen_any := centers.has(a)
 			var nm2 := G.T(a).to_upper() if seen_any else "???"
@@ -1707,18 +1726,29 @@ class MapView extends Control:
 			draw_rect(Rect2(Vector2(12, ly - 6), Vector2(6, 6)), UIKit.INK)
 			draw_rect(Rect2(Vector2(13, ly - 5), Vector2(4, 4)), ac)
 			_str(Vector2(22, ly), nm2, UIKit.WHITE if seen_any else UIKit.TEXT_DIM, 10, "title")
-			ly += 15.0
-		ly += 6.0
-		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos perdidos", "Lost echoes"])]]
-		for lg in legend:
-			var lp2 := Vector2(15, ly - 3)
+			ly += 12.0
+		ly += 5.0
+		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["trial", G.L(["Prueba", "Trial"])],
+			["lock", G.L(["Cerrado", "Sealed"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos", "Echoes"])], ["lore", G.L(["Inscripción", "Inscription"])]]
+		var ly0 := ly
+		for li in legend.size():
+			var lg: Array = legend[li]
+			var colx := 0.0 if li < 4 else 66.0
+			ly = ly0 + (li % 4) * 12.0
+			var lp2 := Vector2(15 + colx, ly - 3)
 			match lg[0]:
 				"brasa": draw_colored_polygon(PackedVector2Array([lp2 + Vector2(0, -4), lp2 + Vector2(3, 2), lp2 + Vector2(-3, 2)]), UIKit.GOLD)
 				"npc": draw_circle(lp2, 3.0, UIKit.CYAN)
 				"boss": UIKit.diamond(self, lp2, 4.0, UIKit.RED)
 				"chest": draw_rect(Rect2(lp2 - Vector2(2, 1), Vector2(5, 3)), UIKit.GOLD)
 				"ecos": UIKit.diamond(self, lp2, 3.0, Color(0.5, 0.85, 1.0))
-			_str(Vector2(24, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
-			ly += 13.0
+				"trial":
+					draw_line(lp2 + Vector2(-3, -3), lp2 + Vector2(3, 3), UIKit.RED, 2.0)
+					draw_line(lp2 + Vector2(3, -3), lp2 + Vector2(-3, 3), UIKit.RED, 2.0)
+				"lock":
+					draw_rect(Rect2(lp2 - Vector2(3, 0), Vector2(6, 4)), Color(0.75, 0.7, 0.8))
+					draw_arc(lp2, 2.0, PI, TAU, 6, Color(0.75, 0.7, 0.8), 1.0)
+				"lore": draw_rect(Rect2(lp2 - Vector2(1, 3), Vector2(3, 6)), Color(0.6, 0.85, 1.0))
+			_str(Vector2(24 + colx, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
 		if Prog.item_count("map_carto") == 0:
 			_str(Vector2(10, size.y - 12), G.L(["Sin cartografía: cofres ocultos", "No cartography: chests hidden"]), UIKit.PINK, 10, "title")

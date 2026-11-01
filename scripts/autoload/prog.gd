@@ -277,8 +277,10 @@ const QUESTS := {
 		"steps": [
 			{"id": "brasa", "text": ["Enciende la Brasa del Santuario", "Kindle the Sanctuary Ember"]},
 			{"id": "talk_brenna", "text": ["Habla con Brenna, la herrera", "Talk to Brenna, the smith"]},
+			{"id": "trial_celdas", "text": ["Sobrevive a las Celdas de Espera, al oeste del Pasillo", "Survive the Waiting Cells, west of the Hall"]},
 			{"id": "kill_carcelero", "text": ["Derrota al Carcelero y toma su llave", "Defeat the Jailer and take his key"]},
-			{"id": "enter_circle", "text": ["Cruza la puerta sellada", "Pass through the sealed gate"]},
+			{"id": "trial_umbral", "text": ["Sube la Escalinata y vence al Custodio del Umbral", "Climb the Stairway and defeat the Threshold Warden"]},
+			{"id": "enter_circle", "text": ["Cruza la puerta de luz", "Pass through the gate of light"]},
 			{"id": "kill_seravel", "text": ["Derrota a Seravel, Guardiana de las Puertas", "Defeat Seravel, Warden of the Gates"]},
 		],
 		"reward": {"ecos": 0, "sp": 2}},
@@ -292,7 +294,7 @@ const QUESTS := {
 		"count": 1, "text": ["Encuentra el mapa en la Galería Rota (%d/%d)", "Find the map in the Broken Gallery (%d/%d)"],
 		"reward": {"ecos": 200, "flask": 1}},
 	"choir": {"type": "bounty", "title": ["Silencio en la Galería", "Silence in the Gallery"], "giver": "velaria",
-		"count": 1, "text": ["Derrota al Coro Hueco al norte de la Galería Rota (%d/%d)", "Defeat the Hollow Choir north of the Broken Gallery (%d/%d)"],
+		"count": 1, "text": ["Resuelve el Atrio de las Voces y derrota al Coro Hueco (%d/%d)", "Solve the Atrium of Voices and defeat the Hollow Choir (%d/%d)"],
 		"reward": {"ecos": 600, "sp": 1}},
 	"jailer_hunt": {"type": "bounty", "title": ["Caza: El Carcelero", "Hunt: The Jailer"], "giver": "brenna",
 		"count": 1, "text": ["Derrota al Carcelero (%d/%d)", "Defeat the Jailer (%d/%d)"],
@@ -658,8 +660,14 @@ func quest_step(id: String, step_id: String) -> void:
 		return
 	var q: Dictionary = QUESTS[id]
 	var st: int = quests[id].step
-	if st < q.steps.size() and q.steps[st].id == step_id:
-		quests[id].step = st + 1
+	var found := -1
+	for i in range(st, q.steps.size()):
+		if q.steps[i].id == step_id:
+			found = i
+			break
+	if found >= 0:
+		quests[id].step = found + 1
+		st = found
 		Audio.sfx("quest", -4.0)
 		if quests[id].step >= q.steps.size():
 			_complete(id)
