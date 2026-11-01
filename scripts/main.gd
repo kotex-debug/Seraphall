@@ -1052,11 +1052,19 @@ func _run_autotest() -> void:
 			await get_tree().create_timer(1.0).timeout
 			for kt in ["hueco", "acolito", "guardia", "carcelero"]:
 				Prog.flags["killed_" + kt] = true
+			for ak in ["first_blood", "jailer", "secret", "bells"]:
+				Prog.flags["ach_" + ak] = true
 			for tb in ["char", "skills", "inventory", "weapons", "quests", "codex", "map", "options"]:
 				w.menu.open(tb, {"brasa": true, "forge": true})
 				await get_tree().create_timer(0.8).timeout
 				await _shot(out + "/m_%s.png" % tb)
 				w.menu.close()
+				if tb == "codex":
+					w.menu.open("codex", {})
+					w.menu._on_codex("_ach")
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_logros.png")
+					w.menu.close()
 			print("AUTOTEST_MENUS_OK")
 			get_tree().quit()
 		"flow":

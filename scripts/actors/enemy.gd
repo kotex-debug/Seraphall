@@ -546,6 +546,15 @@ func die() -> void:
 	velocity = Vector2.ZERO
 	anim = "dead"
 	Prog.flags["killed_" + type] = true
+	if world and world.local_player() and G.autotest != "flow":
+		if not is_boss:
+			Prog.achieve("first_blood")
+		elif type == "carcelero":
+			Prog.achieve("jailer")
+		elif type == "choir":
+			Prog.achieve("choir")
+		elif type == "seravel":
+			Prog.achieve("seravel")
 	if _hp_bar:
 		_hp_bar.visible = false
 	Audio.sfx("die")

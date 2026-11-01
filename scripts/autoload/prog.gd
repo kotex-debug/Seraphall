@@ -344,6 +344,36 @@ var shadow := {}                # sombra activa {"amount", "pos"}
 var weapon_kills := {}          # arma -> {tipo: bajas}
 var oath := ""                  # juramento activo (jefe)
 var spared := {}                # Arcontes perdonados
+
+# ------------------------------------------------------------------ logros
+const ACHIEVEMENTS := {
+	"first_blood": [["Primera Sangre", "First Blood"], ["Derrota a tu primer enemigo.", "Defeat your first enemy."]],
+	"jailer": [["Sin Llave", "Keyless"], ["Derrota al Carcelero.", "Defeat the Jailer."]],
+	"choir": [["Silencio", "Silence"], ["Haz callar al Coro Hueco.", "Silence the Hollow Choir."]],
+	"seravel": [["Las Puertas", "The Gates"], ["Derrota a Seravel, Guardiana de las Puertas.", "Defeat Seravel, Warden of the Gates."]],
+	"spare": [["Misericordia", "Mercy"], ["Perdona a un Arconte.", "Spare an Archon."]],
+	"secret": [["Lo que se oculta", "What Lies Hidden"], ["Descubre la Capilla Olvidada.", "Discover the Forgotten Chapel."]],
+	"bells": [["Al Revés", "Backwards"], ["Tañe el Himno de la Vigilia como lo cantaba el Coro.", "Ring the Hymn of the Vigil as the Choir sang it."]],
+	"trials": [["Digno del Juicio", "Worthy of Judgement"], ["Supera las tres pruebas de las antesalas.", "Clear all three antechamber trials."]],
+	"executioner": [["Verdugo", "Executioner"], ["Ejecuta a 10 enemigos.", "Execute 10 enemies."]],
+	"featherless": [["Desplumado", "Featherless"], ["Quédate con 3 plumas o menos.", "Be left with 3 feathers or fewer."]],
+	"hymn": [["El Himno Completo", "The Whole Hymn"], ["Reúne las tres páginas del himno.", "Gather all three hymn pages."]],
+	"memories": [["Lo Que Fui", "What I Was"], ["Recupera 4 recuerdos.", "Recover 4 memories."]],
+}
+
+func achieve(id: String) -> void:
+	if flags.get("ach_" + id, false) or not ACHIEVEMENTS.has(id):
+		return
+	flags["ach_" + id] = true
+	G.pickup("icon_quest", G.L(["LOGRO: ", "ACHIEVEMENT: "]) + G.L(ACHIEVEMENTS[id][0]).to_upper(), Color(1, 0.85, 0.35))
+	Audio.sfx("levelup", -10.0)
+
+func achievements_count() -> int:
+	var n := 0
+	for k in ACHIEVEMENTS:
+		if flags.get("ach_" + k, false):
+			n += 1
+	return n
 var synergies := {}             # sinergias descubiertas
 var ng := 0                     # Segundo Descenso (NG+)
 var spark := false              # Chispa, la brasa viva
@@ -640,6 +670,8 @@ func grant_ascension(boss: String, level: int) -> void:
 	changed.emit()
 
 func unlock_memory(id: String) -> bool:
+	if memories.size() >= 3:
+		achieve("memories")
 	if memories.has(id):
 		return false
 	memories[id] = true
@@ -708,6 +740,8 @@ func _complete(id: String) -> void:
 		add_weapon(r.weapon)
 	if r.has("item"):
 		add_item(r.item)
+	if id == "hymns":
+		achieve("hymn")
 	Audio.sfx("levelup")
 	G.toast(G.T("quest_done") + ": " + G.L(QUESTS[id].title), Color(1.0, 0.85, 0.4))
 

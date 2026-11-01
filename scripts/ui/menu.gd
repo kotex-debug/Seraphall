@@ -616,8 +616,24 @@ func _build_codex() -> void:
 		var b := _btn(nm.to_upper() if known else nm, Vector2(12, y), _on_codex.bind(e[0]), true, 176)
 		if e[0] == _codex_sel:
 			b.add_theme_color_override("font_color", UIKit.GOLD)
-		y += 31.0
+		y += 29.0
+	var ab := _btn(G.L(["LOGROS", "ACHIEVEMENTS"]) + "  %d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()], Vector2(12, 266), _on_codex.bind("_ach"), true, 176)
+	if _codex_sel == "_ach":
+		ab.add_theme_color_override("font_color", UIKit.GOLD)
 	_panel(Rect2(210, 0, 390, 296), UIKit.PURPLE)
+	if _codex_sel == "_ach":
+		var yy := 14.0
+		var i := 0
+		for k in Prog.ACHIEVEMENTS:
+			var got: bool = Prog.flags.get("ach_" + k, false)
+			var a: Array = Prog.ACHIEVEMENTS[k]
+			var x := 222.0 + (i % 2) * 190.0
+			_lbl(("+ " if got else "- ") + G.L(a[0]).to_upper(), Vector2(x, yy), 8, UIKit.GOLD if got else UIKit.TEXT_DIM, 180, "head")
+			_lbl(G.L(a[1]), Vector2(x + 10, yy + 12), 10, UIKit.WHITE if got else Color(0.5, 0.45, 0.55), 175, "title")
+			if i % 2 == 1:
+				yy += 44.0
+			i += 1
+		return
 	for e2 in CODEX:
 		if e2[0] != _codex_sel:
 			continue

@@ -2101,6 +2101,8 @@ func on_local_player_died(p: Player) -> void:
 	Fx.burst(p.global_position + Vector2(0, -12), wc, 28, 160.0, 1.8, "fx_feather", 180.0, Vector2.UP, 1.3, false, Vector2(0, 45))
 	var had := Prog.wing_feathers
 	Prog.lose_wing_feather()
+	if Prog.wing_feathers <= 3:
+		Prog.achieve("featherless")
 	if had > 0:
 		get_tree().create_timer(1.5).timeout.connect(_feather_torn_msg)
 	# Ecos: si ya había Ecos sin recuperar, se convierten en tu Sombra
@@ -2563,6 +2565,7 @@ func _spare_boss(idx: int) -> void:
 	var e: Enemy = enemies[idx]
 	e.set_meta("spared", true)
 	Prog.spared[e.type] = true
+	Prog.achieve("spare")
 	Prog.skill_points += 1
 	G.flash(Color(1, 0.95, 0.75, 0.7), 0.6)
 	G.slowmo("spare", 0.3, 1.0)
@@ -3132,6 +3135,9 @@ func _execute(p: Player, e: Enemy) -> void:
 	request_damage_enemy(e, dmg, dir, 0.0, true)
 	p.hp = min(Prog.max_hp(), p.hp + Prog.max_hp() * 0.06)
 	p.wrath = min(100.0, p.wrath + 18.0)
+	Prog.flags["executions"] = int(Prog.flags.get("executions", 0)) + 1
+	if int(Prog.flags.executions) >= 10:
+		Prog.achieve("executioner")
 
 func hit_breakables(origin: Vector2, rng: float) -> void:
 	for bw in breakables.values():
@@ -3151,6 +3157,7 @@ func _hit_breakable(id: String) -> void:
 	if bw.hp <= 0:
 		wflags["broken_" + id] = true
 		Prog.flags["broken_" + id] = true
+		Prog.achieve("secret")
 		bw.set_broken(false)
 		hud.big_message(G.L(["PASADIZO SECRETO", "SECRET PASSAGE"]), Color(0.7, 1.0, 0.85), 2.2)
 		if multiplayer.is_server():
@@ -3444,6 +3451,8 @@ func _trial_complete(id: String) -> void:
 	_trial_wave = -1
 	wflags["trial_" + id] = true
 	Prog.flags["trial_" + id] = true
+	if trial_done("celdas") and trial_done("atrio") and trial_done("umbral"):
+		Prog.achieve("trials")
 	unseal_arena()
 	_refresh_locks(false)
 	_ensure_trial_chest(id, true)
@@ -3493,6 +3502,9 @@ func _atrio_solved() -> void:
 	_bell_seq.clear()
 	wflags["trial_atrio"] = true
 	Prog.flags["trial_atrio"] = true
+	Prog.achieve("bells")
+	if trial_done("celdas") and trial_done("umbral"):
+		Prog.achieve("trials")
 	_refresh_locks(false)
 	hud.big_message(G.T("atrio_solved"), Color(0.8, 0.65, 1.0), 2.6)
 	Audio.sfx("levelup")
