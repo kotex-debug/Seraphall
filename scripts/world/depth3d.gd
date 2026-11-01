@@ -219,7 +219,7 @@ class Abyss extends Node2D:
 		_flash = 1.0
 		var tree := get_tree()
 		if tree:
-			tree.create_timer(randf_range(0.5, 1.1)).timeout.connect(func(): Audio.sfx("slam", -24.0, 0.25))
+			tree.create_timer(randf_range(0.5, 1.1)).timeout.connect(func(): Audio.sfx("thunder", -14.0, 0.18))
 	func _colossus(cam: Vector2, base: Vector2, sc: float, flip: bool, t: float) -> void:
 		## Estatua colosal de un ángel orante que emerge del abismo, muy lejos (paralaje profundo)
 		var f := 0.42

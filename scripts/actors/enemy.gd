@@ -336,6 +336,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 		"tears":
 			# alza el vial y tres lágrimas enormes caen desde lo alto sobre ti (sombra de aviso en el suelo)
 			_play("attack", 0)
+			Audio.sfx("wail", -9.0, 0.12)
 			Fx.light_flash(global_position + Vector2(0, -20), Color(0.5, 0.85, 1.0), 1.0, 0.6, 0.7)
 			_tell(0.55, Color(0.55, 0.85, 1.0))
 			if not await _wait(0.4, my_id): return
