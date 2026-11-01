@@ -774,6 +774,14 @@ func _run_autotest() -> void:
 			w.menu.close()
 			print("AUTOTEST_PROMO7_OK")
 			get_tree().quit()
+		"death":
+			var lp: Player = w.local_player()
+			lp.respawn_at(w.tile_pos(46, 64))
+			await get_tree().create_timer(1.0).timeout
+			lp.take_hit(9999.0, Vector2.RIGHT, -1)
+			await get_tree().create_timer(2.0, true, false, true).timeout
+			await _shot(out + "/x01_muerte.png")
+			get_tree().quit()
 		"v8":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

@@ -218,6 +218,12 @@ func big_message(text: String, color: Color, dur := 2.5, slow := false) -> void:
 	b.size = Vector2(640, 360)
 	big_layer.add_child(b)
 
+func death_screen(feathers_before: int) -> void:
+	var d := DeathScreen.new()
+	d.size = Vector2(640, 360)
+	d.feathers = feathers_before
+	big_layer.add_child(d)
+
 func subtitle(speaker: String, text: String, dur := 3.0) -> void:
 	sub_label.text = (speaker + ": " if speaker != "" else "") + text
 	var tw := sub_label.create_tween()
@@ -1630,3 +1636,86 @@ class PickupFeed extends Control:
 			f.draw_string_outline(get_canvas_item(), Vector2(x + 20, y + 12), it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color(UIKit.INK, a))
 			f.draw_string(get_canvas_item(), Vector2(x + 20, y + 12), it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(col.lerp(Color.WHITE, 0.3), a))
 			y -= 19.0
+
+
+class DeathScreen extends Control:
+	## Pantalla de caída: viñeta roja que late, grietas, "HAS CAÍDO" y tus plumas, una de ellas arrancada
+	var feathers := 10
+	var _t := 0.0
+	var _pt: UIKit.PixelText
+	var _line := ""
+	const LINES := [
+		["La Voz se ríe en algún lugar muy abajo.", "The Voice laughs somewhere far below."],
+		["La Brasa te llama. Siempre te llama.", "The Ember calls you. It always does."],
+		["Un recuerdo se te escapa entre los dedos.", "A memory slips through your fingers."],
+		["Tus alas pesan un poco menos. Eso no es bueno.", "Your wings weigh a little less. That is not good."],
+		["Aquí nadie muere del todo.", "Here, no one ever fully dies."],
+	]
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_line = G.L(LINES[randi() % LINES.size()])
+		_pt = UIKit.pixel_text(G.T("you_died"), 52, "logo", Color(0.9, 0.12, 0.15))
+		_pt.align = 1
+		_pt.size = Vector2(640, 56)
+		_pt.position = Vector2(0, 128)
+		_pt.appear = 0.0
+		_pt.extrude = 6
+		_pt.extrude_color = Color(0.25, 0.02, 0.05)
+		_pt.outline = 8
+		_pt.wave = 1.5
+		add_child(_pt)
+		var tw := create_tween()
+		tw.tween_property(_pt, "appear", float(G.T("you_died").length()) + 1.0, 1.0)
+		tw.tween_interval(1.9)
+		tw.tween_property(self, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(queue_free)
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var a := clampf(_t / 0.6, 0.0, 1.0)
+		# oscurecer y viñeta roja que late
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.0, 0.02, 0.45 * a))
+		var pulse := 0.5 + 0.5 * sin(_t * 5.0)
+		for i in 12:
+			var k := 1.0 - i / 12.0
+			var c := Color(0.55, 0.0, 0.05, (0.06 + 0.04 * pulse) * k * a)
+			draw_rect(Rect2(i * 7, 0, 7, 360), c)
+			draw_rect(Rect2(640 - (i + 1) * 7, 0, 7, 360), c)
+			draw_rect(Rect2(0, i * 5, 640, 5), c)
+			draw_rect(Rect2(0, 360 - (i + 1) * 5, 640, 5), c)
+		# grietas que se extienden desde las esquinas
+		var g := clampf(_t / 0.8, 0.0, 1.0)
+		for corner in [Vector2(0, 0), Vector2(640, 0), Vector2(0, 360), Vector2(640, 360)]:
+			var dir = (Vector2(320, 180) - corner).normalized()
+			var p = corner
+			for k2 in 6:
+				var nxt = p + dir.rotated(sin(k2 * 2.3 + corner.x) * 0.6) * 22.0 * g
+				draw_line(p, nxt, Color(0.02, 0.0, 0.02, 0.8 * a), 2.0)
+				p = nxt
+		# banda central
+		var h := 70.0 * a
+		draw_rect(Rect2(Vector2(0, 158 - h / 2.0), Vector2(640, h)), Color(0, 0, 0, 0.55))
+		# las plumas que te quedan (la última, arrancada)
+		var n := clampi(feathers, 0, 10)
+		var wc := Look.color_of(G.look, "wing")
+		var total_w := 10 * 14.0
+		for i in 10:
+			var fp := Vector2(320 - total_w / 2.0 + i * 14.0 + 7.0, 214.0)
+			var have := i < n - 1
+			var torn := i == n - 1
+			var col := wc if have else Color(0.25, 0.12, 0.18)
+			if torn:
+				var k3 := clampf((_t - 0.9) / 1.2, 0.0, 1.0)
+				fp += Vector2(k3 * 22.0, k3 * k3 * 50.0)
+				col = Color(wc, 1.0 - k3)
+			var rot := (_t * 4.0 if torn and _t > 0.9 else 0.0)
+			draw_set_transform(fp, rot, Vector2.ONE)
+			draw_colored_polygon(PackedVector2Array([Vector2(0, -7), Vector2(3, -1), Vector2(0, 7), Vector2(-3, -1)]), col)
+			draw_line(Vector2(0, -7), Vector2(0, 9), Color(0.1, 0.05, 0.08, col.a), 1.0)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var f := UIKit.font("title")
+		var la := clampf((_t - 1.1) / 0.5, 0.0, 1.0)
+		var w := f.get_string_size(_line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		f.draw_string_outline(get_canvas_item(), Vector2(320 - w / 2.0, 244), _line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, Color(0, 0, 0, la))
+		f.draw_string(get_canvas_item(), Vector2(320 - w / 2.0, 244), _line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.95, 0.8, 0.8, la))

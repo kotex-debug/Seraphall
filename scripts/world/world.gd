@@ -2049,7 +2049,7 @@ func on_local_player_died(p: Player) -> void:
 	Audio.sfx("die")
 	Audio.sfx("feather_tear", -2.0, 0.0)
 	Audio.play_music("gameover", 0.4)
-	hud.big_message(G.T("you_died"), Color(0.85, 0.15, 0.15), 3.0, true)
+	hud.death_screen(Prog.wing_feathers)
 	G.slowmo("death", 0.3, 1.2)
 	Prog.deaths += 1
 	if active_boss and is_instance_valid(active_boss):
