@@ -539,7 +539,14 @@ func _build_props() -> void:
 	_prop("rubble", tile_pos(78, 64), 3, 0); _prop("rubble", tile_pos(87, 58), 3, 1)
 	# Patio del Carcelero
 	for p in [Vector2(39, 33), Vector2(59, 33), Vector2(39, 44), Vector2(59, 44)]:
-		_prop("pillar", tile_pos(p.x, p.y), 2, 0, 5.0)
+		var yc := Depth3D.Column.new()
+		yc.position = tile_pos(p.x, p.y)
+		yc.height = 66.0
+		yc.radius = 6.0
+		yc.stone = Color(0.5, 0.44, 0.46)
+		yc.gold = Color(0.55, 0.32, 0.2)
+		yc.broken = p.y > 40
+		entities.add_child(yc)
 		_prop("candle", tile_pos(p.x + (1 if p.x < 49 else -1), p.y), 4, 3, 0.0, Color(1, 0.5, 0.25), 1.2)
 	# Círculo de la Guardiana: anillo dorado y braseros
 	var ring := ArenaRing.new()
@@ -612,6 +619,16 @@ func _build_arena_decor() -> void:
 	# --- Nave del Coro: órganos, velas azules, vitrales
 	for o in [Vector2(78, 31), Vector2(86, 31)]:
 		_prop("organ", tile_pos(o.x, o.y), 1, 0, 8.0)
+	# tubos de órgano gigantes alrededor de la nave (columnas en perspectiva)
+	for i in 6:
+		var a := PI + PI * i / 5.0
+		var pc := Depth3D.Column.new()
+		pc.position = tile_pos(82, 37) + Vector2(cos(a) * 112.0, sin(a) * 96.0 + 30.0)
+		pc.height = 84.0 + (i % 2) * 18.0
+		pc.radius = 4.0
+		pc.stone = Color(0.55, 0.45, 0.72)
+		pc.gold = Color(0.85, 0.85, 0.95)
+		entities.add_child(pc)
 	for cv in [Vector2(76, 34), Vector2(88, 34), Vector2(76, 41), Vector2(88, 41), Vector2(82, 30.5)]:
 		_prop("candle", tile_pos(cv.x, cv.y), 4, int(cv.x) % 4, 0.0, Color(0.6, 0.5, 1.0), 1.5)
 	for bc in [Vector2(80, 30), Vector2(84, 30)]:
