@@ -919,7 +919,8 @@ func _build_map() -> void:
 func _build_options() -> void:
 	_panel(Rect2(140, 0, 320, 296), UIKit.RED)
 	_btn(G.T("resume").to_upper(), Vector2(200, 16), close, true, 200)
-	_btn(G.T("language").to_upper(), Vector2(200, 44), G.toggle_language, true, 200)
+	_btn(G.T("language").to_upper(), Vector2(152, 44), G.toggle_language, true, 144)
+	_btn(G.fs_label().to_upper(), Vector2(304, 44), _on_fullscreen, true, 144)
 	_lbl(G.T("music_vol").to_upper(), Vector2(160, 82), 8, UIKit.WHITE, 0.0, "head")
 	var ms := HSlider.new()
 	ms.position = Vector2(300, 80)
@@ -972,6 +973,10 @@ func _on_access(v: float, which: String) -> void:
 	else:
 		G.flash_mult = v
 	G.save_settings()
+
+func _on_fullscreen() -> void:
+	G.toggle_fullscreen()
+	_rebuild(false)
 
 func _on_tele() -> void:
 	G.tele_boost = not G.tele_boost

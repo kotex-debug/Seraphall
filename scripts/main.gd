@@ -160,6 +160,8 @@ func _on_title_action(act: String, arg: String) -> void:
 			title.set_status(G.T("connecting") if err == OK else G.T("conn_failed"))
 		"lang":
 			G.toggle_language()
+		"fullscreen":
+			G.toggle_fullscreen()
 		"back":
 			Net.close()
 			title.show_main_menu()

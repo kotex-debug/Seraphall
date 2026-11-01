@@ -27,6 +27,7 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 | Modo foto (WASD mover, Q/E zoom, F12 captura) | P | - |
 | Interactuar / revivir | F | B |
 | Menú (personaje, árbol, armas, misiones, **controles**) | Tab | Select |
+| Pantalla completa | F11 o Alt+Intro | - |
 
 Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar solo tienes el ataque básico: la **Lanza** se consigue al encender la Brasa del Santuario, la **Nova** en el árbol de habilidades y la **Ira Seráfica** al vencer al Carcelero.
 
@@ -40,6 +41,7 @@ Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
 
 ## 🧪 Versión ALFA 0.7
+- **Pantalla completa** (F11, Alt+Intro, o desde el inicio y Opciones; se recuerda) y **nuevo icono** de la aplicación.
 - **Salas antes de cada jefe**: *Las Celdas de Espera* (tres oleadas que salen de las celdas, el preso Tobías y un atajo), *El Atrio de las Voces* (puzle de campanas que hay que tañer «al revés») y *La Escalinata y la Antesala del Juicio* (Brasa nueva y el mini-jefe **El Custodio del Umbral**).
 - **Barras de jefe épicas** con marco propio (cadenas, tubos de órgano, plumas de oro), nombre que se escribe letra a letra, daño acumulado, muescas de fase que se rompen y estallido final.
 - **Más 3D**: pilares y estatuas que se inclinan en perspectiva, abismo con capas de paralaje, faldones de roca con profundidad, pozos con cadenas y de luz, escombros con altura.

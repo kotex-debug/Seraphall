@@ -16,6 +16,7 @@ var autotest := ""  # modo de prueba automática (línea de comandos)
 var look := {}          # aspecto del personaje (creador)
 # accesibilidad
 var shake_mult := 1.0
+var fullscreen := false
 var flash_mult := 1.0
 var tele_boost := false   # telegráficos más gruesos y visibles
 var photo_mode := false
@@ -35,6 +36,9 @@ const TXT := {
 	"host": ["Crear partida cooperativa", "Host co-op game"],
 	"join": ["Unirse con código", "Join with code"],
 	"language": ["Idioma: Español", "Language: English"],
+	"fullscreen_on": ["Pantalla: Completa", "Display: Fullscreen"],
+	"fullscreen_off": ["Pantalla: Ventana", "Display: Windowed"],
+	"fullscreen_hint": ["F11 o Alt+Intro: pantalla completa", "F11 or Alt+Enter: fullscreen"],
 	"quit": ["Salir", "Quit"],
 	"back": ["Volver", "Back"],
 	"enter_code": ["Introduce el código de partida (o la IP del anfitrión)", "Enter the game code (or the host's IP)"],
@@ -244,6 +248,41 @@ func _ready() -> void:
 		if a.begins_with("--autotest="):
 			autotest = a.substr(11)
 	_setup_input()
+	if fullscreen and autotest == "" and DisplayServer.get_name() != "headless":
+		apply_fullscreen.call_deferred()
+
+# ------------------------------------------------------------------ pantalla completa
+func fs_label() -> String:
+	return T("fullscreen_on") if fullscreen else T("fullscreen_off")
+
+func toggle_fullscreen() -> void:
+	fullscreen = not fullscreen
+	apply_fullscreen()
+	save_settings()
+	language_changed.emit()   # refresca los textos que muestran el modo de pantalla
+
+func apply_fullscreen() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var scr := DisplayServer.window_get_current_screen()
+		var ss := DisplayServer.screen_get_size(scr)
+		var ws := Vector2i(1280, 720)
+		if ss.x >= 1920 * 1.2 and ss.y >= 1080 * 1.2:
+			ws = Vector2i(1920, 1080)
+		DisplayServer.window_set_size(ws)
+		DisplayServer.window_set_position(DisplayServer.screen_get_position(scr) + (ss - ws) / 2)
+
+func _input(event: InputEvent) -> void:
+	## F11 o Alt+Intro cambian entre ventana y pantalla completa en cualquier momento
+	if event is InputEventKey and event.pressed and not event.echo:
+		var k: int = event.keycode
+		if k == KEY_F11 or ((k == KEY_ENTER or k == KEY_KP_ENTER) and event.alt_pressed):
+			toggle_fullscreen()
+			get_viewport().set_input_as_handled()
 
 func load_settings() -> void:
 	var cf := ConfigFile.new()
@@ -256,6 +295,7 @@ func load_settings() -> void:
 		flash_mult = cf.get_value("access", "flash", 1.0)
 		tele_boost = cf.get_value("access", "tele", false)
 		bindings = cf.get_value("controls", "bindings", {})
+		fullscreen = cf.get_value("video", "fullscreen", false)
 	else:
 		lang = "es"
 
@@ -269,6 +309,7 @@ func save_settings() -> void:
 	cf.set_value("access", "flash", flash_mult)
 	cf.set_value("access", "tele", tele_boost)
 	cf.set_value("controls", "bindings", bindings)
+	cf.set_value("video", "fullscreen", fullscreen)
 	cf.save(SETTINGS_PATH)
 
 func _setup_input() -> void:
