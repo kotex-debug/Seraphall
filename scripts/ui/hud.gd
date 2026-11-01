@@ -943,9 +943,10 @@ class ToastBand extends Control:
 	func _draw() -> void:
 		var f := UIKit.font("title")
 		var fs := 10
-		var lines := text.length() > 64
-		var tw := minf(f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x, 420.0)
-		var h := 14.0 if not lines else 26.0
+		var full := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var tw := minf(full, 300.0)
+		var nl := clampi(ceili(full / 290.0), 1, 3)
+		var h := 14.0 if nl == 1 else 2.0 + 12.0 * nl
 		custom_minimum_size.y = h + 2
 		var r := Rect2(Vector2(150 - tw / 2 - 10, 0), Vector2(tw + 20, h))
 		UIKit.slash_band(self, Rect2(r.position + Vector2(2, 2), r.size), Color(0, 0, 0, 0.5), 5.0)
@@ -953,7 +954,7 @@ class ToastBand extends Control:
 		UIKit.slash_band(self, Rect2(r.position, Vector2(r.size.x, 2)), color, 1.0)
 		var sx := fmod(_t * 120.0, r.size.x + 20.0) - 10.0
 		draw_rect(Rect2(r.position + Vector2(sx, 0), Vector2(3, h)), Color(1, 1, 1, 0.12))
-		f.draw_multiline_string(get_canvas_item(), r.position + Vector2(10, 10), text, HORIZONTAL_ALIGNMENT_CENTER, tw, fs, 2, color)
+		f.draw_multiline_string(get_canvas_item(), r.position + Vector2(10, 10), text, HORIZONTAL_ALIGNMENT_CENTER, tw, fs, nl, color)
 
 class AreaTitle extends Control:
 	var small := ""
