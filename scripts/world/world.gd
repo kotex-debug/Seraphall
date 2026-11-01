@@ -204,10 +204,16 @@ func _build_map() -> void:
 				var room := room_of[y * MAPW + x]
 				var rid: String = ROOMS[room].id if room >= 0 else ""
 				var t := rng.randi_range(0, 3)
-				if rid == "gallery" or rid == "atrio" or rid == "atr_link":
+				if rid == "gallery":
 					t = 13 + rng.randi_range(0, 1)
+				elif rid == "atrio" or rid == "atr_link":
+					t = 22 + rng.randi_range(0, 1)
 				elif rid == "antesala" or rid == "escala" or rid == "jui_link":
-					t = 15 if rng.randf() < 0.55 else rng.randi_range(0, 3)
+					t = 24 + rng.randi_range(0, 1)
+				elif rid == "celdas" or rid == "cel_link" or rid == "cel_up":
+					t = 20 + rng.randi_range(0, 1)
+					if rng.randf() < 0.05:
+						t = 27
 				elif rid == "circle":
 					t = 15 if rng.randf() < 0.7 else rng.randi_range(0, 3)
 				if rng.randf() < 0.1 and rid != "gallery":
@@ -217,16 +223,25 @@ func _build_map() -> void:
 				if (rid == "chains" or rid == "celdas") and rng.randf() < 0.05:
 					t = 11
 				if rid == "escala" and y == 28:
-					t = 10
+					t = 26
 				if rid == "antesala" and (x == 69) and y >= 7:
-					t = 10
+					t = 26
 				if rid == "mirador" or rid == "alcove":
 					t = 19 if rng.randf() < 0.6 else t
 				floor_layer.set_cell(c, 0, Vector2i(t, 0))
 			elif g == 2:
 				var below := y + 1 < MAPH and grid[(y + 1) * MAPW + x] == 1
 				if below:
-					wall_layer.set_cell(c, 0, Vector2i(7 + rng.randi_range(0, 2), 0))
+					var wt := 7 + rng.randi_range(0, 2)
+					var br: int = room_of[(y + 1) * MAPW + x]
+					var brid: String = ROOMS[br].id if br >= 0 else ""
+					if brid in ["celdas", "cel_link", "cel_up"]:
+						wt = 28 + rng.randi_range(0, 1)
+					elif brid in ["antesala", "escala", "jui_link"]:
+						wt = 30 + rng.randi_range(0, 1)
+					elif brid in ["atrio", "atr_link"] and rng.randf() < 0.5:
+						wt = 32 + rng.randi_range(0, 1)
+					wall_layer.set_cell(c, 0, Vector2i(wt, 0))
 				else:
 					wall_layer.set_cell(c, 0, Vector2i(6, 0))
 			elif g == 3:
@@ -258,6 +273,9 @@ func _build_map() -> void:
 	var cd := Depth3D.CliffDepth.new()
 	cd.world = self
 	add_child(cd)
+	var near := Depth3D.NearLayer.new()
+	near.world = self
+	add_child(near)
 
 func _build_tileset() -> TileSet:
 	var ts := TileSet.new()
@@ -269,9 +287,12 @@ func _build_tileset() -> TileSet:
 	src.texture = Fx.tex("tiles")
 	src.texture_region_size = Vector2i(TS, TS)
 	ts.add_source(src, 0)
-	for i in 20:
+	var ntiles: int = src.texture.get_width() / TS
+	for i in ntiles:
 		src.create_tile(Vector2i(i, 0))
-	for i in [6, 7, 8, 9, 12, 16, 18]:
+	for i in [6, 7, 8, 9, 12, 16, 18, 28, 29, 30, 31, 32, 33]:
+		if i >= ntiles:
+			continue
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, PackedVector2Array([Vector2(-8, -8), Vector2(8, -8), Vector2(8, 8), Vector2(-8, 8)]))
@@ -3116,6 +3137,20 @@ func _build_antechambers() -> void:
 		_prop("candle", tile_pos(x3, 29.4), 4, x3 % 4, 0.0, Color(1, 0.8, 0.45), 1.1)
 	_add_inter("brasa", "umbral", tile_pos(59.5, 28.4))
 	_add_inter("lore", "lore_juicio", tile_pos(73, 28.6), {"lines": [["lore_title", ["«Quien suba esta escalera será pesado en la balanza. Las plumas que te queden hablarán por ti.»", "\"Whoever climbs these stairs shall be weighed on the scales. Your remaining feathers will speak for you.\""]]]})
+	# --- antorchas de pared (celdas, escalinata, antesala, pasillo)
+	for tp in [Vector2(20.5, 45.7), Vector2(24.5, 45.7), Vector2(28.5, 45.7), Vector2(34.5, 45.7),
+			Vector2(59.5, 26.7), Vector2(62.5, 26.7), Vector2(66, 5.7), Vector2(72, 5.7),
+			Vector2(39, 53.7), Vector2(59, 53.7), Vector2(44, 53.7), Vector2(54, 53.7)]:
+		var wt := WallTorch.new()
+		wt.position = tile_pos(tp.x, tp.y)
+		if tp.y < 27.0:
+			wt.col = Color(1, 0.8, 0.45)
+		entities.add_child(wt)
+	# --- vitrales del Atrio
+	var glass2 := LightShafts.new()
+	glass2.position = tile_pos(82, 52)
+	glass2.stained = true
+	add_child(glass2)
 	# --- Antesala del Juicio: estandartes y luz que cae
 	for b in [Vector2(66.5, 5.5), Vector2(71.5, 5.5)]:
 		_prop("banner", tile_pos(b.x, b.y), 2, 0)
@@ -3318,3 +3353,32 @@ func _atrio_echo() -> void:
 	get_tree().create_timer(1.0).timeout.connect(Audio.sfx.bind("bell_0", -10.0, 0.0))
 	hud.subtitle(G.L(["El Coro (eco)", "The Choir (echo)"]), G.L(["...emreud, emreud, ojab yum ed odatse ah euq le...", "...peels, peels, woleb raf morf emac ohw eh..."]), 3.4)
 	get_tree().create_timer(3.8).timeout.connect(hud.subtitle.bind("", G.L(["(Lo cantan al revés. Como si no quisieran despertar a alguien.)", "(They sing it backwards. As if trying not to wake someone.)"]), 3.0))
+
+class WallTorch extends Node2D:
+	## Antorcha de pared: soporte de hierro, llama en capas que parpadea, chispas y luz cálida
+	var t := 0.0
+	var col := Color(1, 0.55, 0.2)
+	var _l: PointLight2D
+	func _ready() -> void:
+		t = randf() * 10.0
+		_l = PointLight2D.new()
+		_l.texture = Fx.tex("light")
+		_l.color = col
+		_l.texture_scale = 1.3
+		_l.energy = 0.95
+		_l.position = Vector2(0, -12)
+		add_child(_l)
+	func _process(delta: float) -> void:
+		t += delta
+		_l.energy = 0.9 + 0.12 * sin(t * 13.0) + 0.06 * sin(t * 31.0)
+		if randf() < 0.04:
+			Fx.burst(global_position + Vector2(0, -16), col.lerp(Color(1, 0.9, 0.6), 0.5), 1, 18.0, 0.7, "fx_px", 30.0, Vector2.UP, 0.4)
+		queue_redraw()
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2(-3, -6), Vector2(6, 2)), Color(0.12, 0.1, 0.14))
+		draw_rect(Rect2(Vector2(-1, -8), Vector2(2, 8)), Color(0.32, 0.28, 0.34))
+		draw_rect(Rect2(Vector2(-3, -10), Vector2(6, 3)), Color(0.24, 0.2, 0.26))
+		var f := sin(t * 11.0) * 1.5
+		draw_colored_polygon(PackedVector2Array([Vector2(-3, -10), Vector2(-1, -16 - f), Vector2(0, -20 - f), Vector2(2, -15), Vector2(3, -10)]), col)
+		draw_colored_polygon(PackedVector2Array([Vector2(-2, -10), Vector2(0, -16 + f * 0.5), Vector2(2, -10)]), col.lerp(Color(1, 0.9, 0.5), 0.6))
+		draw_rect(Rect2(Vector2(-1, -12), Vector2(1, 2)), Color(1, 0.98, 0.85))

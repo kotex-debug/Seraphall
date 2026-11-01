@@ -210,3 +210,126 @@ def cellbars():
 
 cellbars().save(f"{OUT}/cellbars.png")
 print("Arte de las antesalas generado en", OUT)
+
+# ================================================================== v0.8: baldosas propias de las salas nuevas
+# Se añaden al final de tiles.png (índices 20 en adelante):
+#   20-21 piedra de celda · 22-23 mosaico de vitral (Atrio) · 24-25 mármol con oro (Antesala)
+#   26 alfombra blanca y oro · 27 sumidero de celda · 28-29 muro de celda · 30-31 muro de mármol · 32-33 muro con vitral
+import random
+import numpy as np
+T = 16
+
+def celda_floor(seed, deco=True):
+    rr = random.Random(seed)
+    img = A2.floor(seed, (0.82, 0.8, 0.86), seed % 4)
+    d = ImageDraw.Draw(img)
+    # adoquines irregulares
+    for k in range(3):
+        x, y = rr.randint(1, 12), rr.randint(1, 12)
+        d.rectangle([x, y, x + rr.randint(2, 3), y + rr.randint(1, 2)], fill=(44, 40, 48, 255))
+        d.point((x, y), fill=(70, 64, 74, 255))
+    if deco:
+        for k in range(4):                                      # paja
+            x, y = rr.randint(1, 13), rr.randint(1, 13)
+            d.line([(x, y), (x + rr.randint(1, 3), y + rr.choice([-1, 0, 1]))], fill=C("8a7448"))
+        if seed % 2:
+            d.ellipse([rr.randint(2, 8), rr.randint(2, 8), rr.randint(9, 13), rr.randint(9, 13)], outline=(40, 30, 34, 255))  # mancha de humedad
+    return img
+
+def mosaic(seed):
+    rr = random.Random(seed)
+    img = canvas(T, T); d = ImageDraw.Draw(img)
+    cols = [C("3a2a6a"), C("4a3a8a"), C("2a4a8a"), C("6a3a8a"), C("2a2a5a")]
+    d.rectangle([0, 0, 15, 15], fill=C("2a1e48"))
+    for y in range(0, 16, 8):
+        for x in range(0, 16, 8):
+            c = cols[rr.randint(0, len(cols) - 1)]
+            d.polygon([(x + 4, y), (x + 8, y + 4), (x + 4, y + 8), (x, y + 4)], fill=c)
+            d.point((x + 3, y + 2), fill=sh(c, 1.5))
+    for i in range(0, 17, 8):                                   # plomo dorado del vitral
+        d.line([(i, 0), (i + 16, 16)], fill=C("8a6a3a")); d.line([(i, 16), (i + 16, 0)], fill=C("8a6a3a"))
+        d.line([(i - 16, 0), (i, 16)], fill=C("8a6a3a")); d.line([(i - 16, 16), (i, 0)], fill=C("8a6a3a"))
+    if seed % 3 == 0:
+        d.point((rr.randint(2, 13), rr.randint(2, 13)), fill=C("e0d0ff"))
+    return img
+
+def marble(seed):
+    rr = random.Random(seed)
+    a = A2.noise_tile((196, 188, 178), seed, 4)
+    for (x0, y0, x1, y1) in [(0, 0, 15, 15)] if seed % 2 == 0 else [(0, 0, 7, 15), (8, 0, 15, 15)]:
+        A2.slab(a, x0, y0, x1, y1, 14, -26)
+    img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)); d = ImageDraw.Draw(img)
+    x, y = rr.randint(0, 6), 0                                   # veta
+    for k in range(16):
+        d.point((x, y), fill=(150, 140, 150, 255))
+        x = max(0, min(15, x + rr.choice([0, 1, 1]))); y += 1
+    d.line([(0, 15), (15, 15)], fill=C("c89a40")); d.line([(15, 0), (15, 15)], fill=C("c89a40"))   # incrustación de oro
+    if seed % 3 == 0:
+        d.polygon([(7, 5), (10, 8), (7, 11), (4, 8)], outline=C("d8aa48"))
+        d.point((7, 8), fill=C("fff0a0"))
+    return img
+
+def gold_carpet():
+    img = canvas(T, T); d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, 15, 15], fill=C("e8e0d0"))
+    d.line([(0, 1), (15, 1)], fill=C("d8aa48")); d.line([(0, 14), (15, 14)], fill=C("d8aa48"))
+    d.line([(0, 2), (15, 2)], fill=C("b8b0a0")); d.line([(0, 13), (15, 13)], fill=C("b8b0a0"))
+    for x in range(0, 16, 8):
+        d.polygon([(x + 4, 4), (x + 6, 8), (x + 4, 11), (x + 2, 8)], fill=C("f4ecd8")); d.point((x + 4, 7), fill=C("d8aa48"))
+    return img
+
+def celda_drain():
+    img = celda_floor(31, False); d = ImageDraw.Draw(img)
+    d.ellipse([3, 4, 12, 11], fill=C("100a10")); d.ellipse([3, 4, 12, 11], outline=C("5a5462"))
+    for x in (5, 7, 9):
+        d.line([(x, 5), (x, 10)], fill=C("6a646e"))
+    d.point((8, 9), fill=C("ff6020"))
+    return img
+
+def celda_wall(seed):
+    img = A2.wall_face(seed + 40); d = ImageDraw.Draw(img)
+    px = img.load()
+    for y in range(T):
+        for x in range(T):
+            r, g, b, a = px[x, y]
+            px[x, y] = (int(r * 0.85), int(g * 0.8), int(b * 0.82), a)
+    d.ellipse([5, 5, 10, 10], outline=C("8a8494"))               # argolla de hierro
+    d.line([(7, 4), (8, 4)], fill=C("5a5462"))
+    if seed % 2:
+        d.line([(3, 11), (3, 15)], fill=C("4a1a1a")); d.point((3, 15), fill=C("6a2a2a"))   # rastro de óxido
+    return img
+
+def marble_wall(seed):
+    rr = random.Random(seed)
+    img = canvas(T, T); d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, 15, 15], fill=C("b8b0a4"))
+    for row, y in enumerate((0, 5, 10)):
+        off = 0 if row % 2 == 0 else 5
+        for x in range(-off, 16, 10):
+            c = sh(C("cfc7ba"), 1 + rr.uniform(-0.06, 0.05))
+            d.rectangle([x, y, x + 9, y + 4], fill=c)
+            d.line([(x, y), (x + 8, y)], fill=sh(c, 1.15)); d.line([(x, y + 4), (x + 9, y + 4)], fill=C("8a8278"))
+    d.line([(0, 0), (15, 0)], fill=C("d8aa48"))
+    if seed % 2 == 0:
+        d.rectangle([6, 6, 9, 13], fill=C("8a6a3a")); d.rectangle([7, 7, 8, 12], fill=C("ffd060"))   # hornacina con vela
+    return img
+
+def glass_wall(seed):
+    img = A2.wall_face(seed + 60); d = ImageDraw.Draw(img)
+    d.rectangle([3, 2, 12, 14], fill=C("1a1230"))
+    d.pieslice([3, -2, 12, 7], 180, 360, fill=C("1a1230"))
+    cols = [C("6a4aff"), C("ff5a8a"), C("4ac0ff"), C("ffd060")]
+    for i, (x, y) in enumerate(((5, 4), (8, 4), (5, 8), (8, 8), (6, 11))):
+        d.rectangle([x, y, x + 2, y + 2], fill=cols[(i + seed) % 4])
+    d.line([(7, 1), (7, 14)], fill=C("8a6a3a")); d.line([(4, 7), (11, 7)], fill=C("8a6a3a"))
+    return img
+
+base = Image.open(f"{OUT}/tiles.png").convert("RGBA")
+extra = [celda_floor(1), celda_floor(2), mosaic(1), mosaic(2), marble(1), marble(2), gold_carpet(), celda_drain(),
+         celda_wall(0), celda_wall(1), marble_wall(0), marble_wall(1), glass_wall(0), glass_wall(1)]
+out = canvas(base.width + T * len(extra), T)
+out.paste(base, (0, 0))
+for i, t in enumerate(extra):
+    out.paste(t, (base.width + i * T, 0), t)
+out.save(f"{OUT}/tiles.png")
+print("tiles.png ampliado a", out.width // T, "baldosas")

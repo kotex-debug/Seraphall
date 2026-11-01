@@ -303,3 +303,35 @@ class CliffDepth extends Node2D:
 				i += 1
 	func _p(p: Vector2, cam: Vector2, k: float) -> Vector2:
 		return cam + (p - cam) * k
+
+
+class NearLayer extends Node2D:
+	## Polvo y ceniza fuera de foco MUY cerca de la cámara: se mueve más que el mundo (paralaje > 1)
+	## y da sensación de profundidad por delante de la escena.
+	var world: Node
+	var motes: Array = []
+	const PAR := 1.45
+	func _ready() -> void:
+		z_index = 60
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 31
+		for i in 70:
+			motes.append([Vector2(rng.randf_range(-200, world.MAPW * 16 + 200), rng.randf_range(-200, world.MAPH * 16 + 200)), rng.randf_range(3.0, 9.0), rng.randf() * TAU])
+	func _process(_delta: float) -> void:
+		queue_redraw()
+	func _draw() -> void:
+		var cam := Depth3D.cam_center(self)
+		var t := Time.get_ticks_msec() / 1000.0
+		var a: String = world.current_area()
+		var warm: bool = a in ["area_sanct", "area_chains", "area_yard", "area_celdas"]
+		var tint := Color(1, 0.6, 0.35) if warm else Color(0.75, 0.7, 0.95)
+		if a == "area_juicio" or a == "area_circle":
+			tint = Color(1, 0.9, 0.65)
+		for m in motes:
+			var base: Vector2 = m[0] + Vector2(sin(t * 0.3 + m[2]) * 20.0, -fmod(t * 6.0 + m[2] * 40.0, 80.0))
+			var p := cam + (base - cam) * PAR
+			if absf(p.x - cam.x) > 340.0 or absf(p.y - cam.y) > 200.0:
+				continue
+			var r: float = m[1]
+			for k in 3:
+				draw_circle(p, r * (1.0 - k * 0.3), Color(tint, 0.025 + k * 0.015))
