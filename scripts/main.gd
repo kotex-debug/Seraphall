@@ -882,7 +882,7 @@ func _run_autotest() -> void:
 			lp.iframes = 9999.0
 			await get_tree().create_timer(1.0).timeout
 			var n := 1
-			for spk in ["Brenna", "Ozias", "Tobías", "Nyx"]:
+			for spk in ["Seravel", "El Carcelero", "Madre Ilse", "Sael"]:
 				var bx = w.dialog.box
 				bx.visible = true
 				bx.scale = Vector2.ONE

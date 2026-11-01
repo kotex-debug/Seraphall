@@ -14,8 +14,8 @@ var _cinematic := false
 const PORTRAITS := {
 	"Brenna": ["bust_brenna", Rect2(0, 0, 48, 48)],
 	"El Cartógrafo": ["bust_carto", Rect2(0, 0, 48, 48)],
-	"Seravel": ["boss_seravel", Rect2(0, 0, 52, 40)],
-	"El Carcelero": ["enemy_carcelero", Rect2(0, 0, 40, 30)],
+	"Seravel": ["cinematic/seravel_body", Rect2(12, 0, 48, 48)],
+	"El Carcelero": ["cinematic/carcelero_body", Rect2(22, 0, 48, 48)],
 	"El Custodio": ["enemy_custodio", Rect2(0, 0, 48, 36)],
 	"Ozias": ["bust_ozias", Rect2(0, 0, 48, 48)],
 	"Madre Ilse": ["bust_ilse", Rect2(0, 0, 48, 48)],
@@ -139,7 +139,8 @@ class DialogBox extends Control:
 			var tex := Fx.tex(portrait[0])
 			var reg: Rect2 = portrait[1]
 			var bust: bool = str(portrait[0]).begins_with("bust_")
-			if bust:
+			var cine: bool = str(portrait[0]).begins_with("cinematic/")
+			if bust or cine:
 				# busto propio: boca que se mueve mientras escribe y parpadeo de vez en cuando
 				var talking := int(chars) < text.length()
 				var fr := 0
@@ -147,7 +148,8 @@ class DialogBox extends Control:
 					fr = 1
 				elif fmod(t, 3.3) < 0.13:
 					fr = 2
-				reg.position.x = fr * 48.0
+				if bust:
+					reg.position.x = fr * 48.0
 				var bob2 := roundf(sin(t * 2.2) * 0.6 - pop * 3.0)
 				draw_texture_rect_region(tex, Rect2(pr.position + Vector2(3, 3 + bob2), Vector2(48, 48)), reg)
 				draw_rect(Rect2(pr.position + Vector2(3, 50), Vector2(48, 1)), UIKit.GOLD_DARK)
