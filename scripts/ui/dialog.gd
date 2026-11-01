@@ -12,16 +12,17 @@ var _auto_t := 0.0
 var _cinematic := false
 
 const PORTRAITS := {
-	"Brenna": ["npc_brenna", Rect2(9, 1, 16, 16)],
-	"El Cartógrafo": ["npc_carto", Rect2(9, 1, 16, 16)],
+	"Brenna": ["bust_brenna", Rect2(0, 0, 48, 48)],
+	"El Cartógrafo": ["bust_carto", Rect2(0, 0, 48, 48)],
 	"Seravel": ["boss_seravel", Rect2(0, 0, 52, 40)],
 	"El Carcelero": ["enemy_carcelero", Rect2(0, 0, 40, 30)],
-	"Ozias": ["npc_ozias", Rect2(9, 1, 16, 16)],
-	"Madre Ilse": ["npc_ilse", Rect2(9, 1, 16, 16)],
-	"Nyx": ["npc_nyx", Rect2(9, 1, 16, 16)],
-	"Sor Velaria": ["npc_velaria", Rect2(9, 1, 16, 16)],
-	"Tobías": ["npc_preso", Rect2(9, 1, 16, 16)],
-	"Sael": ["npc_peregrina", Rect2(9, 1, 16, 16)],
+	"El Custodio": ["enemy_custodio", Rect2(0, 0, 48, 36)],
+	"Ozias": ["bust_ozias", Rect2(0, 0, 48, 48)],
+	"Madre Ilse": ["bust_ilse", Rect2(0, 0, 48, 48)],
+	"Nyx": ["bust_nyx", Rect2(0, 0, 48, 48)],
+	"Sor Velaria": ["bust_velaria", Rect2(0, 0, 48, 48)],
+	"Tobías": ["bust_preso", Rect2(0, 0, 48, 48)],
+	"Sael": ["bust_peregrina", Rect2(0, 0, 48, 48)],
 	"El Coro": ["boss_singer", Rect2(0, 0, 26, 36)],
 }
 
@@ -137,12 +138,26 @@ class DialogBox extends Control:
 			UIKit.frame(self, pr, UIKit.GOLD_DARK, Color(0.16, 0.06, 0.2), 3.0)
 			var tex := Fx.tex(portrait[0])
 			var reg: Rect2 = portrait[1]
-			var frame := int(t * 4.0) % 4
-			reg.position.x = frame * reg.size.x if portrait[0] != "enemy_carcelero" else reg.position.x
-			var scale = 48.0 / max(reg.size.x, reg.size.y)
-			var ds = reg.size * scale
-			var bob := roundf(sin(t * 3.0) * 1.0 - pop * 3.0)
-			draw_texture_rect_region(tex, Rect2(pr.get_center() - ds / 2.0 + Vector2(0, bob + 4), ds), reg)
+			var bust: bool = str(portrait[0]).begins_with("bust_")
+			if bust:
+				# busto propio: boca que se mueve mientras escribe y parpadeo de vez en cuando
+				var talking := int(chars) < text.length()
+				var fr := 0
+				if talking and int(t * 9.0) % 2 == 0:
+					fr = 1
+				elif fmod(t, 3.3) < 0.13:
+					fr = 2
+				reg.position.x = fr * 48.0
+				var bob2 := roundf(sin(t * 2.2) * 0.6 - pop * 3.0)
+				draw_texture_rect_region(tex, Rect2(pr.position + Vector2(3, 3 + bob2), Vector2(48, 48)), reg)
+				draw_rect(Rect2(pr.position + Vector2(3, 50), Vector2(48, 1)), UIKit.GOLD_DARK)
+			else:
+				var frame := int(t * 4.0) % 4
+				reg.position.x = frame * reg.size.x if portrait[0] != "enemy_carcelero" else reg.position.x
+				var scale = 48.0 / max(reg.size.x, reg.size.y)
+				var ds = reg.size * scale
+				var bob := roundf(sin(t * 3.0) * 1.0 - pop * 3.0)
+				draw_texture_rect_region(tex, Rect2(pr.get_center() - ds / 2.0 + Vector2(0, bob + 4), ds), reg)
 			tx = 72.0
 		if speaker != "":
 			var f := UIKit.font("head")

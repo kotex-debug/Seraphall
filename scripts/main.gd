@@ -877,6 +877,25 @@ func _run_autotest() -> void:
 				n += 1
 			print("AUTOTEST_SHADOW_OK")
 			get_tree().quit()
+		"dlg":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			await get_tree().create_timer(1.0).timeout
+			var n := 1
+			for spk in ["Brenna", "Ozias", "Tobías", "Nyx"]:
+				var bx = w.dialog.box
+				bx.visible = true
+				bx.scale = Vector2.ONE
+				bx.speaker = spk
+				bx.text = "Texto de prueba para ver el retrato y el cuadro de diálogo con una frase bastante larga, de dos líneas."
+				bx.chars = 999.0 if n % 2 == 1 else 20.0
+				bx.truth = ""
+				bx.portrait = w.dialog.PORTRAITS.get(spk, [])
+				await get_tree().create_timer(0.4).timeout
+				await _shot(out + "/d%d.png" % n)
+				n += 1
+			print("AUTOTEST_DLG_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
