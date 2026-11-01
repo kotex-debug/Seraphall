@@ -774,6 +774,32 @@ func _run_autotest() -> void:
 			w.menu.close()
 			print("AUTOTEST_PROMO7_OK")
 			get_tree().quit()
+		"v8":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			lp.respawn_at(w.tile_pos(84, 70))
+			await get_tree().create_timer(1.2).timeout
+			await _shot(out + "/e01_muro.png")
+			for i in 4:
+				lp.state = "move"
+				lp.aim = Vector2.DOWN
+				lp._start_attack()
+				await get_tree().create_timer(0.45).timeout
+			await get_tree().create_timer(0.8).timeout
+			await _shot(out + "/e02_derrumbe.png")
+			print("V8 broken=", w.wflags.get("broken_capilla", false))
+			lp.respawn_at(w.tile_pos(84, 78.5))
+			await get_tree().create_timer(2.0).timeout
+			await _shot(out + "/e03_capilla.png")
+			for pid in ["page_1", "page_2", "page_3"]:
+				if w.interactables.has(pid):
+					w._pickup(pid)
+				await get_tree().create_timer(0.3).timeout
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/e04_himno.png")
+			print("V8 hymns=", Prog.quest_done("hymns"), " bell=", Prog.item_count("amulet_bell"))
+			print("AUTOTEST_V8_OK")
+			get_tree().quit()
 		"d3":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

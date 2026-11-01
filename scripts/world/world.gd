@@ -32,13 +32,17 @@ const ROOMS := [
 	{"id": "escala", "rect": Rect2i(58, 27, 16, 3)},
 	{"id": "antesala", "rect": Rect2i(65, 6, 9, 22)},
 	{"id": "jui_link", "rect": Rect2i(61, 12, 5, 3)},
+	# v0.8: capilla secreta bajo la Galería Rota (tras un muro agrietado)
+	{"id": "cap_link", "rect": Rect2i(83, 71, 3, 6)},
+	{"id": "capilla", "rect": Rect2i(79, 76, 11, 7)},
 ]
 const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
 	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
 	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_atrio",
 	"celdas": "area_celdas", "cel_link": "area_celdas", "cel_up": "area_celdas", "atrio": "area_atrio", "atr_link": "area_atrio",
-	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio"}
-const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo"]
+	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio",
+	"cap_link": "area_capilla", "capilla": "area_capilla"}
+const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo", "area_capilla"]
 
 var main: Node
 var leaner: Depth3D.Leaner
@@ -302,7 +306,7 @@ func _scatter_decor() -> void:
 	## Escombros, huesos y plumas repartidos por las salas (decoración sin colisión)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
-	var skip := ["yard", "circle", "choir", "nimbo", "escala", "antesala"]
+	var skip := ["yard", "circle", "choir", "nimbo", "escala", "antesala", "capilla", "cap_link"]
 	for r in ROOMS:
 		if r.id in skip:
 			continue
@@ -350,7 +354,7 @@ func is_wall_at(p: Vector2) -> bool:
 const AREA_COLORS := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
 	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
 	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0), "area_celdas": Color(0.85, 0.45, 0.35),
-	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55)}
+	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55), "area_capilla": Color(0.7, 1.0, 0.85)}
 var _map_tex: ImageTexture
 var _map_seen := -1
 
@@ -876,6 +880,9 @@ func _apply_world_flags(instant: bool) -> void:
 			it.set_opened()
 	set_gate(wflags.get("carcelero_dead", false) and not _boss_started, true)
 	_refresh_locks(instant)
+	for bw in breakables.values():
+		if wflags.get("broken_" + bw.id, false):
+			bw.set_broken(true)
 	for e in enemies:
 		if e.type == "carcelero" and wflags.get("carcelero_dead", false):
 			e.die(); e.visible = false
@@ -3043,6 +3050,30 @@ var _trial_wait := 0.0
 var _locks := {}
 var _bell_seq: Array = []
 var _cell_doors: Array = []
+var breakables := {}
+
+func hit_breakables(origin: Vector2, rng: float) -> void:
+	for bw in breakables.values():
+		if not bw.broken and bw.global_position.distance_to(origin) < rng + 14.0:
+			bcast("_hit_breakable", [bw.id])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _hit_breakable(id: String) -> void:
+	var bw = breakables.get(id)
+	if bw == null or bw.broken:
+		return
+	bw.hp -= 1
+	bw.shake = 0.2
+	Audio.sfx("hit_heavy", -6.0)
+	G.shake(2.0, 0.12)
+	Fx.burst(bw.global_position + Vector2(0, -8), Color(0.55, 0.5, 0.6), 8, 50.0, 0.5, "fx_soft", 180.0, Vector2.UP, 0.4, false)
+	if bw.hp <= 0:
+		wflags["broken_" + id] = true
+		Prog.flags["broken_" + id] = true
+		bw.set_broken(false)
+		hud.big_message(G.L(["PASADIZO SECRETO", "SECRET PASSAGE"]), Color(0.7, 1.0, 0.85), 2.2)
+		if multiplayer.is_server():
+			Prog.save_game()
 
 func trial_done(id: String) -> bool:
 	return wflags.get("trial_" + id, false)
@@ -3151,6 +3182,28 @@ func _build_antechambers() -> void:
 		if tp.y < 27.0:
 			wt.col = Color(1, 0.8, 0.45)
 		entities.add_child(wt)
+	# --- Capilla Olvidada (secreta): recuerdo IV, cofre, inscripción y una página del himno
+	var bw := BreakableWall.new()
+	bw.id = "capilla"
+	bw.world = self
+	bw.position = tile_pos(84, 72)
+	entities.add_child(bw)
+	breakables["capilla"] = bw
+	_add_inter("bench", "bench_capilla", tile_pos(84, 79.6), {"memory": "m4"})
+	_add_inter("chest", "chest_capilla", tile_pos(88, 77.4), {"ecos": 350, "items": {"phoenix": 1, "tear": 1}})
+	_add_inter("lore", "lore_capilla", tile_pos(80.4, 77.4), {"lines": [["lore_title", ["«Aquí rezaba el verdugo. No pedía perdón: pedía olvidar.»", "\"Here the executioner prayed. Not for forgiveness: to forget.\""]],
+		["lore_title", ["«Se lo concedieron.»", "\"It was granted.\""]]]})
+	_add_inter("pickup", "page_3", tile_pos(87.5, 81.5), {"icon": "page", "quest": "hymns"})
+	_add_inter("pickup", "page_1", tile_pos(17.6, 52.4), {"icon": "page", "quest": "hymns"})
+	_add_inter("pickup", "page_2", tile_pos(74.2, 52.6), {"icon": "page", "quest": "hymns"})
+	for cp in [Vector2(81, 81), Vector2(87, 81), Vector2(82, 76.6), Vector2(86, 76.6)]:
+		_prop("candle", tile_pos(cp.x, cp.y), 4, int(cp.x) % 4, 0.0, Color(0.7, 1.0, 0.85), 1.0)
+	var fpc := FlowerPatch.new()
+	fpc.position = tile_pos(84, 81.5)
+	fpc.count = 14
+	fpc.petal = Color(0.75, 1.0, 0.85)
+	entities.add_child(fpc)
+	_fireflies(Rect2(79 * TS, 76 * TS, 11 * TS, 7 * TS))
 	# --- vitrales del Atrio
 	var glass2 := LightShafts.new()
 	glass2.position = tile_pos(82, 52)
@@ -3399,3 +3452,43 @@ class WallTorch extends Node2D:
 		draw_colored_polygon(PackedVector2Array([Vector2(-3, -10), Vector2(-1, -16 - f), Vector2(0, -20 - f), Vector2(2, -15), Vector2(3, -10)]), col)
 		draw_colored_polygon(PackedVector2Array([Vector2(-2, -10), Vector2(0, -16 + f * 0.5), Vector2(2, -10)]), col.lerp(Color(1, 0.9, 0.5), 0.6))
 		draw_rect(Rect2(Vector2(-1, -12), Vector2(1, 2)), Color(1, 0.98, 0.85))
+
+
+class BreakableWall extends Node2D:
+	## Muro agrietado que se derrumba a golpes (3) y deja ver un pasadizo
+	var id := ""
+	var world: Node
+	var hp := 3
+	var broken := false
+	var shake := 0.0
+	var _spr: Sprite2D
+	var _body: StaticBody2D
+	func _ready() -> void:
+		_spr = Sprite2D.new()
+		_spr.texture = Fx.tex("cracked_wall")
+		_spr.region_enabled = true
+		_spr.region_rect = Rect2(0, 0, 48, 24)
+		_spr.offset = Vector2(0, -6)
+		add_child(_spr)
+		_body = StaticBody2D.new()
+		_body.collision_layer = 1
+		var cs := CollisionShape2D.new()
+		var sh := RectangleShape2D.new()
+		sh.size = Vector2(48, 16)
+		cs.shape = sh
+		_body.add_child(cs)
+		add_child(_body)
+	func set_broken(instant: bool) -> void:
+		if broken:
+			return
+		broken = true
+		_spr.region_rect = Rect2(48, 0, 48, 24)
+		_body.queue_free()
+		if not instant:
+			Audio.sfx("slam", -2.0)
+			G.shake(5.0, 0.4)
+			world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position, 16, Color(0.4, 0.36, 0.45), 1.2))
+			Fx.burst(global_position, Color(0.6, 0.55, 0.65), 30, 90.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6, false)
+	func _process(delta: float) -> void:
+		shake = max(0.0, shake - delta)
+		_spr.position = Vector2(randf_range(-2, 2), 0) * (shake / 0.2)

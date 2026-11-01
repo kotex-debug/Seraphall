@@ -51,6 +51,8 @@ const ITEMS := {
 		"desc": ["Aún late bajo la ceniza. Tus golpes pueden quemar (+35% de daño).", "It still beats beneath the ash. Your hits may burn (+35% damage)."]},
 	"choir_heart": {"type": "amulet", "icon": "choir_heart", "rarity": 3, "name": ["Garganta de Cristal", "Crystal Throat"],
 		"desc": ["Canta cuando nadie la escucha. Tus hechizos cuestan un 25% menos de Luz.", "It sings when no one listens. Your spells cost 25% less Light."]},
+	"amulet_bell": {"type": "amulet", "icon": "amulet_bell", "rarity": 3, "name": ["Campanilla de la Vigilia", "Vigil Bell"],
+		"desc": ["Suena sola cuando te curas: los enemigos cercanos se frenan y retroceden.", "It rings by itself when you heal: nearby enemies slow down and stagger back."]},
 	"key_vestibule": {"type": "key", "icon": "key", "rarity": 2, "name": ["Llave de Hueso Cantor", "Singing Bone Key"],
 		"desc": ["Tallada en el hueso de un ángel que cantaba. Abre la puerta del Círculo de la Guardiana.", "Carved from the bone of a singing angel. Opens the gate to the Circle of the Warden."]},
 	"map_carto": {"type": "key", "icon": "scroll", "rarity": 1, "name": ["Cartografía Táctil", "Tactile Chart"],
@@ -68,6 +70,11 @@ const MEMORIES := {
 		["Seravel, de rodillas, con las alas abiertas. Confiaba en ti.", "Seravel, on her knees, wings open. She trusted you."],
 		["Y recuerdas tus propias manos arrancándole la primera pluma.", "And you remember your own hands tearing out her first feather."],
 		["Antes de caer, fuiste el verdugo del Arquitecto.", "Before you fell, you were the Architect's executioner."]]},
+	"m4": {"title": ["La Orden", "The Order"], "lines": [
+		["Una voz sin boca te habla desde todas partes a la vez.", "A voice without a mouth speaks to you from everywhere at once."],
+		["«Ellos se negaron. Tú no te negarás.» No era una pregunta.", "\"They refused. You will not refuse.\" It wasn't a question."],
+		["Te dieron una capucha para que nadie viera tu cara. Ni siquiera tú.", "They gave you a hood so no one would see your face. Not even you."],
+		["Dudaste una vez. Solo una. Y esa duda es lo único que te pertenece.", "You hesitated once. Only once. And that doubt is the only thing that is truly yours."]]},
 	"m1": {"title": ["El Jardín de las Alas", "The Garden of Wings"], "lines": [
 		["Antes de la Espiral, había un jardín donde nadie contaba los días.", "Before the Spiral, there was a garden where no one counted the days."],
 		["Aprendimos a volar entre sus árboles de luz. Torpes. Riendo.", "We learned to fly among its trees of light. Clumsy. Laughing."],
@@ -296,6 +303,9 @@ const QUESTS := {
 	"choir": {"type": "bounty", "title": ["Silencio en la Galería", "Silence in the Gallery"], "giver": "velaria",
 		"count": 1, "text": ["Resuelve el Atrio de las Voces y derrota al Coro Hueco (%d/%d)", "Solve the Atrium of Voices and defeat the Hollow Choir (%d/%d)"],
 		"reward": {"ecos": 600, "sp": 1}},
+	"hymns": {"type": "side", "title": ["Las Páginas del Himno", "The Hymn Pages"], "giver": "",
+		"count": 3, "text": ["Reúne las páginas del Himno de la Vigilia (%d/%d)", "Gather the pages of the Hymn of the Vigil (%d/%d)"],
+		"reward": {"ecos": 500, "sp": 1, "item": "amulet_bell"}},
 	"jailer_hunt": {"type": "bounty", "title": ["Caza: El Carcelero", "Hunt: The Jailer"], "giver": "brenna",
 		"count": 1, "text": ["Derrota al Carcelero (%d/%d)", "Defeat the Jailer (%d/%d)"],
 		"reward": {"ecos": 400, "feathers": 3}},
@@ -696,6 +706,8 @@ func _complete(id: String) -> void:
 		G.toast(G.T("flask_up"), Color(1, 0.6, 0.5))
 	if r.has("weapon"):
 		add_weapon(r.weapon)
+	if r.has("item"):
+		add_item(r.item)
 	Audio.sfx("levelup")
 	G.toast(G.T("quest_done") + ": " + G.L(QUESTS[id].title), Color(1.0, 0.85, 0.4))
 

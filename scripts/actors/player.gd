@@ -321,6 +321,14 @@ func _local_update(delta: float) -> void:
 				Audio.sfx("heal", -2.0)
 				_heal_fx(hp - before)
 				state = "move"
+				if Prog.has_amulet("amulet_bell") and is_local():
+					# la Campanilla de la Vigilia frena y empuja a los enemigos cercanos
+					Audio.sfx("bell_0", -6.0, 0.0)
+					Fx.ring(global_position + Vector2(0, -8), 6.0, 80.0, Color(0.8, 0.7, 1.0), 0.5, 3.0)
+					for e in world.enemies_alive():
+						if e.global_position.distance_to(global_position) < 80.0:
+							world.request_status(e, "slow", 3.0)
+							world.request_damage_enemy(e, 1.0, (e.global_position - global_position).normalized(), 25.0, false)
 		"downed":
 			velocity = Vector2.ZERO
 			downed_t -= delta
@@ -526,6 +534,8 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 		return
 	var origin := global_position + Vector2(0, -6)
 	var hits := 0
+	if is_local():
+		world.hit_breakables(origin, rng + 8.0)
 	for e in world.enemies_alive():
 		var to: Vector2 = e.global_position + Vector2(0, -6) - origin
 		var dist = to.length() - e.body_radius

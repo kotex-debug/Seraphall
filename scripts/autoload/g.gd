@@ -133,6 +133,7 @@ const TXT := {
 	"area_celdas": ["Las Celdas de Espera", "The Waiting Cells"],
 	"area_atrio": ["Atrio de las Voces", "Atrium of Voices"],
 	"area_juicio": ["Antesala del Juicio", "Antechamber of Judgement"],
+	"area_capilla": ["Capilla Olvidada", "Forgotten Chapel"],
 	"trial_celdas": ["LAS CELDAS SE ABREN", "THE CELLS OPEN"],
 	"trial_umbral": ["EL UMBRAL DEL JUICIO", "THE THRESHOLD OF JUDGEMENT"],
 	"trial_label": ["PRUEBA", "TRIAL"],

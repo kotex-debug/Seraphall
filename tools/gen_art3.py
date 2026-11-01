@@ -333,3 +333,51 @@ for i, t in enumerate(extra):
     out.paste(t, (base.width + i * T, 0), t)
 out.save(f"{OUT}/tiles.png")
 print("tiles.png ampliado a", out.width // T, "baldosas")
+
+# ================================================================== v0.8: icono del amuleto nuevo y página del himno
+def icon_bell():
+    img = canvas(16, 16); d = ImageDraw.Draw(img)
+    d.line([(8, 1), (8, 3)], fill=C("8a8494"))
+    d.polygon([(6, 3), (10, 3), (13, 11), (3, 11)], fill=C("d8b050"))
+    d.line([(6, 4), (4, 10)], fill=C("fff0a0")); d.line([(10, 4), (12, 10)], fill=C("8a6a20"))
+    d.line([(3, 11), (13, 11)], fill=C("fff0a0"))
+    d.rectangle([7, 12, 9, 13], fill=C("6a5a7a"))
+    d.point((5, 7), fill=C("e0d0ff")); d.point((11, 7), fill=C("e0d0ff"))
+    d.arc([0, 0, 15, 15], 200, 250, fill=C("c8b8ff")); d.arc([0, 0, 15, 15], 290, 340, fill=C("c8b8ff"))
+    return outline(img)
+
+def icon_page():
+    img = canvas(16, 16); d = ImageDraw.Draw(img)
+    d.polygon([(3, 2), (12, 1), (13, 14), (4, 15)], fill=C("e8dcc0"))
+    d.line([(3, 2), (4, 15)], fill=C("b8a888"))
+    for y in (4, 6, 8, 10):
+        d.line([(5, y), (11, y - 1)], fill=C("6a4a8a"))
+    d.point((10, 12), fill=C("c83040")); d.point((11, 12), fill=C("c83040"))
+    return outline(img)
+
+def cracked_wall():
+    """Muro agrietado (48x24) que tapa el pasadizo de la capilla, y su versión derrumbada."""
+    frames = []
+    for broken in (False, True):
+        img = canvas(48, 24); d = ImageDraw.Draw(img)
+        if not broken:
+            for row, y in enumerate((0, 6, 12, 18)):
+                off = 0 if row % 2 == 0 else 6
+                for x in range(-off, 48, 12):
+                    d.rectangle([x, y, x + 11, y + 5], fill=C("4e465a"))
+                    d.line([(x, y), (x + 10, y)], fill=C("6a6278")); d.line([(x, y + 5), (x + 11, y + 5)], fill=C("2a2434"))
+            for pts in (((20, 2), (24, 8), (22, 13), (27, 19), (25, 23)), ((30, 5), (33, 11), (31, 16))):
+                d.line(pts, fill=C("140c18"), width=1)
+            d.point((24, 10), fill=C("ffd060")); d.point((23, 15), fill=C("ffd060"))   # luz al otro lado
+        else:
+            for k in range(7):
+                x = 4 + k * 6; y = 14 + (k % 3) * 3
+                d.polygon([(x, y), (x + 5, y - 2), (x + 7, y + 4), (x + 1, y + 6)], fill=C("4e465a"))
+                d.line([(x, y), (x + 5, y - 2)], fill=C("6a6278"))
+        frames.append(outline(img))
+    return strip(frames)
+
+icon_bell().save(f"{OUT}/icon_amulet_bell.png")
+icon_page().save(f"{OUT}/icon_page.png")
+cracked_wall().save(f"{OUT}/cracked_wall.png")
+print("Iconos v0.8 generados")
