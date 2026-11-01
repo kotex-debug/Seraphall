@@ -31,6 +31,9 @@ func _ready() -> void:
 	sky.material = UIKit.mat("title_sky")
 	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(sky)
+	var falls := TitleFalls.new()
+	falls.size = Vector2(640, 360)
+	add_child(falls)
 	_build_layers()
 	_build_particles()
 	_build_title()
@@ -622,3 +625,62 @@ class OrnatePanel extends Control:
 	func _draw() -> void:
 		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.RED, UIKit.PANEL, 4.0, t)
 		UIKit.slash_band(self, Rect2(Vector2(size.x / 2 - 60, -6), Vector2(120, 8)), UIKit.RED, 4.0)
+
+
+class TitleFalls extends Control:
+	## Fondo vivo del título: ángeles que caen hacia el vórtice perdiendo plumas y relámpagos lejanos
+	var falls: Array = []    # [x, t, vel, rot, escala]
+	var _t := 0.0
+	var _next := 1.5
+	var _bolt := 0.0
+	var _bolt_x := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		_t += delta
+		_next -= delta
+		if _next <= 0.0:
+			_next = randf_range(2.5, 5.0)
+			falls.append([randf_range(120, 520), 0.0, randf_range(0.7, 1.2), randf_range(-1, 1), randf_range(0.6, 1.1)])
+		for f in falls:
+			f[1] += delta * f[2]
+		falls = falls.filter(func(f): return f[1] < 4.5)
+		_bolt = max(0.0, _bolt - delta)
+		if randf() < delta * 0.12:
+			_bolt = 0.35
+			_bolt_x = randf_range(60, 580)
+			if G.autotest == "":
+				Audio.sfx("event", -22.0)
+		queue_redraw()
+	func _draw() -> void:
+		# relámpago lejano entre las nubes
+		if _bolt > 0.0:
+			draw_rect(Rect2(0, 0, 640, 200), Color(0.9, 0.8, 1.0, 0.12 * (_bolt / 0.35)))
+			var pts := PackedVector2Array([Vector2(_bolt_x, 0)])
+			var x := _bolt_x
+			for k in 6:
+				x += randf_range(-14, 14)
+				pts.append(Vector2(x, 20 + k * 22))
+			draw_polyline(pts, Color(1, 0.95, 1.0, 0.7 * (_bolt / 0.35)), 1.5)
+		# ángeles que caen hacia el vórtice (se encogen: están cada vez más lejos)
+		var vortex := Vector2(320, 236)
+		for f in falls:
+			var k: float = f[1] / 4.5
+			var start := Vector2(f[0], -20)
+			var p := start.lerp(vortex, k * k) + Vector2(sin(f[1] * 2.0) * 10.0, 0)
+			var sc: float = f[4] * (1.0 - k * 0.85)
+			var a := clampf((1.0 - k) * 1.4, 0.0, 1.0) * 0.8
+			draw_line(p, p - (vortex - start).normalized() * 30.0 * sc, Color(1, 0.55, 0.3, 0.35 * a), 2.0)
+			draw_set_transform(p, f[1] * f[3] * 2.0 + PI, Vector2(sc, sc))
+			var col := Color(0.05, 0.02, 0.06, a)
+			var fl := sin(f[1] * 14.0) * 3.0
+			draw_colored_polygon(PackedVector2Array([Vector2(-2, -2), Vector2(-13, -8 - fl), Vector2(-9, 1), Vector2(-2, 2)]), col)
+			draw_colored_polygon(PackedVector2Array([Vector2(2, -2), Vector2(13, -8 - fl), Vector2(9, 1), Vector2(2, 2)]), col)
+			draw_rect(Rect2(-2, -4, 4, 10), col)
+			draw_circle(Vector2(0, -6), 2.5, col)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			# plumas que se desprenden
+			for q in 3:
+				var fk := fmod(f[1] * 0.8 + q * 0.33, 1.0)
+				var fp := p + Vector2((q - 1) * 10.0 * fk, -fk * 26.0)
+				draw_line(fp, fp + Vector2(2, 4), Color(1, 0.97, 0.92, a * (1.0 - fk)), 1.5)
