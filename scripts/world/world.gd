@@ -2921,6 +2921,9 @@ class ArenaSeal extends Node2D:
 		queue_redraw()
 	func _draw() -> void:
 		var h := 26.0
+		# los barrotes son altos: se inclinan con la perspectiva de la cámara
+		var dd := (global_position - Depth3D.cam_center(self)) / Depth3D.CAM_H
+		draw_set_transform_matrix(Transform2D(0.0, Vector2(1.0, clampf(1.0 - dd.y * 0.9, 0.85, 1.15)), asin(clampf(dd.x, -0.4, 0.4)), Vector2.ZERO))
 		match style:
 			"celda":
 				var drop := (1.0 - k) * -30.0
