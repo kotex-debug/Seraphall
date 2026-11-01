@@ -143,3 +143,23 @@ const STELAE := [
 	["lore_alcove", Vector2(35.4, 36.6), [
 		["«El Carcelero no tiene llave para salir. Solo para que nadie entre. Recuérdalo cuando lo mates.»", "\"The Jailer has no key to get out. Only one to keep others from getting in. Remember that when you kill him.\""]]],
 ]
+
+
+## Pensamientos del protagonista (y, a veces, la Voz) la primera vez que entra en cada zona.
+## "" = pensamiento propio; "???" = la Voz.
+const AREA_THOUGHTS := {
+	"area_chains": [["", ["Cadenas por todas partes. Ninguna atada a nada. Como si lo encadenado se hubiera ido... o aún no hubiera llegado.", "Chains everywhere. None of them tied to anything. As if what they held had left... or had yet to arrive."]],
+		["", ["Me duelen los omóplatos al verlas. Ahí es donde estaban mis alas.", "My shoulder blades ache at the sight. That's where my wings used to be."]]],
+	"area_gallery": [["", ["Retratos sin rostro. Alguien rascó cada cara con las uñas, una a una.", "Faceless portraits. Someone scratched every face away with their nails, one by one."]],
+		["???", ["No mires tanto. Uno de ellos era el tuyo.", "Don't stare. One of them was yours."]]],
+	"area_yard": [["", ["Huele a hierro y a lluvia vieja. Aquí arriba nunca llovió... ¿o sí?", "It smells of iron and old rain. It never rained up here... or did it?"]],
+		["", ["Algo enorme arrastra los pies al otro lado del patio. Y canturrea.", "Something huge drags its feet across the yard. And it hums."]]],
+	"area_circle": [["", ["Un círculo perfecto. Los ángeles nunca supieron construir otra cosa.", "A perfect circle. Angels never knew how to build anything else."]]],
+	"area_mirador": [["", ["Desde aquí se ve la caída entera. No recuerdo el golpe. Solo el silencio de después.", "From here you can see the whole fall. I don't remember the impact. Only the silence after."]],
+		["", ["Allí abajo, entre la niebla... ¿eso son alas? Cientos de ellas.", "Down there, in the mist... are those wings? Hundreds of them."]]],
+	"area_nimbo": [["", ["Un nimbo flota sin dueño en el centro de la sala. Todavía da calor.", "A halo floats ownerless in the middle of the hall. It's still warm."]]],
+	"area_celdas": [["", ["Las puertas están cerradas por dentro. Nadie encerró a esta gente. Se encerraron ellos.", "The doors are locked from the inside. Nobody imprisoned these people. They locked themselves in."]],
+		["???", ["Esperaban a alguien. Te esperaban a ti.", "They were waiting for someone. They were waiting for you."]]],
+	"area_capilla": [["", ["Una capilla que nadie tapió por miedo. La tapiaron por cariño, para que nadie la rompiera.", "A chapel nobody walled up out of fear. They walled it up out of love, so no one would break it."]],
+		["", ["Por primera vez desde la caída, la Voz no dice nada.", "For the first time since the fall, the Voice says nothing."]]],
+}

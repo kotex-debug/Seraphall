@@ -1064,6 +1064,8 @@ func _check_area(lp: Player) -> void:
 		_area = a
 		if not first:
 			hud.show_area("", G.T(a))
+			if Lore.AREA_THOUGHTS.has(a) and not Prog.flags.get("thought_" + a, false):
+				_area_thoughts(a)
 		var target := Color(0.42, 0.45, 0.6) if a == "area_gallery" else (Color(0.55, 0.45, 0.5) if a == "area_circle" else Color(0.5, 0.46, 0.58))
 		if a == "area_mirador":
 			target = Color(0.62, 0.62, 0.75)
@@ -3157,6 +3159,22 @@ func hit_breakables(origin: Vector2, rng: float) -> void:
 func _urn_broken(i: int) -> void:
 	if i >= 0 and i < urns.size() and is_instance_valid(urns[i]):
 		urns[i].smash(false)
+
+func _area_thoughts(a: String) -> void:
+	## Monólogo interior al pisar una zona por primera vez (se interrumpe si empieza un combate o una escena)
+	await get_tree().create_timer(2.6).timeout
+	for ln in Lore.AREA_THOUGHTS[a]:
+		if not is_inside_tree() or active_boss != null or _trial != "" or _contemplating or dialog.is_open() or _area != a:
+			return
+		Prog.flags["thought_" + a] = true
+		var txt := G.L(ln[1])
+		var dur := clampf(txt.length() * 0.055, 2.4, 5.0)
+		if ln[0] == "???":
+			Audio.sfx("glitch", -12.0)
+			hud.subtitle("???", txt, dur, Color(1, 0.62, 0.6))
+		else:
+			hud.subtitle("", "( " + txt + " )", dur, Color(0.84, 0.82, 0.96))
+		await get_tree().create_timer(dur + 0.9).timeout
 
 func _place_urns() -> void:
 	## Urnas funerarias junto a los muros de las salas tranquilas: se rompen y sueltan Ecos o una pluma

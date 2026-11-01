@@ -834,6 +834,18 @@ func _run_autotest() -> void:
 			print("V8 hymns=", Prog.quest_done("hymns"), " bell=", Prog.item_count("amulet_bell"))
 			print("AUTOTEST_V8_OK")
 			get_tree().quit()
+		"thought":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			await get_tree().create_timer(1.0).timeout
+			var cc: Vector2 = w._room_corner("mirador")
+			lp.respawn_at(w.tile_pos(cc.x, cc.y))
+			await get_tree().create_timer(3.4).timeout
+			await _shot(out + "/t01_pensamiento.png")
+			await get_tree().create_timer(5.0).timeout
+			await _shot(out + "/t02_voz.png")
+			print("AUTOTEST_THOUGHT_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

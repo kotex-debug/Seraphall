@@ -224,8 +224,9 @@ func death_screen(feathers_before: int) -> void:
 	d.feathers = feathers_before
 	big_layer.add_child(d)
 
-func subtitle(speaker: String, text: String, dur := 3.0) -> void:
+func subtitle(speaker: String, text: String, dur := 3.0, color := UIKit.WHITE) -> void:
 	sub_label.text = (speaker + ": " if speaker != "" else "") + text
+	sub_label.add_theme_color_override("font_color", color)
 	var tw := sub_label.create_tween()
 	tw.tween_property(sub_label, "modulate:a", 1.0, 0.2)
 	tw.tween_interval(dur)
