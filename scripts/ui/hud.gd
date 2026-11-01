@@ -298,10 +298,52 @@ func end_card(title: String, body: String) -> void:
 	b.size = Vector2(640, 60)
 	b.modulate.a = 0.0
 	c.add_child(b)
+	# resumen del estrato: cinco cifras en fichas
+	var echoes := 0
+	for k in ["galeria", "patio", "nimbo"]:
+		if Prog.flags.get("echo_" + k, false):
+			echoes += 1
+	var stats := [
+		[G.L(["TIEMPO", "TIME"]), "%d:%02d" % [int(Prog.playtime / 3600.0), int(Prog.playtime / 60.0) % 60]],
+		[G.L(["CAÍDAS", "FALLS"]), str(Prog.deaths)],
+		[G.L(["PLUMAS", "FEATHERS"]), "%d/%d" % [Prog.wing_feathers, Prog.WING_MAX]],
+		[G.L(["RECUERDOS", "MEMORIES"]), "%d/%d" % [Prog.memories.size(), Prog.MEMORIES.size()]],
+		[G.L(["ECOS", "ECHOES"]), "%d/3" % echoes],
+		[G.L(["LOGROS", "FEATS"]), "%d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()]],
+	]
+	var row := Control.new()
+	row.position = Vector2(60, 262)
+	row.size = Vector2(520, 44)
+	row.modulate.a = 0.0
+	c.add_child(row)
+	for i in stats.size():
+		var cell := Control.new()
+		cell.position = Vector2(i * 88.0, 0)
+		cell.size = Vector2(80, 40)
+		row.add_child(cell)
+		var bgc := ColorRect.new()
+		bgc.color = Color(0.12, 0.05, 0.16, 0.9)
+		bgc.size = Vector2(80, 40)
+		cell.add_child(bgc)
+		var top := ColorRect.new()
+		top.color = UIKit.GOLD_DARK
+		top.size = Vector2(80, 2)
+		cell.add_child(top)
+		var hl := UIKit.label(stats[i][0], 8, UIKit.GOLD, "head", 3)
+		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hl.position = Vector2(0, 5)
+		hl.size = Vector2(80, 10)
+		cell.add_child(hl)
+		var vl := UIKit.label(stats[i][1], 15, UIKit.WHITE)
+		vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vl.position = Vector2(0, 18)
+		vl.size = Vector2(80, 18)
+		cell.add_child(vl)
 	var tw := create_tween()
 	tw.tween_property(c, "color:a", 0.9, 1.2)
 	tw.tween_property(t, "appear", float(title.length()) + 1.0, 1.0)
 	tw.tween_property(b, "modulate:a", 1.0, 0.8)
+	tw.tween_property(row, "modulate:a", 1.0, 0.6)
 	tw.tween_interval(6.0)
 	tw.tween_property(c, "modulate:a", 0.0, 1.5)
 	tw.tween_callback(c.queue_free)

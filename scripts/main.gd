@@ -945,6 +945,15 @@ func _run_autotest() -> void:
 					n += 1
 			print("AUTOTEST_FALLEN_OK")
 			get_tree().quit()
+		"endcard":
+			await get_tree().create_timer(1.0).timeout
+			Prog.playtime = 4210.0
+			Prog.deaths = 7
+			w.hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name())
+			await get_tree().create_timer(4.6).timeout
+			await _shot(out + "/endcard.png")
+			print("AUTOTEST_ENDCARD_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
