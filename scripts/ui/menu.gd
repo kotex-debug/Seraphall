@@ -1024,6 +1024,29 @@ func _build_map() -> void:
 
 # ------------------------------------------------------------------ opciones
 func _build_options() -> void:
+	# ficha de pausa: tu Desplumado, dónde estás y cuánto llevas
+	_panel(Rect2(0, 0, 132, 296), UIKit.PURPLE)
+	_lbl(G.L(["EN PAUSA", "PAUSED"]), Vector2(12, 10), 8, UIKit.GOLD, 0.0, "head")
+	var pb := PauseBust.new()
+	pb.position = Vector2(22, 28)
+	pb.size = Vector2(88, 88)
+	content.add_child(pb)
+	_lbl(Look.display_name(G.look).to_upper(), Vector2(8, 122), 8, UIKit.WHITE, 116, "head").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lbl("%s %d" % [G.T("level"), Prog.level], Vector2(8, 136), 10, UIKit.GOLD, 116, "title").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var area_key: String = world._area if world and world._area != "" else "area_sanct"
+	_lbl(G.T(area_key), Vector2(8, 152), 10, UIKit.CYAN, 116, "title").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var info := [[G.L(["Tiempo", "Time"]), "%d:%02d" % [int(Prog.playtime / 3600.0), int(Prog.playtime / 60.0) % 60]],
+		[G.L(["Plumas", "Feathers"]), "%d/%d" % [Prog.wing_feathers, Prog.WING_MAX]], [G.L(["Caídas", "Falls"]), str(Prog.deaths)]]
+	var iy := 176.0
+	for row in info:
+		_lbl(row[0], Vector2(12, iy), 10, UIKit.TEXT_DIM, 0.0, "title")
+		var v := _lbl(row[1], Vector2(70, iy), 10, UIKit.WHITE, 50, "title")
+		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		iy += 15.0
+	if not ctx.has("whisper"):
+		ctx["whisper"] = Lore.brasa_whisper()
+	var wq := _lbl(str(ctx["whisper"]), Vector2(8, 228), 10, Color(0.82, 0.7, 1.0), 116, "title")
+	wq.modulate.a = 0.85
 	_panel(Rect2(140, 0, 320, 296), UIKit.RED)
 	_btn(G.T("resume").to_upper(), Vector2(200, 16), close, true, 200)
 	_btn(G.T("language").to_upper(), Vector2(152, 44), G.toggle_language, true, 144)
@@ -1930,3 +1953,25 @@ class CodexBust extends Control:
 			draw_texture_rect_region(tex, dst, Rect2(fr * 48, 0, 48, 48))
 		else:
 			draw_texture_rect_region(tex, dst, Rect2(0, 0, 48, 48), Color(0.05, 0.02, 0.08))
+
+
+class PauseBust extends Control:
+	## Busto de tu personaje en la ficha de pausa (con parpadeo)
+	var _t := 0.0
+	var _tex: Texture2D
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tex = Look.bust_texture(G.look, Prog.wing_feathers)
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.GOLD_DARK, Color(0.1, 0.04, 0.14), 3.0)
+		var c := size / 2.0
+		for i in 10:
+			var a := TAU * i / 10.0 + _t * 0.3
+			var d := Vector2.from_angle(a)
+			draw_colored_polygon(PackedVector2Array([c + d * 18.0 + d.orthogonal() * 3.0, c + d * 46.0, c + d * 18.0 - d.orthogonal() * 3.0]), Color(1, 0.8, 0.4, 0.07))
+		if _tex:
+			var fr := 1 if fmod(_t, 3.5) < 0.12 else 0
+			draw_texture_rect_region(_tex, Rect2(Vector2(4, 4), Vector2(80, 80)), Rect2(fr * 40, 0, 40, 40))
