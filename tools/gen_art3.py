@@ -428,3 +428,8 @@ def ex_peregrina(d, img, i, b):
 PAL_PEREGRINA = A2.look_pal(C("e0c0a0"), C("c8b8a0"), C("8ac0a0"), C("8a7a60"), C("4a3e32"), C("d8aa48"), C("5a4a3a"), C("d8d0c0"), C("ffffff"))
 A2.npc("f", 2, PAL_PEREGRINA, ex_peregrina, True, False, (14, 19, 13)).save(f"{OUT}/npc_peregrina.png")
 print("Peregrina generada")
+
+
+# v0.8: las velas y los cálices nuevos sustituyen a los de gen_art/gen_art2
+import gen_props
+gen_props.main()
