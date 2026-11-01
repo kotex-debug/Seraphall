@@ -60,29 +60,35 @@ const STAGE_LINES := {
 ## Frases sueltas que rotan cuando ya no hay nada nuevo que contar
 const IDLE := {
 	"brenna": [
+		["Brenna", ["¿Has visto los esqueletos con alas del Pasillo? Algunos aún aprietan la empuñadura. Buen acero, ese.", "Seen the winged skeletons in the Hall? Some still grip their hilts. Good steel, that."]],
 		["Brenna", ["Acércame esa hoja. A ver qué puedo hacer.", "Hand me that blade. Let's see what I can do."]],
 		["Brenna", ["El fuego de la forja es de la Brasa. Por eso nunca se apaga... y por eso nunca calienta del todo.", "The forge fire comes from the Ember. That's why it never goes out... and why it never quite warms you."]],
 		["Brenna", ["Si se te rompe el arma ahí abajo, no la tires. Las armas también recuerdan.", "If your weapon breaks down there, don't throw it away. Weapons remember too."]],
 	],
 	"carto": [
+		["El Cartógrafo", ["A veces, en la Galería, veo a dos acólitos discutir. Llevan mil años muertos. Siguen sin ponerse de acuerdo.", "Sometimes, in the Gallery, I see two acolytes arguing. They've been dead a thousand years. Still can't agree."]],
 		["El Cartógrafo", ["Los Arcontes no nacieron monstruos. Eran los mejores de nosotros.", "The Archons weren't born monsters. They were the best of us."]],
 		["El Cartógrafo", ["Cien círculos hacia abajo. Nadie ha vuelto a subir. Nadie que yo haya oído.", "A hundred circles down. No one has ever climbed back up. No one I've heard."]],
 		["El Cartógrafo", ["La Voz que te despertó... ¿te dijo su nombre? A mí tampoco.", "The Voice that woke you... did it tell you its name? It never told me either."]],
 		["El Cartógrafo", ["Cuando pierdo el rumbo, cuento los pasos hasta la Brasa. Te aconsejo lo mismo.", "When I lose my way, I count my steps back to the Ember. I'd advise you to do the same."]],
 	],
 	"ozias": [
+		["Ozias", ["La araña de velas del Nimbo la colgué yo. No me preguntes cómo: allí arriba no hay techo.", "I hung the Nimbus chandelier myself. Don't ask me how: there's no ceiling up there."]],
 		["Ozias", ["Tráeme Esquirlas de Nimbo. Cada una guarda un eco de la aureola rota.", "Bring me Nimbus Shards. Each one holds an echo of the broken halo."]],
 		["Ozias", ["Una runa mal grabada no se borra. Se aprende a vivir con ella. Como con todo.", "A badly carved rune can't be erased. You learn to live with it. Like with everything."]],
 	],
 	"ilse": [
+		["Madre Ilse", ["Las urnas guardan cenizas de los que ardieron en la Brasa. Si rompes una, di su nombre. Cualquiera vale.", "The urns hold the ashes of those who burned in the Ember. If you break one, say a name. Any will do."]],
 		["Madre Ilse", ["Cada Lágrima Cristalizada fue alguien. Úsalas bien.", "Every Crystallized Tear was someone. Use them well."]],
 		["Madre Ilse", ["Si se te caen las plumas, tráemelas. Las coso yo, aunque se me vaya la vista en cada puntada.", "If your feathers fall, bring them to me. I'll sew them back, even if every stitch costs me my eyesight."]],
 	],
 	"nyx": [
+		["Nyx", ["¿Rompes urnas para sacar Ecos? Bien. Así me los gastas a mí.", "Breaking urns for Echoes? Good. Then you'll spend them here."]],
 		["Nyx", ["¿Ecos? Los acepto. Lo que vendo no pregunta de dónde vienes, y yo tampoco.", "Echoes? I'll take them. What I sell doesn't ask where you come from, and neither do I."]],
 		["Nyx", ["La máscara no es por el frío, por si te lo preguntabas. Es para que nadie me reconozca... de antes.", "The mask isn't for the cold, if you were wondering. It's so no one recognises me... from before."]],
 	],
 	"velaria": [
+		["Sor Velaria", ["Cuando truena en el abismo, los ecos de los Arcontes se revuelven. Hasta los muertos tienen pesadillas.", "When thunder rolls in the abyss, the Archons' echoes stir. Even the dead have nightmares."]],
 		["Sor Velaria", ["Los Arcontes caídos dejan ecos. Puedo despertarlos, más fuertes, más crueles. Si sobrevives, el Nimbo te recompensará.", "Fallen Archons leave echoes. I can awaken them, stronger, crueler. Survive, and the Nimbus will reward you."]],
 		["Sor Velaria", ["Un juramento pesa más que cualquier armadura. Elige bien antes de cargar con uno.", "An oath weighs more than any armour. Choose well before you carry one."]],
 	],
