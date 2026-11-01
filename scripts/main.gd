@@ -49,8 +49,20 @@ func _ready() -> void:
 			await get_tree().create_timer(0.9).timeout
 			await _shot(sd + "/n05_creador_chico.png")
 			ng._finish()
-			await get_tree().create_timer(4.0).timeout
+			while world == null:
+				await get_tree().create_timer(0.3).timeout
+			await get_tree().create_timer(7.0).timeout
 			await _shot(sd + "/n06_inicio.png")
+			world.local_player().respawn_at(world.tile_pos(54, 62))
+			world.camera.position = world.local_player().position
+			await get_tree().create_timer(1.5).timeout
+			await _shot(sd + "/n07_pozo.png")
+			world.local_player().respawn_at(world.tile_pos(64, 88))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(sd + "/n08_pnj.png")
+			world.menu.open("controls", {})
+			await get_tree().create_timer(0.5).timeout
+			await _shot(sd + "/n09_controles.png")
 			print("NEWGAME look=", G.look, " diff=", Prog.difficulty)
 			get_tree().quit()
 		"promo_title":
@@ -71,6 +83,15 @@ func _ready() -> void:
 			ng.row_sel = 7
 			await get_tree().create_timer(1.4).timeout
 			await _shot(sd + "/p03_creador.png")
+			get_tree().quit()
+		"film":
+			var sd2 := OS.get_environment("SERAPHALL_SHOTS")
+			G.look = Look.sane({"body": "f", "hair": 1})
+			var film := preload("res://scripts/ui/intro_film.gd").new()
+			add_child(film)
+			for k in 6:
+				await get_tree().create_timer(4.2 if k == 0 else 6.6).timeout
+				await _shot(sd2 + "/f%d.png" % k)
 			get_tree().quit()
 		"title":
 			_build_title()
@@ -553,6 +574,19 @@ func _run_autotest() -> void:
 			await _shot(out + "/p14_seravel_fase2.png")
 			print("AUTOTEST_PROMO_OK")
 			get_tree().quit()
+		"pit":
+			var lp: Player = w.local_player()
+			w.camera.zoom = Vector2(1.5, 1.5)
+			lp.respawn_at(w.tile_pos(49, 62))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/pit1.png")
+			lp.respawn_at(w.tile_pos(60, 58))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/pit2.png")
+			lp.respawn_at(w.tile_pos(76, 64))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/pit3.png")
+			get_tree().quit()
 		"hud":
 			var lp: Player = w.local_player()
 			await get_tree().create_timer(1.5).timeout
@@ -672,6 +706,17 @@ func _run_autotest() -> void:
 				cb.hp = cb.max_hp * 0.1
 			await get_tree().create_timer(1.5).timeout
 			await _shot(out + "/v11_boss_bar.png")
+			print("V3 seals=", w._seals.size())
+			for style_room in [["carcelero", "v11b_sello_celda"], ["choir", "v11c_sello_coro"], ["seravel", "v11d_sello_luz"]]:
+				w.seal_for(style_room[0])
+				await get_tree().create_timer(0.2).timeout
+				if not w._seals.is_empty():
+					var sp: Vector2 = w._seals[0].global_position
+					w._cam_focus = sp
+					await get_tree().create_timer(1.3).timeout
+					await _shot(out + "/" + style_room[1] + ".png")
+			w._cam_focus = null
+			w.unseal_arena()
 			# arena del Coro
 			lp.respawn_at(w.tile_pos(82, 41))
 			await get_tree().create_timer(1.5).timeout

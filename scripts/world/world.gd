@@ -83,6 +83,7 @@ func _ready() -> void:
 	canvas_mod.color = Color(0.5, 0.46, 0.58)
 	add_child(canvas_mod)
 	_build_props()
+	_scatter_decor()
 	_spawn_enemies()
 	_spawn_interactables()
 	_build_gate()
@@ -222,6 +223,10 @@ func _build_map() -> void:
 		dp.style = pit[1]
 		dp.z_index = -9
 		add_child(dp)
+	var decals := FloorDecals.new()
+	decals.world = self
+	decals.z_index = -9
+	add_child(decals)
 	var rim := EdgeRim.new()
 	rim.world = self
 	rim.z_index = -9
@@ -244,6 +249,31 @@ func _build_tileset() -> TileSet:
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, PackedVector2Array([Vector2(-8, -8), Vector2(8, -8), Vector2(8, 8), Vector2(-8, 8)]))
 	return ts
+
+func _scatter_decor() -> void:
+	## Escombros, huesos y plumas repartidos por las salas (decoración sin colisión)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var skip := ["yard", "circle", "choir", "nimbo", "gatehall"]
+	for r in ROOMS:
+		if r.id in skip:
+			continue
+		var rect := _rect_of(r)
+		var n := int(rect.size.x * rect.size.y / 40)
+		for k in n:
+			var x := rng.randi_range(rect.position.x + 1, rect.end.x - 2)
+			var y := rng.randi_range(rect.position.y + 1, rect.end.y - 2)
+			if not _floor_at(x, y):
+				continue
+			var p := tile_pos(x + rng.randf_range(-0.3, 0.3), y + rng.randf_range(-0.3, 0.3))
+			var kind := rng.randi_range(0, 5)
+			if kind <= 2:
+				_prop("rubble", p, 3, rng.randi_range(0, 2))
+			elif kind <= 4:
+				_prop("bones", p, 3, rng.randi_range(0, 2))
+			else:
+				var c := _prop("candle", p, 4, rng.randi_range(0, 3), 0.0, Color(1, 0.65, 0.3), 0.7)
+				c.set_meta("anim", 4)
 
 const PITS := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"]]
 
@@ -2780,3 +2810,48 @@ class DepthPit extends Control:
 			draw_colored_polygon(PackedVector2Array([Vector2(x - 2, 2), Vector2(x + 2, 2), Vector2(x, 2 + h)]), rimc.darkened(0.2))
 			x += 5.0
 			i += 1
+
+
+class FloorDecals extends Node2D:
+	## Manchas de ceniza, brasas apagadas, icor seco, plumas sueltas y runas gastadas sobre el suelo
+	var world: Node
+	var decals := []
+	func _ready() -> void:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 777
+		for k in 420:
+			var x := rng.randi_range(0, world.MAPW - 1)
+			var y := rng.randi_range(0, world.MAPH - 1)
+			if not world._floor_at(x, y):
+				continue
+			var rid: String = world.ROOMS[world.room_of[y * world.MAPW + x]].id if world.room_of[y * world.MAPW + x] >= 0 else ""
+			if rid in ["nimbo", "mirador"] and rng.randf() < 0.8:
+				continue
+			decals.append([Vector2(x * 16 + rng.randf_range(0, 16), y * 16 + rng.randf_range(0, 16)), rng.randi_range(0, 4), rng.randf_range(0.6, 1.4), rng.randi()])
+		queue_redraw()
+	func _draw() -> void:
+		for d in decals:
+			var p: Vector2 = d[0]
+			var s: float = d[2]
+			var r := RandomNumberGenerator.new()
+			r.seed = d[3]
+			match d[1]:
+				0:  # ceniza
+					for i in 6:
+						draw_circle(p + Vector2(r.randf_range(-6, 6), r.randf_range(-3, 3)) * s, r.randf_range(1.5, 3.5) * s, Color(0.55, 0.5, 0.52, 0.18))
+				1:  # icor seco
+					draw_circle(p, 4.0 * s, Color(0.32, 0.04, 0.08, 0.35))
+					for i in 5:
+						var a := r.randf() * TAU
+						draw_circle(p + Vector2.from_angle(a) * r.randf_range(4, 9) * s, r.randf_range(0.8, 2.0) * s, Color(0.35, 0.05, 0.1, 0.4))
+				2:  # brasa apagada
+					draw_circle(p, 3.0 * s, Color(0.1, 0.06, 0.06, 0.4))
+					draw_rect(Rect2(p.round(), Vector2(1, 1)), Color(1, 0.45, 0.15, 0.8))
+				3:  # pluma suelta
+					var a2 := r.randf() * TAU
+					var dir := Vector2.from_angle(a2)
+					draw_line(p - dir * 3.0, p + dir * 3.0, Color(0.9, 0.88, 0.95, 0.75), 2.0)
+					draw_line(p - dir * 3.0, p + dir * 3.0, Color(0.6, 0.55, 0.7, 0.75), 1.0)
+				4:  # runa gastada
+					draw_arc(p, 5.0 * s, 0, TAU, 12, Color(0.85, 0.7, 0.35, 0.12), 1.0)
+					draw_line(p + Vector2(0, -3), p + Vector2(0, 3), Color(0.85, 0.7, 0.35, 0.12), 1.0)

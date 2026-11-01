@@ -15,27 +15,38 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 |---|---|---|
 | Moverse | WASD | Stick izquierdo |
 | Apuntar | Ratón | Stick derecho |
-| Ataque (combo) | Clic izquierdo | X |
-| Ataque pesado (mantén para cargar) | Clic derecho | Y |
-| Dash (invulnerable) | Espacio | A |
-| Parry | Shift | LB |
-| Lanza de Luz / Nova de Ceniza | Q / E | RB / → |
-| Ira Seráfica (definitiva) | R | R3 |
+| Ataque básico (combo de 4 golpes distintos) | Clic izquierdo | X |
+| Ataque cargado (mantén) | Espacio | Y |
+| Dash (invulnerable) | Shift | A |
+| Parry (desvía proyectiles) | Clic derecho | LB |
+| Lanza de Luz / Nova de Ceniza *(se desbloquean)* | Q / E | RB / → |
+| Ira Seráfica *(se desbloquea)* | R | R3 |
 | Curar (Lágrima) | C | ↑ |
 | Objeto rápido (bomba, incienso…) | X | ↓ |
 | Mapa | M | - |
 | Modo foto (WASD mover, Q/E zoom, F12 captura) | P | - |
 | Interactuar / revivir | F | B |
-| Menú (personaje, árbol, armas, misiones) | Tab | Select |
+| Menú (personaje, árbol, armas, misiones, **controles**) | Tab | Select |
+
+Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar solo tienes el ataque básico: la **Lanza** se consigue al encender la Brasa del Santuario, la **Nova** en el árbol de habilidades y la **Ira Seráfica** al vencer al Carcelero.
 
 **El gancho:** cada muerte te **arranca una pluma** (se ve en tus alas). Con pocas plumas entras en modo **Desplumado**: más daño y velocidad, menos vida. Encender una Brasa nueva cuesta una pluma. Si mueres dos veces sin recuperar tus Ecos, **tu Sombra** se alza con tu aspecto y tus armas.
 
-**Consejos:** el dash justo antes de un golpe activa el **Instante** (cámara lenta y crítico). Un **parry** perfecto aturde al enemigo. Rompe la **postura** de los enemigos para hacer daño extra. Sube de nivel descansando en las **Brasas**. Mejora tus armas con **Brenna**, la herrera.
+**Consejos:** el dash (Shift) justo antes de un golpe activa el **Instante** (cámara lenta y crítico). Un **parry** (clic derecho) perfecto aturde al enemigo y devuelve sus proyectiles. Rompe la **postura** de los enemigos para hacer daño extra. Sube de nivel descansando en las **Brasas**. Mejora tus armas con **Brenna**, la herrera.
 
 ## 🤝 Cooperativo (2 jugadores)
 - **Anfitrión:** *Crear partida cooperativa* → comparte el **código** (online o de red local).
 - **Amigo:** *Unirse con código* → escribe el código.
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
+
+## 🧪 Versión ALFA 0.6
+- **Corto de introducción** que cuenta la historia antes de empezar, y **Prólogo opcional** que enseña la interfaz, el combate, el dash, el parry y la curación.
+- **Giros de guion** a medida que avanzas: lo que de verdad guardaban las celdas, por qué el Coro canta al revés y quién arrancó la primera pluma de Seravel.
+- **Salas de jefe selladas**: al entrar se cierran con rejas, tubos de órgano o un muro de luz hasta que acaba el combate.
+- **Pozos con profundidad** al estilo *Bloody Hell*: paredes en perspectiva que se mueven con la cámara y un núcleo de brasa o de vacío en el fondo.
+- **Combos variados** por arma (barrido, revés, tajo vertical y remate propio), **controles configurables** y habilidades que se desbloquean jugando.
+- **Arte rehecho**: PNJ, enemigos y objetos a tamaño proporcional y con detalle propio; nuevas monedas, plumas y **viales de vida, Luz y aliento**; suelos con escombros, huesos, ceniza y runas.
+- Animaciones de curación y recarga en el HUD, sonidos de interfaz más suaves y textos en un castellano más natural.
 
 ## 🧪 Versión ALFA 0.5
 - **Juego base de ~10 h** con final abierto, más **2 DLC de ~5 h** (*Los Cielos Rotos* y *El Abismo Sin Nombre*), cada uno con su final, que llevan a **2 finales definitivos** (*Alas Abiertas* o *El Trono Vacío*). La alfa incluye el Estrato I completo y la **balanza del destino**, que ya registra tus decisiones.

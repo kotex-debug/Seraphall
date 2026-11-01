@@ -35,7 +35,7 @@ func _ready() -> void:
 	_build_particles()
 	_build_title()
 	_build_menu()
-	footer = UIKit.label("ALFA 0.5  -  ESTRATO I", 10, Color(0.65, 0.55, 0.7), "title")
+	footer = UIKit.label("ALFA 0.6  -  ESTRATO I", 10, Color(0.65, 0.55, 0.7), "title")
 	footer.position = Vector2(8, 344)
 	add_child(footer)
 	press = UIKit.label(G.T("press_any").to_upper(), 8, UIKit.WHITE, "head")

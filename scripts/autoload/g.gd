@@ -341,7 +341,7 @@ func key_code(action: String) -> String:
 func controls_text() -> String:
 	var parts := []
 	for pair in [["up", ["mover", "move"]], ["attack", ["atacar", "attack"]], ["heavy", ["ataque cargado (mantén)", "heavy attack (hold)"]],
-			["dash", ["esquivar", "dash"]], ["parry", ["bloquear", "parry"]], ["heal", ["curarte", "heal"]], ["interact", ["interactuar", "interact"]],
+			["dash", ["esquivar", "dash"]], ["parry", ["desviar", "parry"]], ["heal", ["curarte", "heal"]], ["interact", ["interactuar", "interact"]],
 			["menu", ["menú", "menu"]], ["map", ["mapa", "map"]]]:
 		var k := key_label(pair[0])
 		if pair[0] == "up":
