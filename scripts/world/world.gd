@@ -574,6 +574,7 @@ func _build_props() -> void:
 		_fireflies(zone)
 	_build_arena_decor()
 	_build_antechambers()
+	_place_urns()
 
 var arena_lights: Array[PointLight2D] = []
 
@@ -1588,6 +1589,7 @@ func _reset_enemies() -> void:
 	unseal_arena()
 	_trial_reset()
 	_bell_seq.clear()
+	_reset_urns()
 	for e in enemies.duplicate():
 		if e.get_meta("extra", false):
 			enemies.erase(e)
@@ -3139,10 +3141,49 @@ func _execute(p: Player, e: Enemy) -> void:
 	if int(Prog.flags.executions) >= 10:
 		Prog.achieve("executioner")
 
+var urns: Array = []
+
 func hit_breakables(origin: Vector2, rng: float) -> void:
 	for bw in breakables.values():
 		if not bw.broken and bw.global_position.distance_to(origin) < rng + 14.0:
 			bcast("_hit_breakable", [bw.id])
+	for i in urns.size():
+		var u: Urn = urns[i]
+		if is_instance_valid(u) and not u.broken and u.global_position.distance_to(origin) < rng + 6.0:
+			u.smash(true)
+			bcast("_urn_broken", [i])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _urn_broken(i: int) -> void:
+	if i >= 0 and i < urns.size() and is_instance_valid(urns[i]):
+		urns[i].smash(false)
+
+func _place_urns() -> void:
+	## Urnas funerarias junto a los muros de las salas tranquilas: se rompen y sueltan Ecos o una pluma
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5150
+	for rid in ["sanct", "chains", "gallery", "alcove", "celdas", "atrio", "escala", "mirador", "capilla", "east"]:
+		for r in ROOMS:
+			if r.id != rid:
+				continue
+			var rc := _rect_of(r)
+			for k in 3:
+				for tries in 10:
+					var x := rng.randi_range(rc.position.x + 1, rc.end.x - 2)
+					var y := rc.position.y + (0 if rng.randf() < 0.7 else rc.size.y - 1)
+					if _floor_at(x, y) and _floor_at(x, y + 1):
+						var u := Urn.new()
+						u.world = self
+						u.position = tile_pos(x + rng.randf_range(-0.2, 0.2), y + 0.2)
+						u.variant = rng.randi_range(0, 2)
+						entities.add_child(u)
+						urns.append(u)
+						break
+
+func _reset_urns() -> void:
+	for u in urns:
+		if is_instance_valid(u):
+			u.restore()
 
 @rpc("any_peer", "call_remote", "reliable")
 func _hit_breakable(id: String) -> void:
@@ -3726,3 +3767,63 @@ class RoomAmbience extends Node2D:
 				"spores":
 					var q3 := p + Vector2(sin(k * 3.0 + p.x) * 5.0, -k * 8.0)
 					draw_circle(q3, 1.2, Color(0.7, 1.0, 0.85, sin(k / 3.0 * PI) * 0.9))
+
+
+class Urn extends Node2D:
+	## Urna funeraria: se rompe de un golpe en trozos con altura y suelta Ecos (o, a veces, una pluma)
+	var world: Node
+	var variant := 0
+	var broken := false
+	var _body: StaticBody2D
+	func _ready() -> void:
+		_body = StaticBody2D.new()
+		_body.collision_layer = 1
+		var cs := CollisionShape2D.new()
+		var sh := CircleShape2D.new()
+		sh.radius = 4.0
+		cs.shape = sh
+		_body.add_child(cs)
+		add_child(_body)
+	func smash(loot: bool) -> void:
+		if broken:
+			return
+		broken = true
+		_body.collision_layer = 0
+		Audio.sfx("hit", -6.0)
+		Audio.sfx("shatter", -10.0)
+		world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position + Vector2(0, -4), 7, [Color(0.55, 0.42, 0.36), Color(0.5, 0.5, 0.58), Color(0.6, 0.5, 0.3)][variant], 0.6))
+		Fx.burst(global_position + Vector2(0, -6), Color(0.6, 0.55, 0.6), 6, 40.0, 0.4, "fx_soft", 180.0, Vector2.UP, 0.3, false)
+		queue_redraw()
+		if not loot:
+			return
+		var roll := randf()
+		if roll < 0.08:
+			Prog.add_feathers(1)
+			G.pickup("icon_feather", "+1 " + G.T("feathers"), Color(0.9, 0.9, 1))
+		elif roll < 0.75:
+			var n := randi_range(6, 18)
+			Prog.add_ecos(n)
+			G.pickup("icon_eco", "+%d %s" % [n, G.T("ecos")], Color(0.6, 0.85, 1))
+		queue_redraw()
+	func restore() -> void:
+		if not broken:
+			return
+		broken = false
+		_body.collision_layer = 1
+		queue_redraw()
+	func _draw() -> void:
+		var cols := [[Color(0.55, 0.42, 0.36), Color(0.72, 0.58, 0.48)], [Color(0.42, 0.42, 0.5), Color(0.6, 0.6, 0.7)], [Color(0.55, 0.45, 0.25), Color(0.8, 0.66, 0.35)]]
+		var c: Array = cols[variant]
+		draw_set_transform(Vector2(0, 1), 0.0, Vector2(1.0, 0.4))
+		draw_circle(Vector2.ZERO, 6.0, Color(0, 0, 0, 0.35))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		if broken:
+			draw_colored_polygon(PackedVector2Array([Vector2(-5, 0), Vector2(-3, -3), Vector2(0, -1), Vector2(3, -4), Vector2(5, 0)]), (c[0] as Color).darkened(0.3))
+			return
+		var ink := Color(0.08, 0.04, 0.08)
+		draw_colored_polygon(PackedVector2Array([Vector2(-6, -2), Vector2(-5, -9), Vector2(-3, -12), Vector2(3, -12), Vector2(5, -9), Vector2(6, -2), Vector2(4, 1), Vector2(-4, 1)]), ink)
+		draw_colored_polygon(PackedVector2Array([Vector2(-5, -2), Vector2(-4, -9), Vector2(-2, -11), Vector2(2, -11), Vector2(4, -9), Vector2(5, -2), Vector2(3, 0), Vector2(-3, 0)]), c[0])
+		draw_line(Vector2(-3, -9), Vector2(-3, -2), c[1], 1.0)
+		draw_rect(Rect2(Vector2(-3, -14), Vector2(6, 3)), ink)
+		draw_rect(Rect2(Vector2(-2, -13), Vector2(4, 2)), c[1])
+		draw_line(Vector2(-4, -6), Vector2(4, -6), (c[0] as Color).darkened(0.35), 1.0)

@@ -834,6 +834,27 @@ func _run_autotest() -> void:
 			print("V8 hymns=", Prog.quest_done("hymns"), " bell=", Prog.item_count("amulet_bell"))
 			print("AUTOTEST_V8_OK")
 			get_tree().quit()
+		"urn":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			print("URNS=", w.urns.size())
+			var u: Node2D = w.urns[4]
+			lp.respawn_at(u.global_position + Vector2(0, 14))
+			await get_tree().create_timer(4.5).timeout
+			await _shot(out + "/u01_urna.png")
+			var e0 := Prog.ecos
+			for i in 2:
+				lp.state = "move"
+				lp.aim = Vector2.UP
+				lp._start_attack()
+				await get_tree().create_timer(0.45).timeout
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/u02_rota.png")
+			for k in range(10, 20):
+				w.urns[k].smash(true)
+			print("URN broken=", u.broken, " ecos ", e0, "->", Prog.ecos)
+			print("AUTOTEST_URN_OK")
+			get_tree().quit()
 		"d3":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
