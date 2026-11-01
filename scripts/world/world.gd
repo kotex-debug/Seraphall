@@ -3221,6 +3221,19 @@ func _build_antechambers() -> void:
 	fpc.petal = Color(0.75, 1.0, 0.85)
 	entities.add_child(fpc)
 	_fireflies(Rect2(79 * TS, 76 * TS, 11 * TS, 7 * TS))
+	# --- Santuario y Sala del Nimbo: antorchas y luz que cae sobre la Brasa
+	for tp2 in [Vector2(42.5, 79.7), Vector2(45, 79.7), Vector2(53, 79.7), Vector2(55.5, 79.7), Vector2(63, 78.7), Vector2(69, 78.7)]:
+		var wt2 := WallTorch.new()
+		wt2.position = tile_pos(tp2.x, tp2.y)
+		entities.add_child(wt2)
+	var sanct_rays := LightShafts.new()
+	sanct_rays.position = tile_pos(49, 85)
+	sanct_rays.col = Color(1, 0.8, 0.55)
+	add_child(sanct_rays)
+	# --- Mirador: estrellas fugaces sobre el abismo
+	var stars := ShootingStars.new()
+	stars.position = tile_pos(24, 84)
+	add_child(stars)
 	# --- vitrales del Atrio
 	var glass2 := LightShafts.new()
 	glass2.position = tile_pos(82, 52)
@@ -3536,3 +3549,30 @@ func _escala_pan() -> void:
 	hud.letterbox(false)
 	if is_instance_valid(lp):
 		lp.cutscene = false
+
+
+class ShootingStars extends Node2D:
+	## Estrellas fugaces (plumas encendidas) que cruzan el cielo frente al Mirador
+	var t := 0.0
+	var trails: Array = []
+	func _ready() -> void:
+		z_index = -12
+		material = Fx.add_material()
+	func _process(delta: float) -> void:
+		t += delta
+		if randf() < delta * 0.5:
+			trails.append([Vector2(randf_range(-160, 120), randf_range(-120, 0)), Vector2(randf_range(60, 120), randf_range(30, 60)), 0.0])
+		for tr in trails:
+			tr[2] += delta
+		trails = trails.filter(func(tr): return tr[2] < 1.4)
+		queue_redraw()
+	func _draw() -> void:
+		for i in 30:
+			var sp := Vector2(fmod(i * 73.0, 280.0) - 160.0, fmod(i * 41.0, 160.0) - 130.0)
+			draw_rect(Rect2(sp, Vector2(1, 1)), Color(1, 1, 1, 0.3 + 0.3 * sin(t * 2.0 + i)))
+		for tr in trails:
+			var k: float = tr[2] / 1.4
+			var p: Vector2 = tr[0] + tr[1] * tr[2]
+			var a := sin(k * PI)
+			draw_line(p, p - tr[1].normalized() * 26.0, Color(1, 0.9, 0.7, 0.6 * a), 1.5)
+			draw_circle(p, 1.5, Color(1, 1, 0.9, a))
