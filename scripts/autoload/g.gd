@@ -158,6 +158,7 @@ const TXT := {
 	"memory_got": ["RECUERDO RECUPERADO", "MEMORY RECOVERED"],
 	"tab_inventory": ["Inventario", "Inventory"],
 	"tab_map": ["Mapa", "Map"],
+	"tab_codex": ["Códice", "Codex"],
 	"use": ["Usar", "Use"],
 	"quick_slot": ["Asignar a [X]", "Assign to [X]"],
 	"consumables": ["Consumibles", "Consumables"],

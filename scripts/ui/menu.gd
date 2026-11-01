@@ -17,9 +17,9 @@ var _inv_filter := "all"
 var _info: Control
 var _anim_dir := 1
 
-const TABS := ["char", "skills", "inventory", "weapons", "quests", "map", "controls", "options"]
+const TABS := ["char", "skills", "inventory", "weapons", "quests", "codex", "map", "controls", "options"]
 const TAB_KEYS := {"char": "tab_char", "skills": "tab_skills", "inventory": "tab_inventory", "weapons": "tab_weapons",
-	"quests": "tab_quests", "map": "tab_map", "controls": "tab_controls", "options": "tab_options"}
+	"quests": "tab_quests", "codex": "tab_codex", "map": "tab_map", "controls": "tab_controls", "options": "tab_options"}
 
 func _ready() -> void:
 	layer = 20
@@ -149,6 +149,7 @@ func _rebuild(animate := true) -> void:
 		"options": _build_options()
 		"service": _build_service()
 		"controls": _build_controls()
+		"codex": _build_codex()
 	if animate:
 		content.position.x = 20 + 40 * _anim_dir
 		content.modulate.a = 0.0
@@ -591,6 +592,57 @@ const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left"
 	"spell1": ["Lanza de Luz", "Lance of Light"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"heal": ["Curarse", "Heal"], "item": ["Objeto rápido", "Quick item"], "interact": ["Interactuar", "Interact"], "menu": ["Menú", "Menu"],
 	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"]}
+
+# ------------------------------------------------------------------ códice (bestiario)
+const CODEX := [
+	["hueco", "enemy_hueco", Rect2(0, 0, 32, 32), ["Hueco", "Husk"], ["Ángeles a los que la Voz vació por dentro. Arrastran cadenas que ya nadie sujeta y repiten, sin saberlo, la última orden que recibieron.", "Angels the Voice hollowed out. They drag chains no one holds anymore and repeat, unknowingly, the last order they were given."]],
+	["acolito", "enemy_acolito", Rect2(0, 0, 32, 32), ["Acólito", "Acolyte"], ["Rezan con los ojos abiertos para no ver lo que adoran. Sus velas no queman: iluminan lo justo para que nadie se pierda... ni escape.", "They pray with open eyes so they won't see what they worship. Their candles don't burn: they shed just enough light so no one gets lost... or escapes."]],
+	["bestia", "enemy_bestia", Rect2(0, 0, 38, 28), ["Bestia de Ceniza", "Ash Beast"], ["Lo que queda cuando un ángel olvida que lo fue. Huele el miedo y la luz por igual.", "What remains when an angel forgets it ever was one. It smells fear and light alike."]],
+	["guardia", "enemy_guardia", Rect2(0, 0, 32, 32), ["Guardia de las Celdas", "Cell Guard"], ["Llevan la puerta de su propia celda como escudo. Ataca por la espalda o rompe su postura: de frente, nada pasa.", "They carry the door of their own cell as a shield. Strike from behind or break their stance: from the front, nothing gets through."]],
+	["custodio", "enemy_custodio", Rect2(0, 0, 48, 48), ["El Custodio del Umbral", "The Threshold Warden"], ["Estatua jurada a una sola puerta. Esperó mil años a que volviera el verdugo... y lo reconoció al instante.", "A statue sworn to a single door. It waited a thousand years for the executioner's return... and recognised it at once."]],
+	["carcelero", "enemy_carcelero", Rect2(0, 0, 40, 40), ["El Carcelero", "The Jailer"], ["No encerraba a los presos para castigarlos, sino para esconderlos. Su llave no abre: impide que algo entre.", "He didn't lock the prisoners away to punish them, but to hide them. His key doesn't open: it keeps something out."]],
+	["choir", "boss_singer", Rect2(0, 0, 26, 36), ["El Coro Hueco", "The Hollow Choir"], ["Tres voces que cantaban un nombre al revés para que su dueño no despertara. Cuando callaron, algo se dio la vuelta en el fondo.", "Three voices that sang a name backwards so its owner would not wake. When they fell silent, something turned over at the bottom."]],
+	["seravel", "boss_seravel", Rect2(0, 0, 52, 56), ["Seravel, Guardiana de las Puertas", "Seravel, Warden of the Gates"], ["La primera de los serafines. Confió en el verdugo que le arrancó la primera pluma. Todavía lo espera a las puertas... del mismo lado, si la perdonas.", "First of the seraphim. She trusted the executioner who tore out her first feather. She still waits for them at the gates... on the same side, if you spare her."]],
+]
+var _codex_sel := "hueco"
+
+func _build_codex() -> void:
+	_panel(Rect2(0, 0, 200, 296), UIKit.RED)
+	_lbl(G.L(["CÓDICE", "CODEX"]), Vector2(14, 10), 8, UIKit.GOLD, 0.0, "head")
+	var y := 30.0
+	for e in CODEX:
+		var known: bool = Prog.flags.get("killed_" + e[0], false)
+		var nm := G.L(e[3]) if known else "???"
+		var b := _btn(nm.to_upper() if known else nm, Vector2(12, y), _on_codex.bind(e[0]), true, 176)
+		if e[0] == _codex_sel:
+			b.add_theme_color_override("font_color", UIKit.GOLD)
+		y += 31.0
+	_panel(Rect2(210, 0, 390, 296), UIKit.PURPLE)
+	for e2 in CODEX:
+		if e2[0] != _codex_sel:
+			continue
+		var known2: bool = Prog.flags.get("killed_" + e2[0], false)
+		var pv := CodexPortrait.new()
+		pv.sheet = e2[1]
+		pv.region = e2[2]
+		pv.known = known2
+		pv.position = Vector2(222, 16)
+		pv.size = Vector2(140, 140)
+		content.add_child(pv)
+		_lbl(G.L(e2[3]).to_upper() if known2 else "???", Vector2(376, 24), 8, UIKit.GOLD if known2 else UIKit.TEXT_DIM, 210, "head")
+		var boss: bool = e2[0] in ["carcelero", "choir", "seravel"]
+		_lbl(G.L(["ARCONTE", "ARCHON"]) if boss else (G.L(["ÉLITE", "ELITE"]) if e2[0] == "custodio" else G.L(["CRIATURA DE LA ESPIRAL", "CREATURE OF THE SPIRAL"])), Vector2(376, 40), 8, UIKit.RED if boss else UIKit.CYAN, 210, "head")
+		_lbl(G.L(e2[4]) if known2 else G.L(["Derrótalo para conocer su historia.", "Defeat it to learn its story."]), Vector2(376, 62), 15, UIKit.WHITE, 210)
+		var kills := 0
+		for w in Prog.weapon_kills.values():
+			kills += int(w.get(e2[0], 0))
+		if known2 and not boss and kills > 0:
+			_lbl(G.L(["Abatidos: %d", "Slain: %d"]) % kills, Vector2(222, 170), 10, UIKit.TEXT_DIM, 0.0, "title")
+
+func _on_codex(id: String) -> void:
+	_codex_sel = id
+	Audio.sfx("ui_move", -10.0)
+	_rebuild(false)
 
 func _build_controls() -> void:
 	_panel(Rect2(0, 0, 600, 296), UIKit.CYAN)
@@ -1135,11 +1187,16 @@ class TabBar2 extends Control:
 		var f := UIKit.font("head")
 		var x := 20.0
 		_rects.clear()
-		for t in menu.get_tabs():
+		var tabs: Array = menu.get_tabs()
+		var total := 0.0
+		for t0 in tabs:
+			total += f.get_string_size(G.T(menu.tab_key(t0)).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 18 + 4
+		var squeeze := clampf((600.0 - total) / float(tabs.size() * 2), -5.0, 0.0)
+		for t in tabs:
 			var txt := G.T(menu.tab_key(t)).to_upper()
-			var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 18
+			var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 18 + squeeze * 2.0
 			_rects[t] = Rect2(Vector2(x, 2), Vector2(w, 18))
-			x += w + 4
+			x += w + 4 + squeeze
 		if _cur.size != Vector2.ZERO:
 			UIKit.slash_band(self, Rect2(_cur.position + Vector2(2, 2), _cur.size), Color(0, 0, 0, 0.5), 5.0)
 			UIKit.slash_band(self, _cur, UIKit.RED, 5.0)
@@ -1149,8 +1206,9 @@ class TabBar2 extends Control:
 			var sel: bool = t == menu.tab
 			var txt := G.T(menu.tab_key(t)).to_upper()
 			var y := r.position.y + 13 - (roundf(sin(_t * 8.0) * 1.0) if sel else 0.0)
-			f.draw_string_outline(get_canvas_item(), Vector2(r.position.x + 9, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 4, UIKit.INK)
-			f.draw_string(get_canvas_item(), Vector2(r.position.x + 9, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE if sel else Color(0.7, 0.62, 0.75))
+			var tx := r.position.x + (r.size.x - f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x) / 2.0
+			f.draw_string_outline(get_canvas_item(), Vector2(tx, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 4, UIKit.INK)
+			f.draw_string(get_canvas_item(), Vector2(tx, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE if sel else Color(0.7, 0.62, 0.75))
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			for t in _rects:
@@ -1757,3 +1815,32 @@ class MapView extends Control:
 			_str(Vector2(24 + colx, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
 		if Prog.item_count("map_carto") == 0:
 			_str(Vector2(10, size.y - 12), G.L(["Sin cartografía: cofres ocultos", "No cartography: chests hidden"]), UIKit.PINK, 10, "title")
+
+
+class CodexPortrait extends Control:
+	## Retrato grande de una criatura del Códice (silueta si aún no la has derrotado)
+	var sheet := ""
+	var region := Rect2()
+	var known := false
+	var _t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.02, 0.07, 0.8))
+		for i in 5:
+			draw_arc(size / 2.0, 30.0 + i * 12.0, 0, TAU, 32, Color(0.6, 0.3, 0.5, 0.06), 1.0)
+		var tex: Texture2D = Fx.tex(sheet)
+		if tex == null:
+			return
+		var sc := floorf(minf(size.x / region.size.x, size.y / region.size.y) * 0.8)
+		var ds := region.size * sc
+		var bob := roundf(sin(_t * 2.0) * 2.0)
+		var col := Color.WHITE if known else Color(0, 0, 0, 0.9)
+		draw_texture_rect_region(tex, Rect2(size / 2.0 - ds / 2.0 + Vector2(0, bob), ds), region, col)
+		if not known:
+			var f := UIKit.font("logo")
+			f.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - 8, size.y / 2.0 + 14), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(0.7, 0.5, 0.8, 0.6))

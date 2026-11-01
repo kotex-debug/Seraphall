@@ -1050,7 +1050,9 @@ func _run_autotest() -> void:
 			Prog.equip_amulet("amulet_wing")
 			Prog.flags["seen_sanct"] = true; Prog.flags["seen_chains"] = true; Prog.flags["seen_hall1"] = true; Prog.flags["seen_mirador"] = true
 			await get_tree().create_timer(1.0).timeout
-			for tb in ["char", "skills", "inventory", "weapons", "quests", "map", "options"]:
+			for kt in ["hueco", "acolito", "guardia", "carcelero"]:
+				Prog.flags["killed_" + kt] = true
+			for tb in ["char", "skills", "inventory", "weapons", "quests", "codex", "map", "options"]:
 				w.menu.open(tb, {"brasa": true, "forge": true})
 				await get_tree().create_timer(0.8).timeout
 				await _shot(out + "/m_%s.png" % tb)

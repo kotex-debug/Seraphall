@@ -545,6 +545,7 @@ func die() -> void:
 	_attack_id += 1
 	velocity = Vector2.ZERO
 	anim = "dead"
+	Prog.flags["killed_" + type] = true
 	if _hp_bar:
 		_hp_bar.visible = false
 	Audio.sfx("die")
