@@ -203,6 +203,11 @@ func _build_char() -> void:
 	name_pt.size = Vector2(150, 10)
 	name_pt.position = Vector2(0, 10)
 	content.add_child(name_pt)
+	# equipo: arma y dos amuletos bajo el retrato
+	var eq := EquipStrip.new()
+	eq.position = Vector2(19, 152)
+	eq.size = Vector2(112, 36)
+	content.add_child(eq)
 	var lvl := UIKit.pixel_text("%s %d" % [G.T("level").to_upper(), Prog.level], 24, "logo", UIKit.WHITE)
 	lvl.align = 1
 	lvl.size = Vector2(150, 26)
@@ -222,12 +227,18 @@ func _build_char() -> void:
 	# atributos
 	_panel(Rect2(160, 0, 250, 296))
 	var y := 12.0
+	var attr_icons := {"vigor": "heart", "aguante": "ala", "fuerza": "iron", "destreza": "lance", "fe": "luz", "arcano": "orbit"}
 	for k in ["vigor", "aguante", "fuerza", "destreza", "fe", "arcano"]:
-		_lbl(G.T(k).to_upper(), Vector2(172, y), 8, UIKit.WHITE, 0.0, "head")
+		var aic := TextureRect.new()
+		aic.texture = Fx.tex("icon_" + attr_icons[k])
+		aic.position = Vector2(170, y - 3)
+		aic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		content.add_child(aic)
+		_lbl(G.T(k).to_upper(), Vector2(190, y), 8, UIKit.WHITE, 0.0, "head")
 		var v: int = Prog.attr[k]
 		var pips := PipBar.new()
 		pips.value = v
-		pips.position = Vector2(172, y + 14)
+		pips.position = Vector2(190, y + 14)
 		content.add_child(pips)
 		var vl := UIKit.pixel_text(str(v), 16, "head", UIKit.GOLD)
 		vl.position = Vector2(330, y)
@@ -235,7 +246,7 @@ func _build_char() -> void:
 		var can := at_brasa and Prog.ecos >= cost
 		var b := _btn("+", Vector2(368, y), _on_buy.bind(k), can, 22)
 		b.tooltip_text = G.T(k + "_d")
-		_lbl(G.T(k + "_d"), Vector2(172, y + 22), 10, UIKit.TEXT_DIM, 0.0, "title")
+		_lbl(G.T(k + "_d"), Vector2(190, y + 22), 10, UIKit.TEXT_DIM, 0.0, "title")
 		y += 46.0
 	# estadísticas
 	_panel(Rect2(420, 0, 180, 296))
@@ -1400,11 +1411,12 @@ class Portrait extends Control:
 		draw_texture_rect_region(tex, Rect2(Vector2(-48, -70 + bob), Vector2(96, 96)), Rect2(frame * 32, 0, 32, 32))
 
 class PipBar extends Control:
+	## Barra de atributo en segmentos con brillo; cada 5 puntos un segmento más alto
 	var value := 1
 	var t := 0.0
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		size = Vector2(150, 6)
+		size = Vector2(130, 7)
 	func _process(delta: float) -> void:
 		t += delta
 		queue_redraw()
@@ -1412,11 +1424,17 @@ class PipBar extends Control:
 		var shown: int = min(int(t * 40.0), value)
 		for i in 20:
 			var on := i < mini(shown, 20)
-			var c := UIKit.RED if on else Color(0.2, 0.1, 0.25)
-			if on and i == shown - 1:
-				c = UIKit.WHITE
-			draw_rect(Rect2(Vector2(i * 7, 0), Vector2(6, 6)), UIKit.INK)
-			draw_rect(Rect2(Vector2(i * 7 + 1, 1), Vector2(4, 4)), c)
+			var tall := (i + 1) % 5 == 0
+			var r := Rect2(Vector2(i * 6.5, 1 if tall else 2), Vector2(5, 6 if tall else 4))
+			draw_rect(r.grow(1), UIKit.INK)
+			if on:
+				var c := UIKit.RED.lerp(UIKit.GOLD, float(i) / 19.0)
+				if i == shown - 1:
+					c = c.lerp(UIKit.WHITE, 0.4 + 0.3 * sin(t * 6.0))
+				draw_rect(r, c)
+				draw_rect(Rect2(r.position, Vector2(r.size.x, 1)), c.lightened(0.35))
+			else:
+				draw_rect(r, Color(0.18, 0.09, 0.22))
 
 class StatBar extends Control:
 	var value := 0.5
@@ -2328,3 +2346,46 @@ class QuestDetail extends Control:
 			draw_rect(Rect2(Vector2(-52, -14), Vector2(104, 28)), Color(0.55, 0.95, 0.6, 0.8), false, 2.0)
 			hf.draw_string(get_canvas_item(), Vector2(-46, 5), G.L(["COMPLETADA", "COMPLETED"]), HORIZONTAL_ALIGNMENT_CENTER, 92, 8, Color(0.6, 1.0, 0.65))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+class EquipStrip extends Control:
+	## Arma equipada y dos huecos de amuleto, en marcos con brillo
+	var _t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _slot(r: Rect2, col: Color) -> void:
+		draw_rect(r.grow(1), UIKit.INK)
+		draw_rect(r, Color(0.12, 0.05, 0.16))
+		draw_rect(r, col, false, 1.0)
+		draw_rect(Rect2(r.position + Vector2(1, 1), Vector2(r.size.x - 2, 1)), Color(col, 0.35))
+	func _draw() -> void:
+		# arma
+		var wr := Rect2(Vector2(0, 2), Vector2(52, 30))
+		_slot(wr, UIKit.GOLD_DARK)
+		var wd: Dictionary = Prog.WEAPONS.get(Prog.equipped, {})
+		if not wd.is_empty():
+			var wt := Fx.tex("weapon_" + wd.sprite)
+			if wt:
+				var asp := float(wt.get_width()) / float(wt.get_height())
+				var ww := minf(46.0, 26.0 * asp)
+				var hh := ww / asp
+				draw_texture_rect(wt, Rect2(wr.get_center() - Vector2(ww, hh) / 2.0, Vector2(ww, hh)), false)
+			var lv: int = Prog.weapons.get(Prog.equipped, 0)
+			if lv > 0:
+				UIKit.font("head").draw_string(get_canvas_item(), wr.position + Vector2(3, wr.size.y - 3), "+%d" % lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
+		# amuletos
+		for k in 2:
+			var ar := Rect2(Vector2(58 + k * 27, 6), Vector2(24, 24))
+			_slot(ar, UIKit.CYAN if Prog.amulets_eq[k] != "" else UIKit.PURPLE)
+			var am: String = Prog.amulets_eq[k]
+			if am != "":
+				var it: Dictionary = Prog.ITEMS.get(am, {})
+				var at := Fx.tex("icon_" + str(it.get("icon", am)))
+				if at:
+					var bob := roundf(sin(_t * 2.0 + k) * 1.0)
+					draw_texture_rect(at, Rect2(ar.position + Vector2(4, 4 + bob), Vector2(16, 16)), false)
+			else:
+				draw_circle(ar.get_center(), 2.0, Color(0.4, 0.25, 0.5))

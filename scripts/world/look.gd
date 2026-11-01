@@ -54,6 +54,16 @@ static func palette(look: Dictionary) -> Dictionary:
 		pal[i] = wc
 	return pal
 
+## Sombreado con desplazamiento de tono: las sombras tiran a violeta frío y las luces a dorado cálido
+static func _shade(base: Color, f: float) -> Color:
+	var c := Color(clampf(base.r * f, 0, 1), clampf(base.g * f, 0, 1), clampf(base.b * f, 0, 1), 1.0)
+	if f < 1.0:
+		# solo las sombras hondas se enfrían; las suaves conservan su color
+		return c.lerp(Color(0.2, 0.1, 0.3), clampf((0.85 - f) * 0.5, 0.0, 0.22))
+	if f > 1.0:
+		return c.lerp(Color(1.0, 0.95, 0.82), clampf((f - 1.0) * 0.45, 0.0, 0.2))
+	return c
+
 static func color_of(look: Dictionary, key: String) -> Color:
 	var l := sane(look)
 	return Color.html(OPTIONS[key][l[key]][2])
@@ -87,7 +97,7 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 					continue
 				var f := c.g8 / 128.0
 				var base: Color = pal.get(part, Color.MAGENTA)
-				var px := Color(clampf(base.r * f, 0, 1), clampf(base.g * f, 0, 1), clampf(base.b * f, 0, 1), 1.0)
+				var px := _shade(base, f)
 				out.set_pixel(x, y, px)
 				if part != 9:
 					solid[y * w + x] = 1
@@ -102,6 +112,7 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 			if solid[y * w + x] == 1 or out.get_pixel(x, y).a > 0.5:
 				continue
 			var edge := false
+			var nb := Color.BLACK
 			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 				var nx: int = x + d.x
 				var ny: int = y + d.y
@@ -111,9 +122,11 @@ static func texture(look: Dictionary, feathers := 10, kind := "pl") -> ImageText
 					continue
 				if solid[ny * w + nx] == 1:
 					edge = true
+					nb = out.get_pixel(nx, ny)
 					break
 			if edge:
-				out.set_pixel(x, y, OUTLINE)
+				# contorno selectivo: oscuro y teñido del color que rodea (más suave que el negro puro)
+				out.set_pixel(x, y, Color(nb.r * 0.32, nb.g * 0.26, nb.b * 0.36).lerp(OUTLINE, 0.55))
 	var tex := ImageTexture.create_from_image(out)
 	_cache[key] = tex
 	return tex

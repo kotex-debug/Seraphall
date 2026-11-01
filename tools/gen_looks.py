@@ -75,8 +75,8 @@ FACE = [
     ".....SSSSSSSSS",  # y7
     ".....sSSSSSSSS",  # y8
     ".....sSSSSBBSS",  # y9  ceja
-    ".....sSsSSWESS",  # y10 oreja + ojo
-    ".....sSsSSSSnS",  # y11
+    ".....sSsSSWESS",  # y10 oreja + ojo (2x2, con brillo)
+    ".....sSsSSEeSn",  # y11
     ".....ssSSSSSm.",  # y12 boca
     "......sssSSS..",  # y13
     "........sS....",  # y14 cuello
@@ -84,8 +84,9 @@ FACE = [
 FACE_F = list(FACE)
 FACE_F[6] = ".....sSSSSSBlS"   # ceja fina + pestaña
 FACE_F[7] = ".....sSsSSWEeS"   # ojo más grande
-FACE_F[8] = ".....sSsSSpSnS"   # rubor
+FACE_F[8] = ".....sSsSpEeSn"   # ojo (2 filas) y rubor
 FACE_HURT = ".....sSsSSBBSS"   # ojos cerrados de dolor
+FACE_HURT2 = ".....sSsSSSSSn"  # fila de debajo con los ojos cerrados
 FACE_MAP = {"S": (1, 1.0), "s": (1, 0.82), "k": (1, 1.12), "n": (1, 0.86), "W": (21, 1.0), "E": (3, 1.0), "e": (3, 0.6),
             "B": (2, 0.5), "l": (2, 0.35), "m": (20, 1.0), "p": (22, 1.0)}
 HAIR_MAP = {"H": (2, 1.0), "h": (2, 0.74), "L": (2, 1.3), "D": (2, 0.52), "T": (6, 1.1)}
@@ -336,6 +337,7 @@ def hero(body, hair, pose):
     face = list(FACE_F if body == "f" else FACE)
     if pose.get("hurt"):
         face[7] = FACE_HURT
+        face[8] = FACE_HURT2
     c.pattern(8, 2 + bob, face, FACE_MAP)
     c.pattern(8, 2 + bob, HAIRS[(body, hair)], HAIR_MAP)
     # ---- aureola (sin contorno en el juego)
