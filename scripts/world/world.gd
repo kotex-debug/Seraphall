@@ -1036,6 +1036,8 @@ func _check_area(lp: Player) -> void:
 		else:
 			_request_choir.rpc_id(1)
 	_check_trials(lp, r)
+	if r == "atrio" and not Prog.flags.get("atrio_echo", false) and not trial_done("atrio"):
+		_atrio_echo()
 	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive() and asc_fight.is_empty():
 		if multiplayer.is_server():
 			_server_start_boss()
@@ -1607,10 +1609,15 @@ func _talk(id: String) -> void:
 				["Tobías", ["No abras las celdas. Por favor. Él nos metió aquí para que estuviéramos a salvo, no para castigarnos.", "Don't open the cells. Please. He put us here to keep us safe, not to punish us."]],
 				["Tobías", ["Cuando la Voz habla, los de las celdas se vuelven... huecos. Escúchame: si oyes que te llaman por tu nombre, no contestes.", "When the Voice speaks, those in the cells turn... hollow. Listen: if you hear your name being called, don't answer."]],
 			]
-			if trial_done("celdas"):
-				lp0 = [["Tobías", ["Han salido todos. Ya no queda nadie a quien proteger... salvo tú. Ten cuidado con la llave.", "They're all out now. There's no one left to protect... except you. Be careful with that key."]]]
-			if wflags.get("carcelero_dead", false):
-				lp0 = [["Tobías", ["El Carcelero ha caído. Lo noto: las cadenas pesan menos. Y algo, ahí fuera, se ha despertado.", "The Jailer has fallen. I can feel it: the chains weigh less. And something, out there, has woken up."]]]
+			if Prog.flags.get("met_preso", false):
+				lp0 = Lore.stage_lines("preso", wflags)
+				if lp0.is_empty() and trial_done("celdas") and not Prog.flags.get("preso_after", false):
+					Prog.flags["preso_after"] = true
+					lp0 = [["Tobías", ["Han salido todos. Ya no queda nadie a quien proteger... salvo tú. Ten cuidado con la llave.", "They're all out now. There's no one left to protect... except you. Be careful with that key."]],
+						["Tobías", ["Madre Ilse... ¿sigue viva? Dile que no se preocupe por mí. Que aquí abajo se está... tranquilo.", "Mother Ilse... is she still alive? Tell her not to worry about me. That it's... quiet down here."]]]
+				if lp0.is_empty():
+					lp0 = Lore.idle_line("preso")
+			Prog.flags["met_preso"] = true
 			dialog.play(lp0, Callable())
 		"brenna":
 			if not Prog.quests.has("feathers"):
@@ -1628,35 +1635,41 @@ func _talk(id: String) -> void:
 				dialog.play(lines, done)
 			else:
 				Prog.quest_step("main1", "talk_brenna")
-				var opts := [["Brenna", ["Acércame esa hoja. A ver qué puedo hacer.", "Hand me that blade. Let's see what I can do."]]]
-				if Prog.is_desplumado():
-					opts = [["Brenna", ["Por la Brasa... ¿dónde has dejado las plumas? Pareces un pollo de feria. Uno muy peligroso, eso sí.", "By the Ember... where did you leave your feathers? You look like a fairground chicken. A very dangerous one, mind."]]]
-				elif Prog.deaths >= 3:
-					opts = [["Brenna", ["%d veces has vuelto de la muerte. A este ritmo te voy a cobrar las reparaciones." % Prog.deaths, "%d times you've come back from death. At this rate I'll start charging for repairs." % Prog.deaths]]]
-				if wflags.get("seravel_dead", false):
-					opts = [["Brenna", ["Seravel... Yo forjé su primera espada, ¿sabes? Antes de que todo esto empezara.", "Seravel... I forged her first sword, you know. Before all this began."]]]
+				var opts := Lore.stage_lines("brenna", wflags)
+				if opts.is_empty():
+					if Prog.is_desplumado():
+						opts = [["Brenna", ["Por la Brasa... ¿dónde has dejado las plumas? Pareces un pollo de feria. Uno muy peligroso, eso sí.", "By the Ember... where did you leave your feathers? You look like a fairground chicken. A very dangerous one, mind."]]]
+					elif Prog.deaths >= 3 and randf() < 0.4:
+						opts = [["Brenna", ["%d veces has vuelto de la muerte. A este ritmo te voy a cobrar las reparaciones." % Prog.deaths, "%d times you've come back from death. At this rate I'll start charging for repairs." % Prog.deaths]]]
+					else:
+						opts = Lore.idle_line("brenna")
 				dialog.play(opts, _open_forge)
 		"ozias":
 			var l1 := [["Ozias", ["Las runas no mienten. El acero sí. Déjame enseñarle a tu arma a recordar el fuego... o el frío.", "Runes do not lie. Steel does. Let me teach your weapon to remember fire... or frost."]]]
 			if Prog.flags.get("met_ozias", false):
-				l1 = [["Ozias", ["Tráeme Esquirlas de Nimbo. Cada una guarda un eco de la aureola rota.", "Bring me Nimbus Shards. Each one holds an echo of the broken halo."]]]
+				l1 = Lore.lines_for("ozias", wflags)
 			Prog.flags["met_ozias"] = true
 			dialog.play(l1, _open_service.bind("ozias"))
 		"ilse":
 			var l2 := [["Madre Ilse", ["Siéntate, criatura. Tus Lágrimas están turbias. Puedo aclararlas... si me traes las de otros.", "Sit, child. Your Tears are cloudy. I can clear them... if you bring me the tears of others."]]]
 			if Prog.flags.get("met_ilse", false):
-				l2 = [["Madre Ilse", ["Cada Lágrima Cristalizada fue alguien. Úsalas bien.", "Every Crystallized Tear was someone. Use them well."]]]
+				l2 = Lore.lines_for("ilse", wflags)
 			Prog.flags["met_ilse"] = true
 			dialog.play(l2, _open_service.bind("ilse"))
 		"nyx":
-			var l3 := [["Nyx", ["¿Ecos? Los acepto. Lo que vendo no pregunta de dónde vienes, y yo tampoco.", "Echoes? I'll take them. What I sell doesn't ask where you come from, and neither do I."]]]
-			if Prog.is_desplumado():
+			var l3 := Lore.stage_lines("nyx", wflags)
+			if l3.is_empty():
+				l3 = Lore.idle_line("nyx")
+			if Prog.is_desplumado() and randf() < 0.5:
 				l3 = [["Nyx", ["Vaya, vaya. Si sigues soltando plumas te compro el resto para un cojín.", "Well, well. Keep shedding feathers and I'll buy the rest for a cushion."]]]
 			elif not Prog.shadow.is_empty():
 				l3 = [["Nyx", ["Tu sombra anda suelta por ahí con tus Ecos. Yo de ti iría a por ella antes de que aprenda a regatear.", "Your shadow's loose out there with your Echoes. I'd fetch it before it learns to haggle."]]]
 			dialog.play(l3, _open_service.bind("nyx"))
 		"velaria":
 			var l4 := [["Sor Velaria", ["Los Arcontes caídos dejan ecos. Puedo despertarlos, más fuertes, más crueles. Si sobrevives, el Nimbo te recompensará.", "Fallen Archons leave echoes. I can awaken them, stronger, crueler. Survive, and the Nimbus will reward you."]]]
+			if Prog.flags.get("met_velaria", false):
+				l4 = Lore.lines_for("velaria", wflags)
+			Prog.flags["met_velaria"] = true
 			if not Prog.quests.has("choir"):
 				l4.append(["Sor Velaria", ["Y escucha: en la Galería Rota alguien sigue cantando. Haz que calle.", "And listen: in the Broken Gallery someone is still singing. Make it stop."]])
 			var cb := func():
@@ -1676,13 +1689,7 @@ func _talk(id: String) -> void:
 					Prog.start_quest("map")
 				dialog.play(lines, done2)
 			else:
-				var lore := [
-					[["Los Arcontes no nacieron monstruos. Eran los mejores de nosotros.", "The Archons weren't born monsters. They were the best of us."]],
-					[["Cien círculos hacia abajo. Nadie ha vuelto a subir. Nadie que yo haya oído.", "A hundred circles down. No one has ever climbed back up. No one I've heard."]],
-					[["La Voz que te despertó... ¿te dijo su nombre? A mí tampoco.", "The Voice that woke you... did it tell you its name? It never told me either."]],
-				]
-				var pick: Array = lore[int(Prog.playtime) % lore.size()]
-				dialog.play([["El Cartógrafo", pick[0]]], Callable())
+				dialog.play(Lore.lines_for("carto", wflags), Callable())
 
 func _open_service(npc: String) -> void:
 	menu.open("service", {"npc": npc})
@@ -3085,6 +3092,11 @@ func _build_antechambers() -> void:
 	var bars := _prop("cellbars", tile_pos(17.2, 49.9), 1, 0)
 	bars.z_index = 1
 	_add_inter("lore", "lore_celdas", tile_pos(34.5, 51.6), {"lines": [["lore_title", ["«Aquí esperan los que no deben salir. Que nadie abra las celdas. Que nadie escuche lo que llama desde fuera.»", "\"Here wait those who must not leave. Let no one open the cells. Let no one heed what calls from outside.\""]]]})
+	for st in Lore.STELAE:
+		var sl := []
+		for ln in st[2]:
+			sl.append(["lore_title", ln])
+		_add_inter("lore", st[0], tile_pos(st[1].x, st[1].y), {"lines": sl})
 	# --- Atrio de las Voces: tres campanas y la inscripción del himno
 	# 0 = aguda (pequeña), 1 = media, 2 = grave (grande). De izquierda a derecha suenan grave-media-aguda:
 	# el himno tal y como está escrito... que es justo lo que NO hay que hacer.
@@ -3146,6 +3158,10 @@ func _trial_begin(id: String) -> void:
 	hud.big_message(G.T(T.title), Color(1, 0.55, 0.4), 2.4)
 	hud.show_trial(G.T(T.title), 0, T.waves.size())
 	Audio.play_music("trial", 0.6)
+	if id == "celdas":
+		# la Voz susurra desde las celdas
+		Audio.sfx("glitch", -8.0)
+		hud.subtitle("???", G.L(["Ábrelas... ábrelas todas. Déjalos salir.", "Open them... open them all. Let them out."]), 2.6)
 
 func _trial_tick(delta: float) -> void:
 	if _trial == "" or not multiplayer.is_server():
@@ -3225,8 +3241,9 @@ func _trial_complete(id: String) -> void:
 	Prog.quest_step("main1", "trial_" + id)
 	if id == "celdas":
 		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("shortcut_open"), Color(0.9, 0.8, 0.7)))
+		get_tree().create_timer(1.2).timeout.connect(hud.subtitle.bind("Tobías", G.L(["¡No...! ¿Qué has hecho? Ahora ya no hay nada entre él y nosotros...", "No...! What have you done? Now there's nothing between him and us..."]), 3.2))
 	if id == "umbral":
-		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("judgement_open"), Color(1, 0.9, 0.6)))
+		get_tree().create_timer(2.8).timeout.connect(_custodio_vision)
 	if multiplayer.is_server():
 		Prog.save_game()
 
@@ -3279,3 +3296,25 @@ func _atrio_fail() -> void:
 	hud.big_message(G.T("atrio_fail"), Color(1, 0.4, 0.5), 1.8)
 	Audio.sfx("glitch", -4.0)
 	G.shake(3.0, 0.3)
+
+
+# ---------------------------------------------------------------- escenas cortas (v0.8)
+func _custodio_vision() -> void:
+	## El Custodio, al caer, reconoce al protagonista. La Voz intenta tapar lo que dice.
+	G.flash(Color(1, 0.92, 0.7, 0.45), 0.5)
+	Audio.sfx("bell_2", -6.0, 0.0)
+	var lines := [
+		["El Custodio", ["Mil años... guardando esta puerta. Hasta que volviera el verdugo.", "A thousand years... guarding this door. Until the executioner returned."]],
+		["El Custodio", ["Has vuelto. Y ni siquiera recuerdas lo que hiciste.", "You've returned. And you don't even remember what you did."]],
+		["???", ["No le escuches. Es solo piedra. Sigue bajando.", "Don't listen to it. It's only stone. Keep going down."], ["Sigue bajando. Ya casi soy libre.", "Keep going down. I'm almost free."]],
+	]
+	dialog.play(lines, func(): G.toast(G.T("judgement_open"), Color(1, 0.9, 0.6)), true)
+
+func _atrio_echo() -> void:
+	## Al entrar por primera vez en el Atrio, el eco del Coro canta su nombre del revés
+	Prog.flags["atrio_echo"] = true
+	Audio.sfx("bell_2", -10.0, 0.0)
+	get_tree().create_timer(0.5).timeout.connect(Audio.sfx.bind("bell_1", -10.0, 0.0))
+	get_tree().create_timer(1.0).timeout.connect(Audio.sfx.bind("bell_0", -10.0, 0.0))
+	hud.subtitle(G.L(["El Coro (eco)", "The Choir (echo)"]), G.L(["...emreud, emreud, ojab yum ed odatse ah euq le...", "...peels, peels, woleb raf morf emac ohw eh..."]), 3.4)
+	get_tree().create_timer(3.8).timeout.connect(hud.subtitle.bind("", G.L(["(Lo cantan al revés. Como si no quisieran despertar a alguien.)", "(They sing it backwards. As if trying not to wake someone.)"]), 3.0))
