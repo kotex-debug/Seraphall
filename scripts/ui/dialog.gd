@@ -26,6 +26,12 @@ const PORTRAITS := {
 	"El Coro": ["boss_singer", Rect2(0, 0, 26, 36)],
 }
 
+## Color de la cinta del nombre de cada hablante
+const SPEAKER_COLORS := {"Brenna": Color(0.85, 0.38, 0.16), "El Cartógrafo": Color(0.3, 0.38, 0.75), "Ozias": Color(0.12, 0.55, 0.58),
+	"Madre Ilse": Color(0.28, 0.3, 0.62), "Nyx": Color(0.62, 0.48, 0.12), "Sor Velaria": Color(0.7, 0.12, 0.2), "Tobías": Color(0.4, 0.38, 0.42),
+	"Sael": Color(0.6, 0.5, 0.3), "Seravel": Color(0.8, 0.66, 0.3), "El Carcelero": Color(0.55, 0.3, 0.22), "El Coro": Color(0.5, 0.3, 0.75),
+	"El Custodio": Color(0.6, 0.56, 0.5), "???": Color(0.75, 0.08, 0.12)}
+
 func _ready() -> void:
 	layer = 15
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -166,7 +172,9 @@ class DialogBox extends Control:
 			var sw := f.get_string_size(speaker.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 			var band := Rect2(Vector2(tx - 4, -8 - roundf(pop * 3.0)), Vector2(sw + 18, 14))
 			UIKit.slash_band(self, Rect2(band.position + Vector2(2, 2), band.size), Color(0, 0, 0, 0.6), 5.0)
-			UIKit.slash_band(self, band, UIKit.RED, 5.0)
+			var scol: Color = SPEAKER_COLORS.get(speaker, UIKit.RED)
+			UIKit.slash_band(self, band, scol, 5.0)
+			UIKit.slash_band(self, Rect2(band.position, Vector2(band.size.x, 2)), scol.lightened(0.35), 1.0)
 			f.draw_string_outline(get_canvas_item(), band.position + Vector2(9, 11), speaker.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
 			f.draw_string(get_canvas_item(), band.position + Vector2(9, 11), speaker.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
 		var bf := UIKit.font("body")
