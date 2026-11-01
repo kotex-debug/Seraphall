@@ -2527,7 +2527,7 @@ class LockedWeaponCard extends Control:
 	var id := ""
 	const HINTS := {"hammer": ["Derrota al Carcelero.", "Defeat the Jailer."], "choir": ["Silencia al Coro Hueco.", "Silence the Hollow Choir."],
 		"seravel": ["Vence a la Guardiana de las Puertas.", "Defeat the Warden of the Gates."], "spear": ["Duerme en un cofre de la Galería Rota.", "It sleeps in a chest in the Broken Gallery."],
-		"scythe": ["El Cartógrafo la da por limpiar el Pasillo.", "The Cartographer gives it for clearing the Hall."]}
+		"scythe": ["Encargo del Cartógrafo.", "The Cartographer's errand."]}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
