@@ -985,34 +985,94 @@ func _on_oath(b: String) -> void:
 	Prog.changed.emit()
 
 # ------------------------------------------------------------------ misiones
+var _quest_sel := ""
+const QUEST_LORE := {
+	"main1": ["Despertaste con una orden grabada a fuego: descender y matar al Rey del Abismo. La Voz insiste en que es tu penitencia. Nunca dice por qué.", "You woke with an order burned into you: descend and slay the King of the Abyss. The Voice insists it is your penance. It never says why."],
+	"feathers": ["Brenna necesita plumas para templar el acero. Dice que las armas recuerdan a quien se las dio.", "Brenna needs feathers to temper steel. She says weapons remember who gave them."],
+	"husks": ["El Cartógrafo no puede medir el Pasillo mientras los Huecos sigan arrastrando cadenas por él.", "The Cartographer can't measure the Hall while the Husks keep dragging chains through it."],
+	"map": ["El Cartógrafo perdió su mapa en la Galería Rota. Jura que alguien lo movió... o algo.", "The Cartographer lost his map in the Broken Gallery. He swears someone moved it... or something."],
+	"choir": ["Sor Velaria quiere silencio. El Coro Hueco canta un nombre al revés y no la deja dormir desde hace siglos.", "Sister Velaria wants silence. The Hollow Choir sings a name backwards and hasn't let her sleep for centuries."],
+	"hymns": ["Tres páginas del Himno de la Vigilia andan dispersas por el Estrato. Juntas quizá expliquen para qué servían las campanas.", "Three pages of the Hymn of the Vigil lie scattered across the Stratum. Together they might explain what the bells were for."],
+	"jailer_hunt": ["Brenna quiere ver con sus propios ojos la llave del Carcelero. Dice que no es hierro de la Espiral.", "Brenna wants to see the Jailer's key with her own eyes. She says it isn't Spiral iron."],
+}
+const GIVERS := {"brenna": ["Brenna", "Brenna"], "carto": ["El Cartógrafo", "The Cartographer"], "velaria": ["Sor Velaria", "Sister Velaria"]}
+
 func _build_quests() -> void:
-	_panel(Rect2(0, 0, 390, 296), UIKit.RED)
-	_lbl(G.T("active_quests").to_upper(), Vector2(12, 8), 8, UIKit.GOLD, 0.0, "head")
-	var y := 26.0
-	var i := 0
-	for id in Prog.QUESTS:
-		if not Prog.quest_active(id):
-			continue
-		var q: Dictionary = Prog.QUESTS[id]
-		var card := QuestCard.new()
-		card.id = id
-		card.position = Vector2(10, y)
-		card.size = Vector2(370, 50)
-		card.delay = i * 0.06
-		content.add_child(card)
-		y += 54.0
-		i += 1
-	_panel(Rect2(400, 0, 200, 296))
-	var dv := DestinyScale.new()
-	dv.position = Vector2(400, 196)
-	dv.size = Vector2(200, 100)
-	content.add_child(dv)
-	_lbl(G.T("done_quests").to_upper(), Vector2(412, 8), 8, Color(0.55, 1.0, 0.6), 0.0, "head")
-	var y2 := 26.0
+	# --- diario: lista por categorías
+	_panel(Rect2(0, 0, 222, 296), UIKit.RED)
+	_lbl(G.L(["DIARIO", "JOURNAL"]), Vector2(12, 8), 8, UIKit.GOLD, 0.0, "head")
+	var order := []
+	for cat in ["main", "side", "bounty"]:
+		for id in Prog.QUESTS:
+			if Prog.QUESTS[id].type == cat and Prog.quest_active(id):
+				order.append(id)
+	var done := []
 	for id in Prog.QUESTS:
 		if Prog.quest_done(id):
-			_lbl("+ " + G.L(Prog.QUESTS[id].title), Vector2(412, y2), 15, Color(0.6, 0.85, 0.65), 180)
-			y2 += 20.0
+			done.append(id)
+	if _quest_sel == "" or not (Prog.quest_active(_quest_sel) or Prog.quest_done(_quest_sel)):
+		_quest_sel = order[0] if not order.is_empty() else (done[0] if not done.is_empty() else "")
+	var y := 24.0
+	var cur_cat := ""
+	var i := 0
+	for id in order + done:
+		var q: Dictionary = Prog.QUESTS[id]
+		var cat: String = "done" if Prog.quest_done(id) else str(q.type)
+		if cat != cur_cat:
+			cur_cat = cat
+			var hdr: String = {"main": G.L(["PRINCIPAL", "MAIN"]), "side": G.L(["ENCARGOS", "ERRANDS"]), "bounty": G.L(["CAZAS", "HUNTS"]), "done": G.L(["COMPLETADAS", "COMPLETED"])}[cat]
+			_lbl(hdr, Vector2(14, y + 2), 8, UIKit.TEXT_DIM, 0.0, "head")
+			y += 14.0
+		var row := QuestRow.new()
+		row.id = id
+		row.menu = self
+		row.selected = id == _quest_sel
+		row.position = Vector2(8, y)
+		row.size = Vector2(206, 20)
+		row.delay = i * 0.04
+		content.add_child(row)
+		y += 22.0
+		i += 1
+		if y > 186.0:
+			break
+	var dv := DestinyScale.new()
+	dv.position = Vector2(11, 196)
+	dv.size = Vector2(200, 100)
+	content.add_child(dv)
+	# --- detalle de la misión elegida
+	_panel(Rect2(232, 0, 368, 296), UIKit.PURPLE)
+	if _quest_sel == "":
+		_lbl(G.L(["No tienes misiones.", "You have no quests."]), Vector2(250, 20), 15, UIKit.TEXT_DIM)
+		return
+	var det := QuestDetail.new()
+	det.id = _quest_sel
+	det.position = Vector2(232, 0)
+	det.size = Vector2(368, 296)
+	content.add_child(det)
+	var qd: Dictionary = Prog.QUESTS[_quest_sel]
+	var lore := _lbl(G.L(QUEST_LORE.get(_quest_sel, ["", ""])), Vector2(306, 52), 10, Color(0.85, 0.8, 0.9), 282, "title")
+	lore.modulate.a = 0.95
+	# pasos o progreso
+	var sy := 124.0
+	var qs: Dictionary = Prog.quests.get(_quest_sel, {})
+	if qd.has("steps"):
+		var cur: int = qs.get("step", 0)
+		var finished := Prog.quest_done(_quest_sel)
+		for k in qd.steps.size():
+			var done_k = finished or k < cur
+			var now_k = not finished and k == cur
+			var txt := G.L(qd.steps[k].text) if (done_k or now_k) else "? ? ?"
+			var col := Color(0.55, 0.85, 0.6) if done_k else (UIKit.WHITE if now_k else Color(0.45, 0.4, 0.5))
+			_lbl(txt, Vector2(270, sy), 10, col, 310, "title")
+			sy += 16.0
+	else:
+		_lbl(Prog.quest_text(_quest_sel), Vector2(250, sy), 15, UIKit.WHITE, 330)
+	_lbl(G.T("reward").to_upper(), Vector2(246, 248), 8, UIKit.GOLD, 0.0, "head")
+
+func _on_quest(id: String) -> void:
+	_quest_sel = id
+	Audio.sfx("ui_move", -10.0)
+	_rebuild(false)
 
 # ------------------------------------------------------------------ mapa
 func _build_map() -> void:
@@ -1703,13 +1763,20 @@ class QuestCard extends Control:
 			draw_rect(Rect2(Vector2(251, 23), Vector2(108 * p, 4)), col)
 
 class MapView extends Control:
-	## Mapa del Estrato: silueta real de las salas exploradas, iconos, rótulos de zona y leyenda.
+	## Mapa del Estrato como carta astral: salas con losas y relieve, muros, pozos, niebla sobre lo
+	## inexplorado, rótulos en placas, iconos, rosa de los vientos y leyenda.
 	var world: Node
 	var t := 0.0
 	const SC := 3.0
 	const OFF := Vector2(150, -4)
+	var _o := OFF
+	var _stars: Array = []
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 4242
+		for k in 70:
+			_stars.append([Vector2(rng.randf_range(140, size.x), rng.randf_range(0, size.y)), rng.randf_range(0.2, 0.7), rng.randf() * TAU])
 	func _process(delta: float) -> void:
 		t += delta
 		queue_redraw()
@@ -1717,22 +1784,49 @@ class MapView extends Control:
 		var f := UIKit.font(kind)
 		f.draw_string_outline(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, 3, UIKit.INK)
 		f.draw_string(get_canvas_item(), p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+	func _seen_bounds() -> Rect2:
+		var b := Rect2()
+		var first := true
+		for r in world.ROOMS:
+			if not Prog.flags.get("seen_" + r.id, false):
+				continue
+			var rc := Rect2(world._rect_of(r))
+			b = rc if first else b.merge(rc)
+			first = false
+		return b
 	func _draw() -> void:
-		# fondo: pergamino oscuro con rejilla y viñeta
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.02, 0.07, 0.6))
-		for gx in range(0, int(size.x), 12):
-			draw_rect(Rect2(Vector2(gx, 0), Vector2(1, size.y)), Color(1, 1, 1, 0.025))
-		for gy in range(0, int(size.y), 12):
-			draw_rect(Rect2(Vector2(0, gy), Vector2(size.x, 1)), Color(1, 1, 1, 0.025))
+		# --- fondo: carta astral (degradado, estrellas, la Espiral girando y viñeta)
+		var area := Rect2(Vector2(144, 0), Vector2(size.x - 144, size.y))
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.015, 0.06, 0.92))
+		for k in 8:
+			draw_rect(Rect2(Vector2(0, size.y * k / 8.0), Vector2(size.x, size.y / 8.0)), Color(0.25, 0.08, 0.3, 0.02 * k))
+		var sc0 := area.get_center() + Vector2(0, 30)
+		for k in 7:
+			var rr2 := 30.0 + k * 22.0
+			draw_arc(sc0, rr2, t * (0.05 + k * 0.01), t * (0.05 + k * 0.01) + PI * 1.4, 48, Color(0.75, 0.45, 0.85, 0.05), 1.0)
+		for st in _stars:
+			var sp: Vector2 = st[0]
+			draw_rect(Rect2(sp, Vector2(1, 1)), Color(1, 0.95, 1.0, st[1] * (0.6 + 0.4 * sin(t * 1.5 + st[2]))))
+		for gx in range(150, int(size.x), 24):
+			draw_rect(Rect2(Vector2(gx, 0), Vector2(1, size.y)), Color(1, 1, 1, 0.018))
+		for gy in range(0, int(size.y), 24):
+			draw_rect(Rect2(Vector2(144, gy), Vector2(size.x - 144, 1)), Color(1, 1, 1, 0.018))
+		# encuadre: centra lo explorado en el hueco de la derecha
+		var sb := _seen_bounds()
+		var tex: ImageTexture = world.map_texture_hd()
+		_o = OFF
+		if sb.size != Vector2.ZERO:
+			var want := area.get_center() - sb.get_center() * SC
+			var lo: float = area.position.x + 8.0 - sb.position.x * SC
+			var hi: float = area.end.x - 8.0 - sb.end.x * SC
+			want.x = clampf(want.x, minf(lo, hi), maxf(lo, hi))
+			var lo2: float = 10.0 - sb.position.y * SC
+			var hi2: float = size.y - 16.0 - sb.end.y * SC
+			want.y = clampf(want.y, minf(lo2, hi2), maxf(lo2, hi2))
+			_o = want.round()
 		var cur: String = world.current_area()
-		var tex: ImageTexture = world.map_texture()
-		# sombra, grosor de las plataformas (extrusión hacia abajo) y mapa
-		draw_texture_rect(tex, Rect2(OFF + Vector2(5, 9), Vector2(96, 96) * SC), false, Color(0, 0, 0, 0.45))
-		for k in range(6, 0, -1):
-			var ek := float(k) / 6.0
-			draw_texture_rect(tex, Rect2(OFF + Vector2(0, k), Vector2(96, 96) * SC), false, Color(0.32 - 0.2 * ek, 0.2 - 0.14 * ek, 0.28 - 0.18 * ek, 1.0))
-		draw_texture_rect(tex, Rect2(OFF, Vector2(96, 96) * SC), false)
-		# borde punteado de salas vecinas sin explorar
+		var full := Vector2(tex.get_width(), tex.get_height())
+		# --- niebla sobre las salas vecinas sin explorar (rayado diagonal y "?")
 		for r in world.ROOMS:
 			if Prog.flags.get("seen_" + r.id, false):
 				continue
@@ -1742,59 +1836,33 @@ class MapView extends Control:
 				if Prog.flags.get("seen_" + r2.id, false) and world._rect_of(r2).grow(1).intersects(rect):
 					adj = true
 			if adj:
-				var rr := Rect2(OFF + Vector2(rect.position) * SC, Vector2(rect.size) * SC)
-				var dash := int(t * 4.0) % 2
-				for k in range(0, int(rr.size.x), 6):
-					if (k / 6) % 2 == dash:
-						draw_rect(Rect2(rr.position + Vector2(k, 0), Vector2(3, 1)), Color(1, 1, 1, 0.25))
-						draw_rect(Rect2(rr.position + Vector2(k, rr.size.y), Vector2(3, 1)), Color(1, 1, 1, 0.25))
-				for k2 in range(0, int(rr.size.y), 6):
-					if (k2 / 6) % 2 == dash:
-						draw_rect(Rect2(rr.position + Vector2(0, k2), Vector2(1, 3)), Color(1, 1, 1, 0.25))
-						draw_rect(Rect2(rr.position + Vector2(rr.size.x, k2), Vector2(1, 3)), Color(1, 1, 1, 0.25))
-				_str(rr.get_center() - Vector2(4, -4), "?", Color(1, 1, 1, 0.35 + 0.2 * sin(t * 3.0)), 8)
-		# rótulos de zona (centro de las salas vistas)
-		var centers := {}
+				var rr := Rect2(_o + Vector2(rect.position) * SC, Vector2(rect.size) * SC)
+				draw_rect(rr, Color(0.6, 0.5, 0.75, 0.05))
+				var k2 := -rr.size.y
+				while k2 < rr.size.x:
+					var a0 := Vector2(maxf(k2, 0.0), maxf(-k2, 0.0))
+					var a1 := Vector2(minf(k2 + rr.size.y, rr.size.x), minf(rr.size.x - k2, rr.size.y))
+					draw_line(rr.position + a0, rr.position + a1, Color(0.75, 0.65, 0.9, 0.09), 1.0)
+					k2 += 5.0
+				draw_rect(rr, Color(0.75, 0.65, 0.9, 0.18 + 0.08 * sin(t * 2.0)), false, 1.0)
+				_str(rr.get_center() - Vector2(3, -4), "?", Color(1, 1, 1, 0.35 + 0.2 * sin(t * 3.0)), 8)
+		# --- salas: sombra, resplandor, grosor (extrusión) y el mapa detallado encima
+		draw_texture_rect(tex, Rect2(_o + Vector2(5, 10), full), false, Color(0, 0, 0, 0.5))
+		for d in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+			draw_texture_rect(tex, Rect2(_o + d, full), false, Color(1, 0.85, 1.0, 0.07))
+		for k in range(7, 0, -1):
+			var ek := float(k) / 7.0
+			draw_texture_rect(tex, Rect2(_o + Vector2(0, k), full), false, Color(0.3 - 0.2 * ek, 0.18 - 0.13 * ek, 0.26 - 0.18 * ek, 1.0))
+		draw_texture_rect(tex, Rect2(_o, full), false)
+		# zona actual: brillo pulsante sobre sus salas
 		for r in world.ROOMS:
-			if not Prog.flags.get("seen_" + r.id, false):
-				continue
-			var a: String = world.AREAS.get(r.id, "")
-			if a == "":
-				continue
-			var rc: Rect2i = world._rect_of(r)
-			if not centers.has(a):
-				centers[a] = [Vector2.ZERO, 0.0]
-			var wgt := float(rc.size.x * rc.size.y)
-			centers[a][0] += Vector2(rc.get_center()) * wgt
-			centers[a][1] += wgt
-		var lf := UIKit.font("title")
-		var placed: Array[Rect2] = []
-		var lp0: Player = world.local_player()
-		if lp0:
-			var pp0: Vector2 = (OFF + lp0.global_position / 16.0 * SC).round()
-			placed.append(Rect2(pp0 - Vector2(40, 22), Vector2(80, 30)))
-		var order: Array = centers.keys()
-		order.sort_custom(func(x, y): return (1 if x == cur else 0) * 100000 + centers[x][1] > (1 if y == cur else 0) * 100000 + centers[y][1])
-		for a in order:
-			var cp: Vector2 = OFF + centers[a][0] / centers[a][1] * SC
-			var nm: String = G.T(a).to_upper()
-			var w := lf.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-			var lr := Rect2(cp - Vector2(w / 2.0 + 2, 8), Vector2(w + 4, 12))
-			var clash := false
-			for q in placed:
-				if q.intersects(lr):
-					clash = true
-			if clash:
-				continue
-			placed.append(lr)
-			var col: Color = world.AREA_COLORS.get(a, Color.WHITE)
-			if a == cur:
-				col = col.lerp(Color.WHITE, 0.4 + 0.3 * sin(t * 4.0))
-			_str((cp - Vector2(w / 2.0, -3)).round(), nm, col, 10, "title")
+			if world.AREAS.get(r.id, "") == cur and Prog.flags.get("seen_" + r.id, false):
+				var rcu := Rect2(_o + Vector2(world._rect_of(r).position) * SC, Vector2(world._rect_of(r).size) * SC)
+				draw_rect(rcu, Color(1, 1, 1, 0.05 + 0.04 * sin(t * 4.0)))
 		# marcadores
 		var npc_labels := []
 		for m in world.map_markers():
-			var mp: Vector2 = (OFF + m[1] * SC).round()
+			var mp: Vector2 = (_o + m[1] * SC).round()
 			var mc: Color = m[2]
 			match m[0]:
 				"brasa":
@@ -1843,16 +1911,22 @@ class MapView extends Control:
 				"lore":
 					draw_rect(Rect2(mp - Vector2(2, 4), Vector2(5, 8)), UIKit.INK)
 					draw_rect(Rect2(mp - Vector2(1, 3), Vector2(3, 6)), mc)
+				"echo":
+					# eco del pasado ya visto: fantasma pequeño
+					var ga := 0.7 + 0.3 * sin(t * 3.0)
+					draw_circle(mp + Vector2(0, -2), 4.0, UIKit.INK)
+					draw_circle(mp + Vector2(0, -2), 3.0, Color(mc, ga))
+					draw_colored_polygon(PackedVector2Array([mp + Vector2(-3, -2), mp + Vector2(3, -2), mp + Vector2(3, 3), mp + Vector2(1, 2), mp + Vector2(0, 4), mp + Vector2(-1, 2), mp + Vector2(-3, 3)]), Color(mc, ga))
+					draw_rect(Rect2(mp + Vector2(-2, -3), Vector2(1, 1)), UIKit.INK)
+					draw_rect(Rect2(mp + Vector2(1, -3), Vector2(1, 1)), UIKit.INK)
 				"ally":
 					draw_rect(Rect2(mp - Vector2(3, 3), Vector2(6, 6)), UIKit.INK)
 					draw_rect(Rect2(mp - Vector2(2, 2), Vector2(4, 4)), mc)
 					_str(mp + Vector2(6, 3), m[3], mc, 8)
-		for nl in npc_labels:
-			_str(nl[0] + Vector2(6, 3), nl[1], UIKit.CYAN, 10, "title")
 		# jugador local con flecha de orientación
 		var lp: Player = world.local_player()
 		if lp:
-			var pp: Vector2 = (OFF + lp.global_position / 16.0 * SC).round()
+			var pp: Vector2 = (_o + lp.global_position / 16.0 * SC).round()
 			var pulse := 3.0 + 2.0 * absf(sin(t * 5.0))
 			draw_arc(pp, pulse + 4, 0, TAU, 16, Color(1, 1, 1, 0.5), 1.0)
 			var fd: Vector2 = lp.aim if lp.aim.length() > 0.1 else Vector2.DOWN
@@ -1864,12 +1938,109 @@ class MapView extends Control:
 			var yw := UIKit.font("title").get_string_size(yt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 			UIKit.slash_band(self, Rect2(pp + Vector2(-yw / 2.0 - 6, -24), Vector2(yw + 12, 12)), UIKit.RED, 3.0)
 			_str(pp + Vector2(-yw / 2.0, -15), yt, UIKit.WHITE, 10, "title")
+		# --- rótulos de zona en placas, encima de cada zona y sin pisar iconos
+		var areas := {}
+		for r in world.ROOMS:
+			if not Prog.flags.get("seen_" + r.id, false):
+				continue
+			var a: String = world.AREAS.get(r.id, "")
+			if a == "":
+				continue
+			var rc := Rect2(world._rect_of(r))
+			if not areas.has(a):
+				areas[a] = [rc, 0.0]
+			else:
+				areas[a][0] = (areas[a][0] as Rect2).merge(rc)
+			areas[a][1] += rc.size.x * rc.size.y
+		var lf := UIKit.font("title")
+		var placed: Array[Rect2] = []
+		var marks: Array[Rect2] = []
+		var lp0: Player = world.local_player()
+		if lp0:
+			var pp0: Vector2 = (_o + lp0.global_position / 16.0 * SC).round()
+			placed.append(Rect2(pp0 - Vector2(40, 26), Vector2(80, 34)))
+		for m in world.map_markers():
+			marks.append(Rect2((_o + m[1] * SC).round() - Vector2(6, 6), Vector2(12, 12)))
+		var order: Array = areas.keys()
+		order.sort_custom(func(x, y): return (1 if x == cur else 0) * 100000 + areas[x][1] > (1 if y == cur else 0) * 100000 + areas[y][1])
+		for a in order:
+			var ab: Rect2 = areas[a][0]
+			var nm: String = G.T(a).to_upper()
+			var w := lf.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var cands := [Vector2(ab.get_center().x, ab.position.y) * SC + _o + Vector2(0, -5),
+				ab.get_center() * SC + _o,
+				Vector2(ab.get_center().x, ab.end.y) * SC + _o + Vector2(0, 12),
+				Vector2(ab.position.x * SC + _o.x - w / 2.0 - 6, ab.get_center().y * SC + _o.y),
+				Vector2(ab.end.x * SC + _o.x + w / 2.0 + 6, ab.get_center().y * SC + _o.y),
+				ab.get_center() * SC + _o + Vector2(0, 14), ab.get_center() * SC + _o + Vector2(0, -14)]
+			var done := false
+			for pass_i in 2:
+				if done:
+					break
+				for cp in cands:
+					var lr := Rect2(cp - Vector2(w / 2.0 + 5, 9), Vector2(w + 10, 13))
+					if lr.position.x < 146.0 or lr.end.x > size.x - 2.0 or lr.position.y < 2.0 or lr.end.y > size.y - 2.0:
+						continue
+					var clash := false
+					for q in placed:
+						if q.intersects(lr):
+							clash = true
+					if pass_i == 0:
+						for q2 in marks:
+							if q2.intersects(lr):
+								clash = true
+					if not clash:
+						cands = [cp]
+						done = true
+						break
+			if not done:
+				continue
+			var col: Color = world.AREA_COLORS.get(a, Color.WHITE)
+			if a == cur:
+				col = col.lerp(Color.WHITE, 0.4 + 0.3 * sin(t * 4.0))
+			for cp in cands:
+				var lr := Rect2(cp - Vector2(w / 2.0 + 5, 9), Vector2(w + 10, 13))
+				if lr.position.x < 146.0 or lr.end.x > size.x - 2.0 or lr.position.y < 2.0 or lr.end.y > size.y - 2.0:
+					continue
+				var clash := false
+				for q in placed:
+					if q.intersects(lr):
+						clash = true
+				if clash:
+					continue
+				placed.append(lr)
+				UIKit.slash_band(self, Rect2(lr.position + Vector2(1, 1), lr.size), Color(0, 0, 0, 0.5), 3.0)
+				UIKit.slash_band(self, lr, Color(0.07, 0.03, 0.1, 0.85), 3.0)
+				draw_rect(Rect2(lr.position + Vector2(3, lr.size.y - 1), Vector2(lr.size.x - 6, 1)), Color(col, 0.8))
+				_str((cp - Vector2(w / 2.0, -1)).round(), nm, col, 10, "title")
+				break
+		# --- rosa de los vientos (abajo a la derecha)
+		var cr := Vector2(size.x - 26, size.y - 26)
+		draw_arc(cr, 15.0, 0, TAU, 24, Color(1, 0.85, 0.5, 0.35), 1.0)
+		draw_arc(cr, 11.0, 0, TAU, 24, Color(1, 0.85, 0.5, 0.2), 1.0)
+		for q in 4:
+			var dv := Vector2.from_angle(q * PI / 2.0 - PI / 2.0 + sin(t * 0.5) * 0.03)
+			var colq := UIKit.RED if q == 0 else Color(1, 0.85, 0.5, 0.7)
+			draw_colored_polygon(PackedVector2Array([cr + dv * 15.0, cr + dv.orthogonal() * 3.0, cr - dv.orthogonal() * 3.0]), colq)
+		draw_circle(cr, 2.0, UIKit.GOLD)
+		_str(cr + Vector2(-3, -18), "N", UIKit.WHITE, 8)
+		# --- marco interior con esquinas doradas
+		var fr := Rect2(Vector2(146, 2), Vector2(size.x - 148, size.y - 4))
+		draw_rect(fr, Color(0.6, 0.4, 0.7, 0.25), false, 1.0)
+		for cpt in [fr.position, Vector2(fr.end.x, fr.position.y), Vector2(fr.position.x, fr.end.y), fr.end]:
+			var sx := 1.0 if cpt.x < size.x / 2.0 else -1.0
+			var sy := 1.0 if cpt.y < size.y / 2.0 else -1.0
+			draw_line(cpt, cpt + Vector2(10 * sx, 0), UIKit.GOLD_DARK, 2.0)
+			draw_line(cpt, cpt + Vector2(0, 10 * sy), UIKit.GOLD_DARK, 2.0)
 		# panel de leyenda (izquierda)
 		UIKit.frame(self, Rect2(4, 4, 136, size.y - 8), UIKit.RED_DARK, Color(0.08, 0.03, 0.1, 0.85), 3.0, -1.0)
-		_str(Vector2(12, 18), G.T("stratum1"), UIKit.GOLD, 8)
-		var ly := 31.0
+		var st_parts: PackedStringArray = G.T("stratum1").split(" - ")
+		_str(Vector2(12, 16), st_parts[0], UIKit.GOLD, 8)
+		if st_parts.size() > 1:
+			_str(Vector2(12, 27), st_parts[1], UIKit.GOLD.darkened(0.15), 8)
+		var ly := 40.0
 		for a in world.AREA_COLORS:
-			var seen_any := centers.has(a)
+			var seen_any: bool = areas.has(a)
 			var nm2 := G.T(a).to_upper() if seen_any else "???"
 			var ac: Color = world.AREA_COLORS[a] if seen_any else Color(0.3, 0.3, 0.3)
 			if a == cur:
@@ -1879,13 +2050,13 @@ class MapView extends Control:
 			_str(Vector2(22, ly), nm2, UIKit.WHITE if seen_any else UIKit.TEXT_DIM, 10, "title")
 			ly += 12.0
 		ly += 5.0
-		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["trial", G.L(["Prueba", "Trial"])],
-			["lock", G.L(["Cerrado", "Sealed"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos", "Echoes"])], ["lore", G.L(["Inscripción", "Inscription"])]]
+		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["trial", G.L(["Prueba", "Trial"])], ["echo", G.L(["Eco", "Echo"])],
+			["lock", G.L(["Cerrado", "Sealed"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos", "Echoes"])], ["lore", G.L(["Inscripción", "Inscription"])], ["you", G.L(["Tú", "You"])]]
 		var ly0 := ly
 		for li in legend.size():
 			var lg: Array = legend[li]
-			var colx := 0.0 if li < 4 else 66.0
-			ly = ly0 + (li % 4) * 12.0
+			var colx := 0.0 if li < 5 else 66.0
+			ly = ly0 + (li % 5) * 12.0
 			var lp2 := Vector2(15 + colx, ly - 3)
 			match lg[0]:
 				"brasa": draw_colored_polygon(PackedVector2Array([lp2 + Vector2(0, -4), lp2 + Vector2(3, 2), lp2 + Vector2(-3, 2)]), UIKit.GOLD)
@@ -1900,6 +2071,11 @@ class MapView extends Control:
 					draw_rect(Rect2(lp2 - Vector2(3, 0), Vector2(6, 4)), Color(0.75, 0.7, 0.8))
 					draw_arc(lp2, 2.0, PI, TAU, 6, Color(0.75, 0.7, 0.8), 1.0)
 				"lore": draw_rect(Rect2(lp2 - Vector2(1, 3), Vector2(3, 6)), Color(0.6, 0.85, 1.0))
+				"echo":
+					draw_circle(lp2 + Vector2(0, -1), 2.5, Color(0.6, 0.85, 1.0))
+					draw_rect(Rect2(lp2 + Vector2(-2, -1), Vector2(5, 4)), Color(0.6, 0.85, 1.0))
+				"you":
+					draw_rect(Rect2(lp2 - Vector2(2, 2), Vector2(4, 4)), UIKit.WHITE)
 			_str(Vector2(24 + colx, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
 		if Prog.item_count("map_carto") == 0:
 			_str(Vector2(10, size.y - 12), G.L(["Sin cartografía: cofres ocultos", "No cartography: chests hidden"]), UIKit.PINK, 10, "title")
@@ -1976,3 +2152,179 @@ class PauseBust extends Control:
 		if _tex:
 			var fr := 1 if fmod(_t, 3.5) < 0.12 else 0
 			draw_texture_rect_region(_tex, Rect2(Vector2(4, 4), Vector2(80, 80)), Rect2(fr * 40, 0, 40, 40))
+
+
+class QuestRow extends Control:
+	## Entrada del diario: icono del tipo, título y barra de progreso fina
+	var id := ""
+	var menu: Node
+	var selected := false
+	var delay := 0.0
+	var _t := 0.0
+	var _hover := false
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_entered.connect(func(): _hover = true)
+		mouse_exited.connect(func(): _hover = false)
+		modulate.a = 0.0
+		create_tween().tween_property(self, "modulate:a", 1.0, 0.2).set_delay(delay)
+	func _gui_input(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			menu._on_quest(id)
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var q: Dictionary = Prog.QUESTS[id]
+		var done := Prog.quest_done(id)
+		var col := UIKit.GOLD if q.type == "main" else (UIKit.PINK if q.type == "bounty" else UIKit.CYAN)
+		if done:
+			col = Color(0.5, 0.75, 0.55)
+		var bg := Color(0.2, 0.08, 0.24) if selected else (Color(0.14, 0.06, 0.18) if _hover else Color(0.08, 0.03, 0.1, 0.8))
+		UIKit.slash_band(self, Rect2(Vector2.ZERO, size), bg, 4.0)
+		if selected:
+			UIKit.slash_band(self, Rect2(Vector2.ZERO, Vector2(size.x, 1)), col, 4.0)
+			draw_rect(Rect2(Vector2(size.x - 6, 6), Vector2(3, 8)), col)
+		var ic := Vector2(12, 10)
+		if done:
+			draw_line(ic + Vector2(-4, 0), ic + Vector2(-1, 3), col, 2.0)
+			draw_line(ic + Vector2(-1, 3), ic + Vector2(4, -4), col, 2.0)
+		else:
+			match str(q.type):
+				"main":
+					UIKit.diamond(self, ic, 5.0, UIKit.INK)
+					UIKit.diamond(self, ic, 4.0, col.lerp(UIKit.WHITE, 0.25 + 0.25 * sin(_t * 4.0)))
+				"bounty":
+					draw_line(ic + Vector2(-4, -4), ic + Vector2(4, 4), col, 2.0)
+					draw_line(ic + Vector2(4, -4), ic + Vector2(-4, 4), col, 2.0)
+				_:
+					draw_colored_polygon(PackedVector2Array([ic + Vector2(0, -5), ic + Vector2(3, 0), ic + Vector2(0, 5), ic + Vector2(-3, 0)]), col)
+		var f := UIKit.font("head")
+		f.draw_string(get_canvas_item(), Vector2(24, 13), G.L(q.title).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 34, 8, col if not done else Color(0.55, 0.7, 0.6))
+		# progreso fino bajo el título
+		var p := 1.0 if done else 0.0
+		var st: Dictionary = Prog.quests.get(id, {})
+		if not done:
+			if q.has("steps"):
+				p = float(st.get("step", 0)) / q.steps.size()
+			elif q.has("count"):
+				p = float(st.get("progress", 0)) / q.count
+		draw_rect(Rect2(Vector2(24, 16), Vector2(size.x - 40, 2)), Color(0, 0, 0, 0.5))
+		draw_rect(Rect2(Vector2(24, 16), Vector2((size.x - 40) * p, 2)), col)
+
+class QuestDetail extends Control:
+	## Hoja de la misión: cinta con el título, quién la encarga, pasos marcados y recompensas con icono
+	var id := ""
+	var _t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var q: Dictionary = Prog.QUESTS[id]
+		var done := Prog.quest_done(id)
+		var col := UIKit.GOLD if q.type == "main" else (UIKit.PINK if q.type == "bounty" else UIKit.CYAN)
+		var hf := UIKit.font("head")
+		var tf := UIKit.font("title")
+		# cinta del título
+		var title := G.L(q.title).to_upper()
+		UIKit.slash_band(self, Rect2(Vector2(10, 10), Vector2(348, 18)), Color(0, 0, 0, 0.5), 6.0)
+		UIKit.slash_band(self, Rect2(Vector2(8, 8), Vector2(348, 18)), col.darkened(0.55), 6.0)
+		UIKit.slash_band(self, Rect2(Vector2(8, 8), Vector2(348, 2)), col, 6.0)
+		hf.draw_string_outline(get_canvas_item(), Vector2(18, 21), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		hf.draw_string(get_canvas_item(), Vector2(18, 21), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+		var kind: String = {"main": G.L(["MISIÓN PRINCIPAL", "MAIN QUEST"]), "side": G.L(["ENCARGO", "ERRAND"]), "bounty": G.L(["CAZA", "HUNT"])}[str(q.type)]
+		hf.draw_string(get_canvas_item(), Vector2(18, 40), kind, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
+		# retrato de quien la encarga (o la orden grabada a fuego)
+		var pr := Rect2(Vector2(14, 50), Vector2(52, 52))
+		draw_rect(pr, Color(0.1, 0.04, 0.14))
+		var giver := str(q.get("giver", ""))
+		if giver != "" and ResourceLoader.exists("res://assets/sprites/bust_%s.png" % giver):
+			var fr := 2 if fmod(_t, 3.3) < 0.13 else 0
+			draw_texture_rect_region(Fx.tex("bust_" + giver), Rect2(pr.position + Vector2(2, 2), Vector2(48, 48)), Rect2(fr * 48, 0, 48, 48))
+		else:
+			# el ojo de la Voz: rayos dorados, iris rojo y un fallo de imagen de vez en cuando
+			var c := pr.get_center()
+			for k in 12:
+				var a := TAU * k / 12.0 + _t * 0.4
+				draw_line(c + Vector2.from_angle(a) * 14.0, c + Vector2.from_angle(a) * (21.0 + 2.0 * sin(_t * 3.0 + k)), Color(1, 0.8, 0.35, 0.5), 1.0)
+			var eye := PackedVector2Array()
+			for k in 17:
+				var a2 := PI * k / 16.0
+				eye.append(c + Vector2(-cos(a2) * 16.0, -sin(a2) * 8.0))
+			for k in range(1, 16):
+				var a3 := PI * k / 16.0
+				eye.append(c + Vector2(cos(a3) * 16.0, sin(a3) * 8.0))
+			draw_colored_polygon(eye, Color(0.95, 0.9, 0.82))
+			var look := Vector2(sin(_t * 0.7) * 3.0, 0)
+			draw_circle(c + look, 6.0, Color(0.85, 0.2, 0.25))
+			draw_circle(c + look, 3.0, Color(0.08, 0.02, 0.06))
+			draw_circle(c + look + Vector2(-1.5, -1.5), 1.0, Color(1, 1, 1))
+			draw_polyline(eye + PackedVector2Array([eye[0]]), Color(0.5, 0.35, 0.2), 1.0)
+			if fmod(_t, 2.7) < 0.15:
+				for g in 3:
+					draw_rect(Rect2(pr.position + Vector2(randf_range(0, 30), randf_range(10, 44)), Vector2(randf_range(10, 30), 2)), Color(1, 0.2, 0.3, 0.7))
+		draw_rect(pr, col.darkened(0.2), false, 1.0)
+		var gname: String = G.L(GIVERS[giver]) if GIVERS.has(giver) else G.L(["La Voz", "The Voice"])
+		tf.draw_string(get_canvas_item(), Vector2(14, 112), gname, HORIZONTAL_ALIGNMENT_CENTER, 52, 10, UIKit.TEXT_DIM)
+		# pasos: casillas marcadas
+		var st: Dictionary = Prog.quests.get(id, {})
+		if q.has("steps"):
+			var cur: int = st.get("step", 0)
+			var y := 124.0
+			for k in q.steps.size():
+				var done_k = done or k < cur
+				var now_k = not done and k == cur
+				var box := Rect2(Vector2(26, y + 1), Vector2(8, 8))
+				draw_rect(box, Color(0.05, 0.02, 0.07))
+				draw_rect(box, (Color(0.55, 0.85, 0.6) if done_k else (col if now_k else Color(0.35, 0.3, 0.4))), false, 1.0)
+				if done_k:
+					draw_line(box.position + Vector2(1, 4), box.position + Vector2(3, 7), Color(0.55, 0.95, 0.6), 2.0)
+					draw_line(box.position + Vector2(3, 7), box.position + Vector2(8, 0), Color(0.55, 0.95, 0.6), 2.0)
+				elif now_k:
+					draw_rect(Rect2(box.position + Vector2(2, 2), Vector2(4, 4)), col.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(_t * 5.0)))
+					draw_line(Vector2(14, y + 5), Vector2(20, y + 5), col, 1.0)
+				if k < q.steps.size() - 1:
+					draw_line(Vector2(30, y + 10), Vector2(30, y + 16), Color(0.3, 0.25, 0.35), 1.0)
+				y += 16.0
+		elif q.has("count"):
+			var n: int = st.get("progress", 0)
+			if done:
+				n = q.count
+			var w := 300.0
+			var seg = w / q.count
+			for k in q.count:
+				var r := Rect2(Vector2(20 + k * seg, 150), Vector2(seg - 3, 10))
+				draw_rect(r, Color(0.05, 0.02, 0.07))
+				if k < n:
+					draw_rect(r.grow(-1), col)
+					draw_rect(Rect2(r.position + Vector2(1, 1), Vector2(r.size.x - 2, 2)), col.lerp(UIKit.WHITE, 0.4))
+			hf.draw_string(get_canvas_item(), Vector2(20, 176), "%d / %d" % [n, q.count], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
+		# recompensas con icono
+		var r2: Dictionary = q.reward
+		var chips := []
+		if r2.get("ecos", 0) > 0: chips.append(["icon_eco", str(r2.ecos)])
+		if r2.get("sp", 0) > 0: chips.append(["icon_arconte", "%d PH" % r2.sp])
+		if r2.has("feathers"): chips.append(["icon_feather", "x%d" % r2.feathers])
+		if r2.has("flask"): chips.append(["icon_flask", "+1"])
+		if r2.has("free_upgrade"): chips.append(["icon_iron", "+1"])
+		if r2.has("weapon"): chips.append(["icon_filo", G.L(Prog.WEAPONS[r2.weapon].name)])
+		if r2.has("item"): chips.append(["icon_" + str(r2.item), G.L(Prog.ITEMS[r2.item].name) if Prog.ITEMS.has(r2.item) else ""])
+		var cx := 14.0
+		for ch in chips:
+			var tw := tf.get_string_size(ch[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var cr := Rect2(Vector2(cx, 262), Vector2(tw + 26, 20))
+			draw_rect(cr, Color(0.08, 0.03, 0.1))
+			draw_rect(cr, col.darkened(0.3), false, 1.0)
+			if ResourceLoader.exists("res://assets/sprites/%s.png" % ch[0]):
+				draw_texture_rect(Fx.tex(ch[0]), Rect2(cr.position + Vector2(3, 2), Vector2(16, 16)), false)
+			tf.draw_string(get_canvas_item(), cr.position + Vector2(21, 14), ch[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.WHITE)
+			cx += cr.size.x + 6.0
+		# sello de completada
+		if done:
+			draw_set_transform(Vector2(290, 70), -0.25, Vector2.ONE)
+			draw_rect(Rect2(Vector2(-52, -14), Vector2(104, 28)), Color(0.55, 0.85, 0.6, 0.15))
+			draw_rect(Rect2(Vector2(-52, -14), Vector2(104, 28)), Color(0.55, 0.95, 0.6, 0.8), false, 2.0)
+			hf.draw_string(get_canvas_item(), Vector2(-46, 5), G.L(["COMPLETADA", "COMPLETED"]), HORIZONTAL_ALIGNMENT_CENTER, 92, 8, Color(0.6, 1.0, 0.65))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

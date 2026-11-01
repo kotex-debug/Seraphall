@@ -425,6 +425,84 @@ func map_texture() -> ImageTexture:
 	_map_tex = ImageTexture.create_from_image(img)
 	return _map_tex
 
+## Mapa detallado: 3 píxeles por casilla, con losas, borde iluminado, muros con ladrillo y pozos que brillan.
+var _map_hd: ImageTexture
+var _map_hd_seen := -1
+func map_texture_hd() -> ImageTexture:
+	var n := 0
+	for r in ROOMS:
+		if Prog.flags.get("seen_" + r.id, false):
+			n += 1
+	if _map_hd and n == _map_hd_seen:
+		return _map_hd
+	_map_hd_seen = n
+	const K := 3
+	var img := Image.create(MAPW * K, MAPH * K, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in MAPH:
+		for x in MAPW:
+			var i := y * MAPW + x
+			var g := grid[i]
+			if g == 2:
+				# cara de muro de una sala vista: ladrillo oscuro con filo de luz arriba
+				for dy in [1, 2]:
+					if y + dy < MAPH and grid[(y + dy) * MAPW + x] == 1 and room_of[(y + dy) * MAPW + x] >= 0:
+						var wr: String = ROOMS[room_of[(y + dy) * MAPW + x]].id
+						if Prog.flags.get("seen_" + wr, false):
+							var wc: Color = AREA_COLORS.get(AREAS.get(wr, ""), Color.WHITE)
+							for py in K:
+								for px in K:
+									var cc := wc.darkened(0.72 if dy == 1 else 0.62)
+									if py == 0 and dy == 2:
+										cc = wc.darkened(0.35)
+									elif (py == 1 and (px + x) % 3 == 0) or (py == 2 and (px + x) % 3 == 1):
+										cc = cc.darkened(0.3)
+									img.set_pixel(x * K + px, y * K + py, cc)
+							break
+				continue
+			if room_of[i] < 0 or not Prog.flags.get("seen_" + ROOMS[room_of[i]].id, false):
+				continue
+			var rid: String = ROOMS[room_of[i]].id
+			var c: Color = AREA_COLORS.get(AREAS.get(rid, ""), Color.WHITE)
+			if g == 5:
+				# pozo: vacío con resplandor en el centro
+				var core := false
+				for pit in PITS:
+					var pr: Rect2i = pit[0]
+					if pr.has_point(Vector2i(x, y)) and absf(x - pr.get_center().x + 0.5) <= 1.0 and absf(y - pr.get_center().y + 0.5) <= 1.0:
+						core = true
+				for py in K:
+					for px in K:
+						var pc := Color(0.04, 0.01, 0.05)
+						if core:
+							pc = Color(1, 0.55, 0.25) if (px == 1 and py == 1) else Color(0.55, 0.22, 0.12)
+						img.set_pixel(x * K + px, y * K + py, pc)
+				continue
+			if g != 1:
+				continue
+			var base := c.darkened(0.52)
+			var hsh := (x * 73 + y * 151) % 7
+			var sides := []
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				sides.append(nx < 0 or ny < 0 or nx >= MAPW or ny >= MAPH or (grid[ny * MAPW + nx] != 1 and grid[ny * MAPW + nx] != 5))
+			for py in K:
+				for px in K:
+					var pc2 := base
+					if (x + y) % 2 == 0:
+						pc2 = pc2.lightened(0.04)
+					if px == 0 and py == 0:
+						pc2 = base.darkened(0.25)              # junta de las losas
+					elif px == 1 and py == 1 and hsh == 0:
+						pc2 = base.lightened(0.12)             # brillo suelto
+					var rim = (sides[0] and px == K - 1) or (sides[1] and px == 0) or (sides[2] and py == K - 1) or (sides[3] and py == 0)
+					if rim:
+						pc2 = c.lightened(0.3)
+					img.set_pixel(x * K + px, y * K + py, pc2)
+	_map_hd = ImageTexture.create_from_image(img)
+	return _map_hd
+
 func map_markers() -> Array:
 	## [tipo, posición en casillas, color, etiqueta]
 	var out := []
@@ -460,6 +538,9 @@ func map_markers() -> Array:
 		if e.is_boss and Prog.flags.get("seen_" + room_at(e.spawn_pos), false):
 			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false)
 			out.append(["boss_dead" if dead else "boss", e.spawn_pos / TS, UIKit.RED, G.T(e.cfg.get("title", "boss_carcelero"))])
+	for c in entities.get_children():
+		if c is GhostEcho and Prog.flags.get("echo_" + c.id, false):
+			out.append(["echo", c.position / TS, Color(0.6, 0.85, 1.0), ""])
 	for pid in players:
 		var q: Player = players[pid]
 		if pid != Net.my_id():

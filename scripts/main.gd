@@ -1158,6 +1158,26 @@ func _run_autotest() -> void:
 			await _shot(out + "/p2.png")
 			print("AUTOTEST_PENITENT_OK")
 			get_tree().quit()
+		"map":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			await get_tree().create_timer(1.0).timeout
+			w.menu.open("map", {})
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/map1_inicio.png")
+			w.menu.close()
+			for rid in w.ROOMS:
+				Prog.flags["seen_" + rid.id] = true
+			Prog.flags["echo_patio"] = true
+			Prog.flags["echo_nimbo"] = true
+			Prog.add_item("map_carto", 1, true)
+			lp.respawn_at(w.tile_pos(47, 60))
+			await get_tree().create_timer(1.0).timeout
+			w.menu.open("map", {})
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/map2_completo.png")
+			print("AUTOTEST_MAP_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
@@ -1399,6 +1419,12 @@ func _run_autotest() -> void:
 				Prog.flags["killed_" + kt] = true
 			for ak in ["first_blood", "jailer", "secret", "bells"]:
 				Prog.flags["ach_" + ak] = true
+			for qid in ["feathers", "husks", "hymns", "jailer_hunt"]:
+				Prog.start_quest(qid)
+			Prog.quest_progress("feathers", 3)
+			Prog.quest_progress("hymns", 1)
+			Prog.quest_step("main1", "brasa")
+			Prog.quest_step("main1", "talk_brenna")
 			for tb in ["char", "skills", "inventory", "weapons", "quests", "codex", "map", "options"]:
 				w.menu.open(tb, {"brasa": true, "forge": true})
 				await get_tree().create_timer(0.8).timeout
@@ -1420,6 +1446,12 @@ func _run_autotest() -> void:
 					w.menu.open("service", {"npc": "nyx"})
 					await get_tree().create_timer(0.6).timeout
 					await _shot(out + "/m_servicio.png")
+					w.menu.close()
+				if tb == "quests":
+					w.menu._quest_sel = "feathers"
+					w.menu.open("quests", {})
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_quests2.png")
 					w.menu.close()
 			print("AUTOTEST_MENUS_OK")
 			get_tree().quit()
