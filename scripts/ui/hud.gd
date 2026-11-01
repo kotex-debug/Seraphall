@@ -1518,6 +1518,13 @@ class Minimap extends Control:
 		for m in w.map_markers():
 			var mp: Vector2 = view.position + (m[1] - src.position) * PX
 			if not view.grow(-2).has_point(mp):
+				if m[0] == "objective":
+					# flecha dorada en el borde hacia el objetivo
+					var cc := view.get_center()
+					var dirv := (mp - cc).normalized()
+					var edge := Vector2(clamp(mp.x, view.position.x + 4, view.end.x - 4), clamp(mp.y, view.position.y + 4, view.end.y - 4))
+					draw_colored_polygon(PackedVector2Array([edge + dirv * 4.0, edge + dirv.orthogonal() * 3.0 - dirv * 2.0, edge - dirv.orthogonal() * 3.0 - dirv * 2.0]), UIKit.GOLD.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(t * 6.0)))
+					continue
 				if m[0] == "boss":
 					var cl := Vector2(clamp(mp.x, view.position.x + 3, view.end.x - 3), clamp(mp.y, view.position.y + 3, view.end.y - 3))
 					UIKit.diamond(self, cl, 2.0 + absf(sin(t * 4.0)), UIKit.RED)
@@ -1534,6 +1541,8 @@ class Minimap extends Control:
 					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(3, 2)), UIKit.GOLD)
 				"ecos":
 					UIKit.diamond(self, mp, 2.0 + absf(sin(t * 5.0)), Color(0.5, 0.85, 1.0))
+				"objective":
+					UIKit.diamond(self, mp, 3.0 + absf(sin(t * 4.0)), UIKit.GOLD)
 				"ally":
 					draw_rect(Rect2(mp - Vector2(1, 1), Vector2(3, 3)), m[2])
 		if lp:

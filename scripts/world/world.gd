@@ -503,6 +503,26 @@ func map_texture_hd() -> ImageTexture:
 	_map_hd = ImageTexture.create_from_image(img)
 	return _map_hd
 
+## Dónde está el siguiente paso de la misión principal (en casillas), o INF si no se sabe
+const OBJECTIVE_ROOMS := {"brasa": Vector2(49, 86), "talk_brenna": Vector2(46, 84), "trial_celdas": "celdas", "kill_carcelero": "yard",
+	"trial_umbral": "antesala", "enter_circle": Vector2(63.5, 13.5), "kill_seravel": "circle"}
+func objective_pos() -> Vector2:
+	if not Prog.quest_active("main1"):
+		return Vector2.INF
+	var steps: Array = Prog.QUESTS.main1.steps
+	var st: int = Prog.quests.main1.step
+	if st >= steps.size():
+		return Vector2.INF
+	var where = OBJECTIVE_ROOMS.get(steps[st].id, null)
+	if where == null:
+		return Vector2.INF
+	if where is Vector2:
+		return where
+	for r in ROOMS:
+		if r.id == where:
+			return Vector2(_rect_of(r).get_center())
+	return Vector2.INF
+
 func map_markers() -> Array:
 	## [tipo, posición en casillas, color, etiqueta]
 	var out := []
@@ -538,6 +558,9 @@ func map_markers() -> Array:
 		if e.is_boss and Prog.flags.get("seen_" + room_at(e.spawn_pos), false):
 			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false)
 			out.append(["boss_dead" if dead else "boss", e.spawn_pos / TS, UIKit.RED, G.T(e.cfg.get("title", "boss_carcelero"))])
+	var obj := objective_pos()
+	if obj != Vector2.INF:
+		out.append(["objective", obj, UIKit.GOLD, ""])
 	for c in entities.get_children():
 		if c is GhostEcho and Prog.flags.get("echo_" + c.id, false):
 			out.append(["echo", c.position / TS, Color(0.6, 0.85, 1.0), ""])

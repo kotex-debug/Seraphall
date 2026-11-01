@@ -2050,6 +2050,19 @@ class MapView extends Control:
 				"lore":
 					draw_rect(Rect2(mp - Vector2(2, 4), Vector2(5, 8)), UIKit.INK)
 					draw_rect(Rect2(mp - Vector2(1, 3), Vector2(3, 6)), mc)
+				"objective":
+					# siguiente paso de la misión principal: estrella dorada con onda (se ve aunque la sala no se haya explorado)
+					var rr3 := 6.0 + fmod(t * 10.0, 10.0)
+					draw_arc(mp, rr3, 0, TAU, 20, Color(UIKit.GOLD, 0.7 - fmod(t * 10.0, 10.0) / 14.0), 1.5)
+					var star := PackedVector2Array()
+					for k3 in 10:
+						var ra := 6.0 if k3 % 2 == 0 else 2.6
+						star.append(mp + Vector2.from_angle(-PI / 2.0 + k3 * PI / 5.0) * ra)
+					var star_o := PackedVector2Array()
+					for q3 in star:
+						star_o.append(mp + (q3 - mp) * 1.4)
+					draw_colored_polygon(star_o, UIKit.INK)
+					draw_colored_polygon(star, UIKit.GOLD.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(t * 6.0)))
 				"echo":
 					# eco del pasado ya visto: fantasma pequeño
 					var ga := 0.7 + 0.3 * sin(t * 3.0)
@@ -2190,7 +2203,7 @@ class MapView extends Control:
 			ly += 12.0
 		ly += 5.0
 		var legend := [["brasa", G.L(["Brasa", "Ember"])], ["npc", G.L(["Aliado", "Ally"])], ["boss", G.L(["Jefe", "Boss"])], ["trial", G.L(["Prueba", "Trial"])], ["echo", G.L(["Eco", "Echo"])],
-			["lock", G.L(["Cerrado", "Sealed"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos", "Echoes"])], ["lore", G.L(["Inscripción", "Inscription"])], ["you", G.L(["Tú", "You"])]]
+			["lock", G.L(["Cerrado", "Sealed"])], ["chest", G.L(["Cofre", "Chest"])], ["ecos", G.L(["Ecos", "Echoes"])], ["lore", G.L(["Inscripción", "Inscription"])], ["objective", G.L(["Objetivo", "Objective"])]]
 		var ly0 := ly
 		for li in legend.size():
 			var lg: Array = legend[li]
@@ -2213,8 +2226,11 @@ class MapView extends Control:
 				"echo":
 					draw_circle(lp2 + Vector2(0, -1), 2.5, Color(0.6, 0.85, 1.0))
 					draw_rect(Rect2(lp2 + Vector2(-2, -1), Vector2(5, 4)), Color(0.6, 0.85, 1.0))
-				"you":
-					draw_rect(Rect2(lp2 - Vector2(2, 2), Vector2(4, 4)), UIKit.WHITE)
+				"objective":
+					var st2 := PackedVector2Array()
+					for k4 in 10:
+						st2.append(lp2 + Vector2.from_angle(-PI / 2.0 + k4 * PI / 5.0) * (4.0 if k4 % 2 == 0 else 1.8))
+					draw_colored_polygon(st2, UIKit.GOLD)
 			_str(Vector2(24 + colx, ly), lg[1], UIKit.TEXT_DIM, 10, "title")
 		if Prog.item_count("map_carto") == 0:
 			_str(Vector2(10, size.y - 12), G.L(["Sin cartografía: cofres ocultos", "No cartography: chests hidden"]), UIKit.PINK, 10, "title")
