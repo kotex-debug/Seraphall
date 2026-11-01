@@ -3113,7 +3113,7 @@ const TRIALS := {
 			[["bestia", 22.5, 47.3], ["guardia", 18.5, 47.3], ["acolito", 33, 50], ["guardia", 26.5, 47.3]]],
 		"reward": {"feathers": 1, "ecos": 300, "items": {"tear": 1}}, "chest": Vector2(19.5, 51.3)},
 	"umbral": {"room": "antesala", "seal": "luz", "title": "trial_umbral",
-		"waves": [[["acolito", 67, 9], ["acolito", 71, 9], ["hueco", 69, 13]],
+		"waves": [[["acolito", 67, 9], ["planidera", 71, 9], ["hueco", 69, 13]],
 			[["custodio", 69, 10]]],
 		"reward": {"feathers": 2, "ecos": 600, "items": {"iron": 1}}, "chest": Vector2(69, 7.4)},
 }

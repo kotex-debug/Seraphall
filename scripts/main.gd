@@ -672,6 +672,88 @@ func _run_autotest() -> void:
 				await get_tree().create_timer(5.0).timeout
 			print("AUTOTEST_V7_OK")
 			get_tree().quit()
+		"promo8":
+			# capturas de las novedades de la noche (ALFA 0.8, 1920x1080)
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			G.look = Look.sane({"body": "f", "hair": 1, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": "Aurel"})
+			w.send_look()
+			Prog.level = 12
+			Prog.weapons = {"sword": 6, "seravel": 3}
+			Prog.equipped = "seravel"
+			Prog.wing_feathers = 8
+			for rid in w.ROOMS:
+				Prog.flags["seen_" + rid.id] = true
+			for fl in ["nimbo_intro", "escala_seen", "atrio_echo", "echo_nimbo", "echo_galeria"]:
+				Prog.flags[fl] = true
+			for ar in ["area_nimbo", "area_gallery", "area_mirador", "area_juicio", "area_yard", "area_chains", "area_celdas", "area_capilla", "area_circle", "area_atrio", "area_choir"]:
+				Prog.flags["thought_" + ar] = true
+			lp.refresh_stats(true)
+			lp._update_weapon_sprite()
+			w.camera.zoom = Vector2(1.35, 1.35)
+			# 1. Sala del Nimbo: lámpara de araña, PNJ y sombras de los braseros
+			lp.respawn_at(w.tile_pos(65, 90.5))
+			await get_tree().create_timer(3.0).timeout
+			await _shot(out + "/n01_nimbo_lampara.png")
+			# 2. Diálogo con busto nuevo junto a Brenna
+			lp.respawn_at(w.tile_pos(46, 85.5))
+			await get_tree().create_timer(2.0).timeout
+			var bx = w.dialog.box
+			bx.visible = true
+			bx.scale = Vector2.ONE
+			bx.speaker = "Brenna"
+			bx.text = G.L(["¿Has visto los esqueletos con alas del Pasillo? Algunos aún aprietan la empuñadura. Buen acero, ese.", "Seen the winged skeletons in the Hall? Some still grip their hilts. Good steel, that."])
+			bx.chars = 999.0
+			bx.portrait = w.dialog.PORTRAITS["Brenna"]
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/n02_dialogo_busto.png")
+			bx.visible = false
+			# 3. Eco del pasado en el Patio
+			lp.respawn_at(w.tile_pos(52.5, 46.0))
+			await get_tree().create_timer(1.2).timeout
+			lp.respawn_at(w.tile_pos(51.0, 45.2))
+			await get_tree().create_timer(3.4).timeout
+			await _shot(out + "/n03_eco_del_pasado.png")
+			# 4. Mirador: estatua colosal y relámpago
+			lp.respawn_at(w.tile_pos(32, 87))
+			await get_tree().create_timer(2.5).timeout
+			var ab = w.get_node("Abyss")
+			ab._next_bolt = 0.01
+			await get_tree().create_timer(0.07).timeout
+			await _shot(out + "/n04_tormenta_coloso.png")
+			# 5. Galería: la Plañidera llora sobre ti
+			var mo: Enemy = null
+			for e in w.enemies_alive():
+				if e.type == "planidera":
+					mo = e
+					break
+			if mo:
+				lp.respawn_at(mo.global_position + Vector2(-60, 40))
+				await get_tree().create_timer(1.6).timeout
+				mo.cooldown = 99.0
+				mo.perform("tears", lp.global_position + Vector2(10, 0), 3)
+				await get_tree().create_timer(0.95).timeout
+				await _shot(out + "/n05_planidera.png")
+			# 6. Antesala del Juicio con sus lámparas
+			lp.respawn_at(w.tile_pos(69.5, 25.5))
+			await get_tree().create_timer(2.2).timeout
+			await _shot(out + "/n06_antesala_lamparas.png")
+			# 7. Códice: personajes
+			for kn in ["brenna", "carto", "ozias", "ilse", "nyx", "velaria", "preso", "peregrina"]:
+				Prog.flags["known_" + kn] = true
+			w.menu.open("codex", {})
+			w.menu._on_codex("_npc")
+			await get_tree().create_timer(0.7).timeout
+			await _shot(out + "/n07_codice_personajes.png")
+			w.menu.close()
+			# 8. Resumen del Estrato
+			Prog.playtime = 9420.0
+			Prog.deaths = 6
+			w.hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name())
+			await get_tree().create_timer(4.6).timeout
+			await _shot(out + "/n08_fin_del_estrato.png")
+			print("AUTOTEST_PROMO8_OK")
+			get_tree().quit()
 		"promo7":
 			# capturas promocionales de la ALFA 0.7 (1920x1080)
 			var lp: Player = w.local_player()
