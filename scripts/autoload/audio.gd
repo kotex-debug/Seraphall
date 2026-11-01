@@ -60,7 +60,7 @@ func refresh_volume() -> void:
 		_music_a.volume_db = linear_to_db(max(0.001, G.music_volume))
 
 const VOICES := {"Brenna": "brenna", "El Cartógrafo": "carto", "Ozias": "ozias", "Madre Ilse": "ilse", "Nyx": "nyx",
-	"Sor Velaria": "velaria", "Tobías": "carto", "El Custodio": "carcelero", "The Warden": "carcelero", "Inscripción": "default", "Inscription": "default", "???": "voz", "Seravel": "seravel", "El Carcelero": "carcelero", "El Coro": "coro"}
+	"Sor Velaria": "velaria", "Tobías": "carto", "Sael": "ilse", "El Custodio": "carcelero", "The Warden": "carcelero", "Inscripción": "default", "Inscription": "default", "???": "voz", "Seravel": "seravel", "El Carcelero": "carcelero", "El Coro": "coro"}
 
 ## Voz de diálogo propia de cada personaje (pitidos como en Undertale)
 func voice(speaker: String) -> void:

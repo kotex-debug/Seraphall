@@ -412,3 +412,19 @@ def guard_rows():
 
 sheet(guard_rows()).save(f"{OUT}/enemy_guardia.png")
 print("Guardia generado")
+
+# ================================================================== v0.8: Sael, la Peregrina (PNJ de la Escalinata)
+def ex_peregrina(d, img, i, b):
+    hood = C("6a5a48")
+    d.polygon([(12, 4 + b), (18, 2 + b), (22, 6 + b), (22, 10 + b), (19, 8 + b), (15, 7 + b), (14, 14 + b), (11, 16 + b)], fill=hood)
+    d.line([(13, 5 + b), (19, 3 + b)], fill=sh(hood, 1.35))
+    sx = 23
+    d.line([(sx, 8 + b), (sx, 30)], fill=C("7a5a3a"))                                  # bastón
+    ly = 9 + b + (1 if i in (1, 2) else 0)
+    d.rectangle([sx - 1, ly - 1, sx + 1, ly + 2], fill=C("ffd88a")); d.point((sx, ly), fill=C("fffbe0"))   # farolillo
+    for k in range(3):                                                                    # cinta de peregrina
+        d.point((13 + k, 19 + b + k % 2), fill=C("c83040"))
+
+PAL_PEREGRINA = A2.look_pal(C("e0c0a0"), C("c8b8a0"), C("8ac0a0"), C("8a7a60"), C("4a3e32"), C("d8aa48"), C("5a4a3a"), C("d8d0c0"), C("ffffff"))
+A2.npc("f", 2, PAL_PEREGRINA, ex_peregrina, True, False, (14, 19, 13)).save(f"{OUT}/npc_peregrina.png")
+print("Peregrina generada")

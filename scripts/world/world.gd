@@ -1074,6 +1074,8 @@ func _check_area(lp: Player) -> void:
 	_check_trials(lp, r)
 	if r == "atrio" and not Prog.flags.get("atrio_echo", false) and not trial_done("atrio"):
 		_atrio_echo()
+	if r == "escala" and not Prog.flags.get("escala_seen", false):
+		_escala_pan()
 	if r == "circle" and not wflags.get("seravel_dead", false) and not _boss_started and lp.is_alive() and asc_fight.is_empty():
 		if multiplayer.is_server():
 			_server_start_boss()
@@ -1639,6 +1641,17 @@ func _grant(d: Dictionary) -> void:
 func _talk(id: String) -> void:
 	var lines := []
 	match id:
+		"peregrina":
+			if not Prog.flags.get("met_peregrina", false):
+				Prog.flags["met_peregrina"] = true
+				var lpg := [
+					["Sael", ["¿Subes o bajas? En la Espiral es lo mismo: el Juicio te espera en las dos direcciones.", "Going up or down? In the Spiral it's all the same: Judgement awaits you either way."]],
+					["Sael", ["Llevo trescientos años en esta escalera. Cada vez que llego arriba, despierto abajo.", "I've been on these stairs for three hundred years. Every time I reach the top, I wake up at the bottom."]],
+					["Sael", ["Toma. Una Lágrima no se le niega a nadie que vaya a enfrentarse a ella.", "Here. A Tear is never denied to anyone about to face her."]],
+				]
+				dialog.play(lpg, func(): Prog.add_item("tear", 1))
+			else:
+				dialog.play(Lore.lines_for("peregrina", wflags), Callable())
 		"preso":
 			var lp0 := [
 				["Tobías", ["¿Eres de carne? Hace tanto que solo me hablan las cadenas...", "Are you flesh? It's been so long since anything but the chains spoke to me..."]],
@@ -3175,6 +3188,7 @@ func _build_antechambers() -> void:
 	for x3 in [62, 66, 70]:
 		_prop("candle", tile_pos(x3, 29.4), 4, x3 % 4, 0.0, Color(1, 0.8, 0.45), 1.1)
 	_add_inter("brasa", "umbral", tile_pos(59.5, 28.4))
+	_add_inter("npc", "peregrina", tile_pos(67.5, 27.6), {"sheet": "npc_peregrina", "name": ["Sael, la Peregrina", "Sael, the Pilgrim"], "flip": true, "light": Color(1, 0.85, 0.55)})
 	_add_inter("lore", "lore_juicio", tile_pos(73, 28.6), {"lines": [["lore_title", ["«Quien suba esta escalera será pesado en la balanza. Las plumas que te queden hablarán por ti.»", "\"Whoever climbs these stairs shall be weighed on the scales. Your remaining feathers will speak for you.\""]]]})
 	# --- antorchas de pared (celdas, escalinata, antesala, pasillo)
 	for tp in [Vector2(20.5, 45.7), Vector2(24.5, 45.7), Vector2(28.5, 45.7), Vector2(34.5, 45.7),
@@ -3505,3 +3519,20 @@ func _enemy_blocked(idx: int) -> void:
 	Audio.sfx("parry", -6.0)
 	Fx.sparks(e.global_position + Vector2(float(e.facing) * 8.0, -12), Vector2(float(e.facing), -0.4), Color(1, 0.85, 0.5), 10, 160.0, 70.0)
 	Fx.text(e.global_position + Vector2(0, -6), G.L(["¡BLOQUEADO!", "BLOCKED!"]), Color(0.85, 0.85, 0.95), 9)
+
+
+func _escala_pan() -> void:
+	## Primera vez en la Escalinata: la cámara sube hasta la Antesala y vuelve
+	Prog.flags["escala_seen"] = true
+	var lp := local_player()
+	if lp == null:
+		return
+	lp.cutscene = true
+	hud.letterbox(true)
+	_cam_focus = tile_pos(69, 12)
+	hud.subtitle("", G.L(["La Escalinata del Juicio. Arriba, alguien lleva mil años esperando.", "The Stairway of Judgement. Above, someone has waited a thousand years."]), 2.6)
+	await get_tree().create_timer(2.8 if G.autotest == "" else 0.4).timeout
+	_cam_focus = null
+	hud.letterbox(false)
+	if is_instance_valid(lp):
+		lp.cutscene = false

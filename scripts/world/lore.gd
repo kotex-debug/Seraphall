@@ -45,6 +45,11 @@ const STAGE_LINES := {
 		"choir_dead": [["Sor Velaria", ["Has hecho callar al Coro. Cumpliste tu palabra. Toma... y no preguntes de qué estaba hecho su corazón.", "You silenced the Choir. You kept your word. Take this... and don't ask what its heart was made of."]]],
 		"seravel_dead": [["Sor Velaria", ["La Guardiana ha caído y aun así la Espiral no se abre. Quizá nunca fue una puerta, sino un cerrojo.", "The Warden has fallen and still the Spiral won't open. Perhaps it was never a door, but a lock."]]],
 	},
+	"peregrina": {
+		"trial_umbral": [["Sael", ["El Custodio te ha dejado pasar. A mí nunca me miró. Ni una sola vez en trescientos años.", "The Warden let you through. It never once looked at me. Not once in three hundred years."]]],
+		"seravel_dead": [["Sael", ["Has llegado arriba... y la escalera sigue. Siempre sigue. Hacia abajo, eso sí.", "You reached the top... and the stairs go on. They always do. Downwards, mind you."]],
+			["Sael", ["Si encuentras el último peldaño, vuelve y cuéntamelo. Me haría ilusión tener algo que esperar.", "If you find the last step, come back and tell me. I'd like to have something to look forward to."]]],
+	},
 	"preso": {
 		"carcelero_dead": [["Tobías", ["El Carcelero ha caído. Lo noto: las cadenas pesan menos. Y algo, ahí fuera, se ha despertado.", "The Jailer has fallen. I can feel it: the chains weigh less. And something, out there, has woken up."]]],
 		"trial_umbral": [["Tobías", ["Anoche soñé con una figura sin rostro bajando la escalinata. Tenía tus andares. Perdona... son cosas de viejo.", "Last night I dreamt of a faceless figure walking down the stairway. It walked like you. Forgive me... an old man's fancies."]]],
@@ -80,6 +85,11 @@ const IDLE := {
 	"velaria": [
 		["Sor Velaria", ["Los Arcontes caídos dejan ecos. Puedo despertarlos, más fuertes, más crueles. Si sobrevives, el Nimbo te recompensará.", "Fallen Archons leave echoes. I can awaken them, stronger, crueler. Survive, and the Nimbus will reward you."]],
 		["Sor Velaria", ["Un juramento pesa más que cualquier armadura. Elige bien antes de cargar con uno.", "An oath weighs more than any armour. Choose well before you carry one."]],
+	],
+	"peregrina": [
+		["Sael", ["Cuenta los peldaños. Si un día salen distintos, es que la Espiral te está mintiendo.", "Count the steps. If one day the number changes, the Spiral is lying to you."]],
+		["Sael", ["Mi farolillo no da calor. Lo llevo para que los de abajo sepan que aún queda alguien subiendo.", "My lantern gives no warmth. I carry it so those below know someone is still climbing."]],
+		["Sael", ["¿Sabes por qué las estatuas de la escalera están de rodillas? Yo tampoco. Pero nunca les doy la espalda.", "Do you know why the statues on the stairs are kneeling? Neither do I. But I never turn my back on them."]],
 	],
 	"preso": [
 		["Tobías", ["No abras las celdas. Por favor. Él nos metió aquí para que estuviéramos a salvo, no para castigarnos.", "Don't open the cells. Please. He put us here to keep us safe, not to punish us."]],
