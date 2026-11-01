@@ -513,6 +513,7 @@ class CastShadow extends Sprite2D:
 	## alarga al moverte alrededor de la luz, como en Bloody Hell.
 	const RANGE := 150.0
 	var src: Sprite2D
+	var size_mul := 1.0
 	var world: Node
 	func _ready() -> void:
 		z_index = -1
@@ -546,6 +547,8 @@ class CastShadow extends Sprite2D:
 		region_enabled = src.region_enabled
 		region_rect = src.region_rect
 		flip_h = src.flip_h
-		offset = Vector2(0, -region_rect.size.y * 0.5 + 2.0)
-		transform = Transform2D(Vector2(dir.y, -dir.x) * 0.9, -dir * len, Vector2(0, 1))
+		var sc := src.scale.abs() * size_mul
+		var hh := region_rect.size.y if region_enabled else float(texture.get_height())
+		offset = Vector2(0, -hh * 0.5 + 2.0 / maxf(sc.y, 0.01))
+		transform = Transform2D(Vector2(dir.y, -dir.x) * 0.9 * sc.x, -dir * len * sc.y, Vector2(0, 1))
 		modulate = Color(0, 0, 0, a)

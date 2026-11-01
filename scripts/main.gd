@@ -860,7 +860,7 @@ func _run_autotest() -> void:
 				lp.respawn_at(w.tile_pos(sp.x, sp.y - 2.0))
 				await get_tree().create_timer(2.6).timeout
 				await _shot(out + "/g%d_eco.png" % n)
-				await get_tree().create_timer(9.0).timeout
+				await get_tree().create_timer(12.0).timeout
 				n += 1
 			print("GHOST flags ", Prog.flags.get("echo_nimbo"), Prog.flags.get("echo_galeria"), Prog.flags.get("echo_patio"), " ach=", Prog.flags.get("ach_echoes", false))
 			print("AUTOTEST_GHOST_OK")

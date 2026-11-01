@@ -575,6 +575,7 @@ func _build_props() -> void:
 	_build_arena_decor()
 	_build_antechambers()
 	_place_urns()
+	_place_webs()
 	_place_ghost_echoes()
 	_collect_shadow_lights()
 
@@ -2002,8 +2003,14 @@ func _server_start_carcelero() -> void:
 			bcast("_carcelero_intro", [e.idx])
 			return
 
-func show_boss_line(line: Array) -> void:
-	hud.subtitle("Seravel", G.L(line), 3.0)
+const BOSS_SPEAKERS := {"carcelero": ["El Carcelero", "The Jailer"], "choir": ["El Coro", "The Choir"], "seravel": ["Seravel", "Seravel"],
+	"custodio": ["El Custodio", "The Warden"]}
+
+func show_boss_line(line: Array, who := "") -> void:
+	if who == "" and active_boss != null and is_instance_valid(active_boss):
+		who = active_boss.type
+	var sp: String = G.L(BOSS_SPEAKERS[who]) if BOSS_SPEAKERS.has(who) else ""
+	hud.subtitle(sp, G.L(line), 3.0, Color(1, 0.86, 0.8))
 
 func _on_carcelero_dead(e: Enemy) -> void:
 	unseal_arena()
@@ -3212,6 +3219,30 @@ func _place_ghost_echoes() -> void:
 		g.position = tile_pos(sp[1].x, sp[1].y)
 		entities.add_child(g)
 
+func _place_webs() -> void:
+	## Telarañas en las esquinas de las salas: detalle que da edad a la Espiral
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 777
+	for r in ROOMS:
+		if not r.has("rect"):
+			continue
+		var rc: Rect2i = r.rect
+		if rc.size.x < 5 or rc.size.y < 4:
+			continue
+		for side in [0, 1]:
+			if rng.randf() > 0.65:
+				continue
+			var tx := rc.position.x if side == 0 else rc.end.x - 1
+			var ty := rc.position.y
+			if not _floor_at(tx, ty):
+				continue
+			var wb := CornerWeb.new()
+			wb.position = Vector2((tx + (0 if side == 0 else 1)) * TS, ty * TS)
+			wb.dir = 1.0 if side == 0 else -1.0
+			wb.radius = rng.randf_range(11.0, 19.0)
+			wb.z_index = -1
+			entities.add_child(wb)
+
 func _place_urns() -> void:
 	## Urnas funerarias junto a los muros de las salas tranquilas: se rompen y sueltan Ecos o una pluma
 	var rng := RandomNumberGenerator.new()
@@ -3894,6 +3925,8 @@ class GhostEcho extends Node2D:
 	var _t := 0.0
 	var _alpha := 0.0
 	var _target := 0.1
+	var _aborted := false
+	var _gen := 0
 	var _light: PointLight2D
 	func _ready() -> void:
 		z_index = 0
@@ -3928,11 +3961,23 @@ class GhostEcho extends Node2D:
 		_t += delta
 		if not played:
 			var lp: Player = world.local_player()
-			if lp and lp.is_alive() and lp.global_position.distance_to(global_position) < 52.0 and world.active_boss == null and world._trial == "":
+			var calm: bool = world.active_boss == null and world._trial == ""
+			if not calm:
+				_target = 0.0
+			elif _alpha <= 0.13:
+				_aborted = false
+				_target = 0.12
+			if lp and lp.is_alive() and calm and not _aborted and lp.global_position.distance_to(global_position) < 52.0:
 				_play()
 			elif randf() < delta * 2.5:
 				Fx.burst(global_position + Vector2(randf_range(-18, 18), randf_range(-24, 0)), Color(0.55, 0.8, 1.0), 1, 8.0, 0.9, "fx_soft", 40.0, Vector2.UP, 0.25, true)
-		_alpha = move_toward(_alpha, _target, delta * 0.9)
+		elif _target > 0.0 and not _aborted and (world.active_boss != null or world._trial != ""):
+			# empieza un combate: el eco se desvanece y podrá verse más tarde
+			_aborted = true
+			_target = 0.0
+			played = false
+			Prog.flags["echo_" + id] = false
+		_alpha = move_toward(_alpha, _target, delta * (3.0 if _aborted else 0.9))
 		for i in _sprs.size():
 			var sp: Sprite2D = _sprs[i]
 			sp.modulate.a = _alpha * (0.82 + 0.18 * sin(_t * 9.0 + i * 2.1))
@@ -3941,6 +3986,8 @@ class GhostEcho extends Node2D:
 		if played and _alpha <= 0.0 and _target <= 0.0:
 			set_process(false)
 	func _play() -> void:
+		_gen += 1
+		var my_gen := _gen
 		played = true
 		Prog.flags["echo_" + id] = true
 		Audio.sfx("glitch", -14.0)
@@ -3948,15 +3995,19 @@ class GhostEcho extends Node2D:
 		_target = 0.7
 		var lines: Array = Lore.GHOST_ECHOES[id]
 		await get_tree().create_timer(0.8).timeout
+		if _aborted or my_gen != _gen:
+			return
 		for ln in lines:
 			if not is_inside_tree():
 				return
-			if world.active_boss != null or world._trial != "":
-				break
+			if _aborted or my_gen != _gen:
+				return
 			var txt := G.L(ln[1])
 			var dur := clampf(txt.length() * 0.055, 2.4, 5.0)
 			world.hud.subtitle(G.L(ln[0]), txt, dur, Color(0.68, 0.86, 1.0))
 			await get_tree().create_timer(dur + 0.7).timeout
+		if _aborted or my_gen != _gen:
+			return
 		_target = 0.0
 		for sp in _sprs:
 			Fx.burst((sp as Sprite2D).global_position + Vector2(0, -14), Color(0.55, 0.8, 1.0), 10, 30.0, 1.0, "fx_soft", 60.0, Vector2.UP, 0.5, true)
@@ -3969,3 +4020,34 @@ class GhostEcho extends Node2D:
 			if not Prog.flags.get("echo_" + k, false):
 				return false
 		return true
+
+
+class CornerWeb extends Node2D:
+	## Telaraña de esquina: hilos radiales y arcos que se mecen con la corriente
+	var dir := 1.0
+	var radius := 14.0
+	var _t := 0.0
+	func _ready() -> void:
+		_t = randf() * 10.0
+	func _process(delta: float) -> void:
+		_t += delta
+		if Engine.get_process_frames() % 3 == 0:
+			queue_redraw()
+	func _draw() -> void:
+		var col := Color(0.86, 0.84, 0.92, 0.22)
+		var n := 5
+		var sway := sin(_t * 1.3) * 0.8
+		var ends: Array = []
+		for i in n:
+			var a := lerpf(0.05, PI / 2.0 - 0.05, float(i) / float(n - 1))
+			var e := Vector2(cos(a) * dir, sin(a)) * radius
+			ends.append(e)
+			draw_line(Vector2.ZERO, e, col, 1.0)
+		for ring in [0.35, 0.6, 0.85]:
+			for i in n - 1:
+				var p0: Vector2 = ends[i] * ring
+				var p1: Vector2 = ends[i + 1] * ring
+				var mid := (p0 + p1) * 0.5 * 0.88 + Vector2(0, sway * ring)
+				draw_line(p0, mid, col, 1.0)
+				draw_line(mid, p1, col, 1.0)
+		draw_circle(ends[2] * 0.55 + Vector2(0, sway * 0.6 + 2.0), 1.2, Color(0.1, 0.06, 0.1, 0.8))

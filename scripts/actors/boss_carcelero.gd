@@ -46,6 +46,11 @@ func _ready() -> void:
 	rig.add_child(r_eyes)
 	for s in [r_body, r_ball]:
 		s.material = _flash_mat
+	var cast := Depth3D.CastShadow.new()
+	cast.src = r_body
+	cast.world = world
+	add_child(cast)
+	move_child(cast, 0)
 	var l := PointLight2D.new()
 	l.texture = Fx.tex("light")
 	l.color = Color(1, 0.45, 0.15)

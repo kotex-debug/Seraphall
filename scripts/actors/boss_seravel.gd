@@ -44,6 +44,11 @@ func _ready() -> void:
 	r_wr.flip_h = true
 	r_wr.offset = Vector2(-8, -28)
 	r_body = _part("res://assets/sprites/cinematic/seravel_body.png", Vector2.ZERO, false)
+	var cast := Depth3D.CastShadow.new()
+	cast.src = r_body
+	cast.world = world
+	add_child(cast)
+	move_child(cast, 0)
 	r_sword = _part("res://assets/sprites/cinematic/seravel_sword.png", Vector2(18, 2), false)
 	r_sword.offset = Vector2(0, -36)
 	r_eyes = _part("res://assets/sprites/cinematic/seravel_eyes.png", Vector2.ZERO, true)
