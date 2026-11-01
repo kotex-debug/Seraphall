@@ -883,6 +883,9 @@ func _apply_world_flags(instant: bool) -> void:
 	for bw in breakables.values():
 		if wflags.get("broken_" + bw.id, false):
 			bw.set_broken(true)
+	# Tobías sale de su celda cuando cae el Carcelero
+	if wflags.get("carcelero_dead", false) and interactables.has("preso"):
+		interactables["preso"].position = tile_pos(21.5, 50.8)
 	for e in enemies:
 		if e.type == "carcelero" and wflags.get("carcelero_dead", false):
 			e.die(); e.visible = false

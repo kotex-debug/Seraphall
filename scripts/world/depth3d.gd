@@ -176,14 +176,35 @@ class Abyss extends Node2D:
 			var n: int = [70, 55, 40][li]
 			for i in n:
 				var p := Vector2(rng.randf_range(-200, W + 200), rng.randf_range(-200, H + 200))
-				var kind := rng.randi_range(0, 9)
+				var kind := rng.randi_range(0, 10)
 				items.append([p, kind, rng.randf_range(0.7, 1.4), rng.randi(), rng.randf() * TAU])
 			layers.append([f, items])
 	func _process(_delta: float) -> void:
 		queue_redraw()
+	func _giant(cam: Vector2, t: float) -> void:
+		## Cada ~45 s un ángel enorme cae muy lejos, por detrás de todo, perdiendo plumas
+		var cycle := fmod(t, 45.0)
+		if cycle > 14.0:
+			return
+		var k := cycle / 14.0
+		var seed: float = floor(t / 45.0)
+		var x := cam.x + sin(seed * 12.9) * 220.0
+		var p := Vector2(x + k * 60.0, cam.y - 220.0 + k * 460.0)
+		var a := sin(k * PI) * 0.35
+		var col := Color(0.12, 0.04, 0.1, a)
+		draw_set_transform(p, PI + sin(t * 0.4) * 0.3, Vector2(2.6, 2.6))
+		draw_colored_polygon(PackedVector2Array([Vector2(-2, -2), Vector2(-16, -10), Vector2(-11, 2), Vector2(-2, 3)]), col)
+		draw_colored_polygon(PackedVector2Array([Vector2(2, -2), Vector2(16, -10), Vector2(11, 2), Vector2(2, 3)]), col)
+		draw_rect(Rect2(-2, -4, 4, 11), col)
+		draw_circle(Vector2(0, -7), 2.6, col)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		for q in 5:
+			var fk := fmod(k * 3.0 + q * 0.2, 1.0)
+			draw_line(p + Vector2((q - 2) * 14.0, -fk * 60.0), p + Vector2((q - 2) * 14.0 + 3, -fk * 60.0 + 6), Color(0.6, 0.5, 0.55, a * (1.0 - fk)), 2.0)
 	func _draw() -> void:
 		var cam := Depth3D.cam_center(self)
 		var t := Time.get_ticks_msec() / 1000.0
+		_giant(cam, t)
 		for L in layers:
 			var f: float = L[0]
 			var fog := 1.0 - f            # cuanto más hondo, más niebla
@@ -236,6 +257,19 @@ class Abyss extends Node2D:
 					9:
 						# ascua lejana
 						draw_circle(p, 2.0 * s, Color(1, 0.5, 0.25, alpha * (0.5 + 0.5 * sin(t * 2.0 + it[4]))))
+					10:
+						# puente roto: tablones colgando de dos cadenas
+						var bw := 60.0 * s
+						var sag := 10.0 * s
+						var prev := p
+						for k4 in 9:
+							var u := k4 / 8.0
+							var q2 := p + Vector2(bw * u, sin(u * PI) * sag + sin(t * 0.6 + it[4]) * 2.0 * u)
+							if k4 > 0:
+								draw_line(prev, q2, Color(rock.lightened(0.2), alpha * 0.8), 1.0)
+							if k4 % 2 == 0 and k4 != 4:
+								draw_rect(Rect2(q2 - Vector2(3, 0) * s, Vector2(6, 2) * s), Color(0.32, 0.22, 0.2, alpha))
+							prev = q2
 
 
 class CliffDepth extends Node2D:
