@@ -13,6 +13,9 @@ const TYPES := {
 	"bestia": {"sheet": "enemy_bestia", "fw": 38, "fh": 28, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
 		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -12.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
+	"guardia": {"sheet": "enemy_guardia", "fw": 32, "fh": 32, "hp": 95.0, "speed": 50.0, "radius": 8.0, "dmg": 18.0, "poise": 55.0,
+		"ecos": 62, "aggro": 160.0, "range": 120.0, "cd": 1.5, "off": -14.0, "shield": true,
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
 	"custodio": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 560.0, "speed": 60.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
 		"ecos": 650, "aggro": 260.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "custodio_title",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
@@ -227,6 +230,8 @@ func _choose_attack(d: float) -> String:
 			if phase == 2 and randf() < 0.4:
 				return "triple"
 			return "sweep" if d < 50.0 else "slam"
+		"guardia":
+			return "charge" if d > 45.0 else "slash"
 		"custodio":
 			if d < 55.0:
 				return "sweep" if randf() < 0.6 else "slam"
@@ -462,6 +467,11 @@ func _hit_circle(center: Vector2, r: float, dmg: float, dir: Vector2) -> bool:
 func server_apply_damage(dmg: float, dir: Vector2, poise_dmg: float) -> Dictionary:
 	if state == "dead" or (is_boss and not active):
 		return {}
+	# escudo: los golpes de frente rebotan (salvo con la postura rota o por la espalda)
+	if cfg.get("shield", false) and state != "stagger" and dir != Vector2.ZERO and dir.x * float(facing) < -0.25:
+		dmg *= 0.2
+		poise_dmg *= 1.6
+		world.bcast("_enemy_blocked", [idx])
 	hp -= dmg
 	last_hit_t = 0.0
 	var broke := false
@@ -546,6 +556,12 @@ func die() -> void:
 	tw.tween_interval(0.35)
 	tw.tween_method(_set_dissolve, 0.0, 1.0, 0.9)
 	tw.tween_callback(hide)
+	# el alma sube hacia la cámara
+	if world and not is_boss:
+		var soul := Depth3D.Soul.new()
+		soul.position = global_position + Vector2(0, -4)
+		soul.col = Color(0.6, 0.85, 1.0) if type != "custodio" else Color(1, 0.9, 0.6)
+		world.get_node("FX").add_child(soul)
 
 # ====================================================================== visual
 func _play(a: String, frame := -1) -> void:

@@ -381,3 +381,34 @@ icon_bell().save(f"{OUT}/icon_amulet_bell.png")
 icon_page().save(f"{OUT}/icon_page.png")
 cracked_wall().save(f"{OUT}/cracked_wall.png")
 print("Iconos v0.8 generados")
+
+# ================================================================== v0.8: Guardia de las Celdas (32x32)
+def guard_rows():
+    """Guardia: carcelero menor con casco de rejilla, cota oxidada y un escudo-puerta de celda."""
+    pal = A2.look_pal(C("8a7a72"), C("3a3236"), C("ff7a30"), C("5a5258"), C("3a3438"), C("9a6a3a"), C("4a2a24"), C("5a5258"), C("000000"))
+    lost = tuple(range(10, 20))
+    def frame(pose, k):
+        pose = dict(pose); pose["halo"] = False; pose["wings"] = False
+        img = A2.colorize(GL.hero("m", 0, pose), pal, lost)
+        d = ImageDraw.Draw(img); b = pose.get("bob", 0)
+        d.rectangle([13, 3 + b, 21, 11 + b], fill=C("4a4450"))                         # yelmo de rejilla
+        for x in (15, 17, 19):
+            d.line([(x, 6 + b), (x, 11 + b)], fill=C("2a2430"))
+        d.point((17, 8 + b), fill=C("ff7a30")); d.point((19, 8 + b), fill=C("ff7a30"))
+        d.line([(13, 3 + b), (21, 3 + b)], fill=C("7a7480"))
+        sx = 22 if pose.get("arm", 0) != 2 else 24                                        # escudo: puerta de celda
+        d.rectangle([sx - 3, 14 + b, sx + 3, 26 + b], fill=C("3a3440"))
+        for x in range(sx - 2, sx + 3, 2):
+            d.line([(x, 15 + b), (x, 25 + b)], fill=C("8a8494"))
+        d.line([(sx - 3, 19 + b), (sx + 3, 19 + b)], fill=C("6a646e"))
+        d.point((sx, 20 + b), fill=C("c89a40"))
+        return outline(img)
+    idle = [frame({"bob": [0, 0, 1, 1][i]}, i) for i in range(4)]
+    cyc = [(-2, 2), (-1, 1), (1, -1), (2, -2)]
+    walk = [frame({"l": cyc[i][0], "r": cyc[i][1], "bob": i % 2}, i) for i in range(4)]
+    atk = [frame({"arm": a, "l": l, "r": -l}, k) for k, (a, l) in enumerate(((1, -1), (2, 2), (2, 1)))]
+    dead = frame({"bob": 1}, 0).rotate(90, expand=False, resample=Image.NEAREST)
+    return [idle, walk, atk, [dead, dead]]
+
+sheet(guard_rows()).save(f"{OUT}/enemy_guardia.png")
+print("Guardia generado")

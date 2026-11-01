@@ -816,7 +816,7 @@ func _spawn_enemies() -> void:
 		["hueco", 49, 49],
 		["acolito", 78, 52], ["acolito", 87, 60], ["acolito", 82, 67],
 		["bestia", 76, 61], ["bestia", 88, 66], ["hueco", 84, 70], ["hueco", 74, 59],
-		["acolito", 70, 28], ["hueco", 63, 28], ["hueco", 35, 54],
+		["acolito", 70, 28], ["guardia", 63, 28], ["hueco", 35, 54], ["guardia", 49, 57],
 		["carcelero", 49, 38],
 		["choir", 82, 35],
 		["seravel", 49, 10],
@@ -3033,7 +3033,7 @@ const TRIALS := {
 	"celdas": {"room": "celdas", "seal": "celda", "title": "trial_celdas",
 		"waves": [[["hueco", 18.5, 47.3], ["hueco", 22.5, 47.3], ["hueco", 26.5, 47.3]],
 			[["hueco", 18.5, 47.3], ["acolito", 31, 51], ["hueco", 30.5, 47.3], ["hueco", 22.5, 47.3]],
-			[["bestia", 22.5, 47.3], ["hueco", 18.5, 47.3], ["acolito", 33, 50], ["hueco", 26.5, 47.3]]],
+			[["bestia", 22.5, 47.3], ["guardia", 18.5, 47.3], ["acolito", 33, 50], ["guardia", 26.5, 47.3]]],
 		"reward": {"feathers": 1, "ecos": 300, "items": {"tear": 1}}, "chest": Vector2(19.5, 51.3)},
 	"umbral": {"room": "antesala", "seal": "luz", "title": "trial_umbral",
 		"waves": [[["acolito", 67, 9], ["acolito", 71, 9], ["hueco", 69, 13]],
@@ -3492,3 +3492,13 @@ class BreakableWall extends Node2D:
 	func _process(delta: float) -> void:
 		shake = max(0.0, shake - delta)
 		_spr.position = Vector2(randf_range(-2, 2), 0) * (shake / 0.2)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _enemy_blocked(idx: int) -> void:
+	if idx >= enemies.size():
+		return
+	var e: Enemy = enemies[idx]
+	Audio.sfx("parry", -6.0)
+	Fx.sparks(e.global_position + Vector2(float(e.facing) * 8.0, -12), Vector2(float(e.facing), -0.4), Color(1, 0.85, 0.5), 10, 160.0, 70.0)
+	Fx.text(e.global_position + Vector2(0, -6), G.L(["¡BLOQUEADO!", "BLOCKED!"]), Color(0.85, 0.85, 0.95), 9)

@@ -443,3 +443,32 @@ class HangingChain extends Node2D:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.4))
 		draw_circle(Vector2.ZERO, 4.0, Color(0, 0, 0, 0.25))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+
+class Soul extends Node2D:
+	## Alma que abandona al enemigo caído: sube con perspectiva hacia la cámara, crece y se desvanece
+	var col := Color(0.6, 0.85, 1.0)
+	var t := 0.0
+	const DUR := 1.4
+	func _ready() -> void:
+		z_index = 30
+		material = Fx.add_material()
+	func _process(delta: float) -> void:
+		t += delta
+		if t >= DUR:
+			queue_free()
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var k := t / DUR
+		var cam := Depth3D.cam_center(self) - global_position
+		var h := 10.0 + 150.0 * k * k
+		var p := Depth3D.lift(Vector2(sin(t * 6.0) * 4.0, 0), h, cam)
+		var s := 1.0 + h / 160.0
+		var a := (1.0 - k) * 0.9
+		for i in 4:
+			var q := Depth3D.lift(Vector2(sin((t - i * 0.06) * 6.0) * 4.0, 0), maxf(0.0, h - i * 10.0), cam)
+			draw_circle(q, (3.0 - i * 0.5) * s, Color(col, a * (0.35 - i * 0.07)))
+		draw_circle(p, 3.5 * s, Color(col, a * 0.5))
+		draw_circle(p, 1.8 * s, Color(1, 1, 1, a))
