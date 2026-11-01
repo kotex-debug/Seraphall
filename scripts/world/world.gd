@@ -86,6 +86,7 @@ func setup(p_main: Node, mode: String) -> void:
 
 func _ready() -> void:
 	y_sort_enabled = false
+	add_to_group("world")
 	_build_map()
 	leaner = Depth3D.Leaner.new()
 	add_child(leaner)
@@ -3372,6 +3373,11 @@ func _spawn_trial_enemy(type: String, pos: Vector2) -> void:
 	if type == "custodio":
 		G.shake(6.0, 0.6)
 		Fx.light_flash(pos, Color(1, 0.85, 0.5), 3.0, 1.6, 0.8)
+		_cam_focus = pos + Vector2(0, -20)
+		hud.letterbox(true)
+		get_tree().create_timer(1.8 if G.autotest == "" else 0.3).timeout.connect(func():
+			_cam_focus = null
+			hud.letterbox(false))
 
 @rpc("any_peer", "call_remote", "reliable")
 func _trial_complete(id: String) -> void:
@@ -3410,6 +3416,7 @@ func _ring_bell(id: String) -> void:
 		return
 	var n: int = it.data.note
 	it.ring()
+	Fx.text(it.global_position + Vector2(0, -22), G.L([["Aguda", "High"], ["Media", "Middle"], ["Grave", "Low"]][n]), Color(0.85, 0.75, 1.0), 9)
 	Audio.sfx("bell_%d" % n, -3.0, 0.0)
 	Fx.ring(it.global_position + Vector2(0, -14), 4.0, 46.0 + n * 10.0, Color(0.75, 0.6, 1.0), 0.7, 2.0)
 	_bell_seq.append(n)

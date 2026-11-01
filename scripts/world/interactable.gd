@@ -183,6 +183,19 @@ func prompt() -> String:
 	return ""
 
 var _ring_t := 0.0
+var _bark_t := 6.0
+var _bark := ""
+var _bark_a := 0.0
+const BARKS := {
+	"brenna": [["¡Clang! ¡Clang!", "Clang! Clang!"], ["Este acero no se templa solo...", "This steel won't temper itself..."], ["¿Otra vez rota?", "Broken again?"]],
+	"carto": [["...trescientos doce pasos...", "...three hundred and twelve steps..."], ["Huelo a ceniza nueva.", "I smell fresh ash."]],
+	"ozias": [["Las runas susurran...", "The runes whisper..."], ["Escarcha... no, Brasa.", "Frost... no, Ember."]],
+	"ilse": [["Shhh... duerme, pequeña llama.", "Shhh... sleep, little flame."], ["Una puntada más.", "One more stitch."]],
+	"nyx": [["Psst. Género nuevo.", "Psst. New stock."], ["Todo tiene un precio.", "Everything has a price."]],
+	"velaria": [["Los ecos no descansan.", "Echoes never rest."], ["¿Te atreves?", "Do you dare?"]],
+	"preso": [["...no contestes...", "...don't answer..."], ["Las cadenas pesan menos hoy.", "The chains weigh less today."]],
+	"peregrina": [["...cuatrocientos uno, cuatrocientos dos...", "...four hundred and one, four hundred and two..."], ["Sube. O baja. Da igual.", "Go up. Or down. It's all the same."]],
+}
 var _bell: Sprite2D
 func ring() -> void:
 	_ring_t = 1.0
@@ -202,6 +215,20 @@ func _process(delta: float) -> void:
 		"npc":
 			var f2 := int(_t * 4.0) % _frames
 			spr.region_rect = Rect2(f2 * _fw, 0, _fw, 32)
+			# comentarios sueltos cuando pasas cerca
+			_bark_t -= delta
+			_bark_a = move_toward(_bark_a, 1.0 if _bark_t > 2.2 else 0.0, delta * 3.0)
+			if _bark_t <= 0.0:
+				_bark_t = randf_range(9.0, 15.0)
+				var w := get_tree().get_first_node_in_group("world") if is_inside_tree() else null
+				var lp: Node2D = w.local_player() if w and w.has_method("local_player") else null
+				if lp and lp.global_position.distance_to(global_position) < 110.0 and BARKS.has(id) and not (w.dialog.is_open()):
+					var pool: Array = BARKS[id]
+					_bark = G.L(pool[randi() % pool.size()])
+					_bark_t = 4.5 + randf_range(5.0, 9.0)
+				else:
+					_bark = ""
+			queue_redraw()
 		"bell":
 			_ring_t = max(0.0, _ring_t - delta * 0.8)
 			_bell.rotation = sin(_t * 14.0) * 0.35 * _ring_t
@@ -215,3 +242,15 @@ func _process(delta: float) -> void:
 			spr.position.y = sin(_t * 3.0) * 2.0
 			if randf() < 0.08:
 				Fx.burst(global_position + Vector2(randf_range(-4, 4), -8), Color(0.8, 0.9, 1), 1, 15.0, 0.8, "fx_px", 40.0, Vector2.UP)
+
+
+func _draw() -> void:
+	if kind != "npc" or _bark == "" or _bark_a <= 0.01:
+		return
+	var f := UIKit.font("title")
+	var w := f.get_string_size(_bark, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+	var r := Rect2(Vector2(-w / 2.0 - 5, -50), Vector2(w + 10, 14))
+	draw_rect(r.grow(1), Color(UIKit.INK, 0.85 * _bark_a))
+	draw_rect(r, Color(0.95, 0.92, 0.86, 0.92 * _bark_a))
+	draw_colored_polygon(PackedVector2Array([Vector2(-3, -36), Vector2(3, -36), Vector2(0, -32)]), Color(0.95, 0.92, 0.86, 0.92 * _bark_a))
+	f.draw_string(get_canvas_item(), Vector2(-w / 2.0, -40), _bark, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.15, 0.08, 0.15, _bark_a))
