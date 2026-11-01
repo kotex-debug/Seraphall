@@ -846,6 +846,25 @@ func _run_autotest() -> void:
 			await _shot(out + "/t02_voz.png")
 			print("AUTOTEST_THOUGHT_OK")
 			get_tree().quit()
+		"ghost":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			Prog.flags["thought_area_nimbo"] = true
+			Prog.flags["thought_area_gallery"] = true
+			Prog.flags["thought_area_yard"] = true
+			var n := 1
+			for sp in [Vector2(66, 86.5), Vector2(67.5, 64.4), Vector2(49.5, 47.5)]:
+				lp.respawn_at(w.tile_pos(sp.x, sp.y))
+				await get_tree().create_timer(1.6).timeout
+				await _shot(out + "/g%d_antes.png" % n)
+				lp.respawn_at(w.tile_pos(sp.x, sp.y - 2.0))
+				await get_tree().create_timer(2.6).timeout
+				await _shot(out + "/g%d_eco.png" % n)
+				await get_tree().create_timer(9.0).timeout
+				n += 1
+			print("GHOST flags ", Prog.flags.get("echo_nimbo"), Prog.flags.get("echo_galeria"), Prog.flags.get("echo_patio"), " ach=", Prog.flags.get("ach_echoes", false))
+			print("AUTOTEST_GHOST_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

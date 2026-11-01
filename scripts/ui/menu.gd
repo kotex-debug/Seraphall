@@ -631,7 +631,7 @@ func _build_codex() -> void:
 			_lbl(("+ " if got else "- ") + G.L(a[0]).to_upper(), Vector2(x, yy), 8, UIKit.GOLD if got else UIKit.TEXT_DIM, 180, "head")
 			_lbl(G.L(a[1]), Vector2(x + 10, yy + 12), 10, UIKit.WHITE if got else Color(0.5, 0.45, 0.55), 175, "title")
 			if i % 2 == 1:
-				yy += 44.0
+				yy += 40.0
 			i += 1
 		return
 	for e2 in CODEX:

@@ -359,6 +359,7 @@ const ACHIEVEMENTS := {
 	"featherless": [["Desplumado", "Featherless"], ["Quédate con 3 plumas o menos.", "Be left with 3 feathers or fewer."]],
 	"hymn": [["El Himno Completo", "The Whole Hymn"], ["Reúne las tres páginas del himno.", "Gather all three hymn pages."]],
 	"memories": [["Lo Que Fui", "What I Was"], ["Recupera 4 recuerdos.", "Recover 4 memories."]],
+	"echoes": [["Mil Años Atrás", "A Thousand Years Ago"], ["Presencia los tres ecos del pasado.", "Witness all three echoes of the past."]],
 }
 
 func achieve(id: String) -> void:

@@ -163,3 +163,17 @@ const AREA_THOUGHTS := {
 	"area_capilla": [["", ["Una capilla que nadie tapió por miedo. La tapiaron por cariño, para que nadie la rompiera.", "A chapel nobody walled up out of fear. They walled it up out of love, so no one would break it."]],
 		["", ["Por primera vez desde la caída, la Voz no dice nada.", "For the first time since the fall, the Voice says nothing."]]],
 }
+
+
+## Ecos del pasado: fantasmas que reviven una escena cuando te acercas (una sola vez por partida).
+const GHOST_ECHOES := {
+	"galeria": [[["Acólito", "Acolyte"], ["¿Lo has oído? Dicen que uno de los Serafines se negó a cantar el Himno.", "Have you heard? They say one of the Seraphim refused to sing the Hymn."]],
+		[["Acólita", "Acolyte"], ["Calla. Si la Voz te oye repetirlo, te raspará la cara como a los de los cuadros.", "Hush. If the Voice hears you say it, it'll scrape your face off like the ones in the paintings."]],
+		[["Acólito", "Acolyte"], ["Dicen que no tenía miedo. Que solo... miraba hacia abajo.", "They say it wasn't afraid. That it just... kept looking down."]]],
+	"patio": [[["Seravel", "Seravel"], ["Toma la llave, Carcelero. Desde hoy nadie baja. Nadie sube.", "Take the key, Jailer. From today, no one goes down. No one comes up."]],
+		[["El Carcelero", "The Jailer"], ["¿Y si el que baja es uno de los vuestros, Guardiana?", "And if the one going down is one of yours, Warden?"]],
+		[["Seravel", "Seravel"], ["Entonces, sobre todo, ese.", "Then that one above all."]]],
+	"nimbo": [[["Seravel", "Seravel"], ["Si cruzas ese umbral tendré que darte caza. Lo sabes.", "If you cross that threshold I'll have to hunt you down. You know that."]],
+		[["Tú, antes", "You, before"], ["Lo sé. Por eso te dejo mi nimbo. Para que tengas algo que perseguir.", "I know. That's why I'm leaving you my halo. So you'll have something to chase."]],
+		[["Seravel", "Seravel"], ["...Pues vuelve a buscarlo. Prométemelo.", "...Then come back for it. Promise me."]]],
+}

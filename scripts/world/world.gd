@@ -575,6 +575,7 @@ func _build_props() -> void:
 	_build_arena_decor()
 	_build_antechambers()
 	_place_urns()
+	_place_ghost_echoes()
 
 var arena_lights: Array[PointLight2D] = []
 
@@ -3176,6 +3177,21 @@ func _area_thoughts(a: String) -> void:
 			hud.subtitle("", "( " + txt + " )", dur, Color(0.84, 0.82, 0.96))
 		await get_tree().create_timer(dur + 0.9).timeout
 
+func _place_ghost_echoes() -> void:
+	## Fantasmas que reviven un recuerdo del Estrato al acercarte
+	var specs := [
+		["galeria", Vector2(67.5, 61.4), [["enemy_acolito", Rect2(0, 0, 32, 32), Vector2(-12, 0), false], ["enemy_acolito", Rect2(32, 0, 32, 32), Vector2(12, 0), true]]],
+		["patio", Vector2(49.5, 44.2), [["boss_seravel", Rect2(0, 0, 52, 56), Vector2(-16, 0), false], ["enemy_carcelero", Rect2(0, 0, 40, 40), Vector2(18, 0), true]]],
+		["nimbo", Vector2(66, 82.6), [["boss_seravel", Rect2(0, 0, 52, 56), Vector2(-15, 0), false], ["player", Rect2(0, 0, 32, 32), Vector2(14, 0), true]]],
+	]
+	for sp in specs:
+		var g := GhostEcho.new()
+		g.world = self
+		g.id = sp[0]
+		g.figures = sp[2]
+		g.position = tile_pos(sp[1].x, sp[1].y)
+		entities.add_child(g)
+
 func _place_urns() -> void:
 	## Urnas funerarias junto a los muros de las salas tranquilas: se rompen y sueltan Ecos o una pluma
 	var rng := RandomNumberGenerator.new()
@@ -3845,3 +3861,91 @@ class Urn extends Node2D:
 		draw_rect(Rect2(Vector2(-3, -14), Vector2(6, 3)), ink)
 		draw_rect(Rect2(Vector2(-2, -13), Vector2(4, 2)), c[1])
 		draw_line(Vector2(-4, -6), Vector2(4, -6), (c[0] as Color).darkened(0.35), 1.0)
+
+
+class GhostEcho extends Node2D:
+	## Eco del pasado: figuras translúcidas que repiten una conversación de hace mil años
+	var world: Node
+	var id := ""
+	var figures: Array = []
+	var played := false
+	var _sprs: Array = []
+	var _base: Array = []
+	var _t := 0.0
+	var _alpha := 0.0
+	var _target := 0.1
+	var _light: PointLight2D
+	func _ready() -> void:
+		z_index = 0
+		played = Prog.flags.get("echo_" + id, false)
+		_target = 0.0 if played else 0.12
+		for f in figures:
+			var sp := Sprite2D.new()
+			var r: Rect2 = f[1]
+			if str(f[0]) == "player":
+				var lp: Player = world.local_player()
+				sp.texture = Look.texture(lp.look, 10) if lp else Fx.tex("player_p1")
+			else:
+				sp.texture = Fx.tex(f[0])
+			sp.region_enabled = true
+			sp.region_rect = r
+			sp.position = f[2]
+			sp.offset = Vector2(0, -r.size.y * 0.42)
+			sp.flip_h = f[3]
+			sp.material = Fx.add_material()
+			sp.modulate = Color(0.45, 0.7, 1.0, 0.0)
+			add_child(sp)
+			_sprs.append(sp)
+			_base.append(sp.position)
+		_light = PointLight2D.new()
+		_light.texture = Fx.tex("light")
+		_light.color = Color(0.5, 0.75, 1.0)
+		_light.texture_scale = 1.6
+		_light.energy = 0.0
+		_light.position = Vector2(0, -14)
+		add_child(_light)
+	func _process(delta: float) -> void:
+		_t += delta
+		if not played:
+			var lp: Player = world.local_player()
+			if lp and lp.is_alive() and lp.global_position.distance_to(global_position) < 52.0 and world.active_boss == null and world._trial == "":
+				_play()
+			elif randf() < delta * 2.5:
+				Fx.burst(global_position + Vector2(randf_range(-18, 18), randf_range(-24, 0)), Color(0.55, 0.8, 1.0), 1, 8.0, 0.9, "fx_soft", 40.0, Vector2.UP, 0.25, true)
+		_alpha = move_toward(_alpha, _target, delta * 0.9)
+		for i in _sprs.size():
+			var sp: Sprite2D = _sprs[i]
+			sp.modulate.a = _alpha * (0.82 + 0.18 * sin(_t * 9.0 + i * 2.1))
+			sp.position = _base[i] + Vector2(sin(_t * 1.3 + i) * 0.6, sin(_t * 1.7 + i * 1.4) * 1.2)
+		_light.energy = _alpha * 0.9
+		if played and _alpha <= 0.0 and _target <= 0.0:
+			set_process(false)
+	func _play() -> void:
+		played = true
+		Prog.flags["echo_" + id] = true
+		Audio.sfx("glitch", -14.0)
+		Audio.sfx("bell_1", -16.0)
+		_target = 0.7
+		var lines: Array = Lore.GHOST_ECHOES[id]
+		await get_tree().create_timer(0.8).timeout
+		for ln in lines:
+			if not is_inside_tree():
+				return
+			if world.active_boss != null or world._trial != "":
+				break
+			var txt := G.L(ln[1])
+			var dur := clampf(txt.length() * 0.055, 2.4, 5.0)
+			world.hud.subtitle(G.L(ln[0]), txt, dur, Color(0.68, 0.86, 1.0))
+			await get_tree().create_timer(dur + 0.7).timeout
+		_target = 0.0
+		for sp in _sprs:
+			Fx.burst((sp as Sprite2D).global_position + Vector2(0, -14), Color(0.55, 0.8, 1.0), 10, 30.0, 1.0, "fx_soft", 60.0, Vector2.UP, 0.5, true)
+		Prog.add_ecos(25)
+		G.pickup("icon_memory", G.L(["Eco del pasado", "Echo of the past"]) + "  +25", Color(0.68, 0.86, 1.0))
+		if _all_echoes():
+			Prog.achieve("echoes")
+	func _all_echoes() -> bool:
+		for k in Lore.GHOST_ECHOES.keys():
+			if not Prog.flags.get("echo_" + k, false):
+				return false
+		return true
