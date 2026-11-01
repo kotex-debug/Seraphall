@@ -40,6 +40,10 @@ func _ready() -> void:
 			_spr.texture = Fx.tex("fx_feather"); col = Color(1, 0.95, 0.9); _spr.scale = Vector2(1.5, 1.5)
 		"note":
 			_spr.texture = Fx.tex("proj_note"); col = Color(0.75, 0.55, 1.0)
+		"dawn":
+			_spr.texture = Fx.tex("proj_orb"); col = Color(1, 0.85, 0.45)
+			_spr.modulate = Color(1.0, 0.9, 0.5)
+			_spr.material = Fx.add_material()
 		"wave":
 			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.95, 0.7); _spr.scale = Vector2(1.6, 2.6)
 			_spr.material = Fx.add_material()

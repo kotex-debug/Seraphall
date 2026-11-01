@@ -26,6 +26,16 @@ const WEAPONS := {
 	"seravel": {"name": ["Hoja de Seravel", "Seravel's Blade"], "sprite": "seravel", "dmg": 20.0, "speed": 1.1, "range": 36.0,
 		"arc": 130.0, "combo": 3, "stam": 12.0, "poise": 12.0, "fue": 0.35, "des": 0.35, "fe": 0.5, "wave": true,
 		"desc": ["Arma de Arconte. El tercer corte libera una onda de luz.", "Archon weapon. The third slash releases a wave of light."]},
+	# --- v0.8: tres estilos de combate nuevos
+	"reaper": {"name": ["Guadaña del Segador", "Reaper's Scythe"], "sprite": "reaper", "dmg": 19.0, "speed": 0.78, "range": 42.0,
+		"arc": 220.0, "combo": 3, "stam": 15.0, "poise": 12.0, "fue": 0.6, "des": 0.4, "fe": 0.0, "drain": 0.06, "pull": true,
+		"desc": ["Barridos enormes y lentos. Cada golpe te devuelve vida y el último atrae a todos hacia la hoja.", "Huge, slow sweeps. Every hit drains life and the last one pulls everyone toward the blade."]},
+	"staff": {"name": ["Báculo del Alba", "Dawn Staff"], "sprite": "staff", "dmg": 11.0, "speed": 1.0, "range": 26.0,
+		"arc": 90.0, "combo": 3, "stam": 8.0, "poise": 4.0, "fue": 0.0, "des": 0.2, "fe": 1.0, "ranged": true,
+		"desc": ["Arma de apoyo: dispara orbes de luz. El ataque cargado crea un círculo que te cura a ti y a tu compañero; el último del combo estalla en una nova curativa.", "Support weapon: fires orbs of light. The charged attack creates a circle that heals you and your partner; the combo finisher bursts into a healing nova."]},
+	"fists": {"name": ["Puños del Penitente", "Penitent's Fists"], "sprite": "fists", "dmg": 8.0, "speed": 1.75, "range": 22.0,
+		"arc": 80.0, "combo": 5, "stam": 6.0, "poise": 11.0, "fue": 0.7, "des": 0.5, "fe": 0.0, "rapid": true,
+		"desc": ["Ráfagas de cinco puñetazos que destrozan la postura. El quinto es un gancho que levanta al enemigo.", "Five-punch flurries that shred posture. The fifth is an uppercut that lifts the enemy."]},
 }
 
 # ------------------------------------------------------------------ objetos

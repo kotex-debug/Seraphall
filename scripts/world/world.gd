@@ -980,6 +980,7 @@ func _spawn_interactables() -> void:
 	_add_inter("npc", "carto", tile_pos(55, 84), {"sheet": "npc_carto", "name": ["El Cartógrafo Ciego", "The Blind Cartographer"], "flip": true, "light": Color(0.6, 0.7, 1.0)})
 	_add_inter("chest", "chest_chains", tile_pos(61, 55), {"feathers": 2, "ecos": 120, "items": {"bomb": 2}})
 	_add_inter("chest", "chest_gallery", tile_pos(90, 59), {"weapon": "spear", "items": {"amulet_wing": 1, "ointment": 1}})
+	_add_inter("chest", "chest_reaper", tile_pos(72.5, 25.4), {"weapon": "reaper", "ecos": 200})
 	_add_inter("chest", "chest_yard", tile_pos(59, 34), {"feathers": 1, "ecos": 250, "items": {"iron": 1, "incense": 1}})
 	_add_inter("chest", "chest_mirador", tile_pos(37.5, 88.5), {"items": {"amulet_eye": 1}, "ecos": 150})
 	_add_inter("bench", "bench_mirador", tile_pos(34, 85.5), {"memory": "m1"})
@@ -1576,6 +1577,17 @@ func _spawn_extra(type: String, pos: Vector2) -> void:
 	Fx.burst(pos, Color(1, 0.3, 0.3), 20, 70.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.5)
 
 @rpc("any_peer", "call_remote", "reliable")
+func spawn_heal_zone(pos: Vector2, dur: float, radius: float, amount: float) -> void:
+	## Círculo de curación del Báculo: cada máquina cura a su propio jugador si está dentro
+	var hz := HealZone.new()
+	hz.position = pos
+	hz.dur = dur
+	hz.radius = radius
+	hz.amount = amount
+	hz.world = self
+	entities.add_child(hz)
+
+@rpc("any_peer", "call_remote", "reliable")
 func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, kind: String, team: String, owner: int, radius: float, life: float, pierce: int) -> void:
 	spawn_projectile_local(pos, vel, dmg, kind, team, owner, radius, life, pierce)
 
@@ -1802,7 +1814,10 @@ func _talk(id: String) -> void:
 				if lp0.is_empty() and trial_done("celdas") and not Prog.flags.get("preso_after", false):
 					Prog.flags["preso_after"] = true
 					lp0 = [["Tobías", ["Han salido todos. Ya no queda nadie a quien proteger... salvo tú. Ten cuidado con la llave.", "They're all out now. There's no one left to protect... except you. Be careful with that key."]],
-						["Tobías", ["Madre Ilse... ¿sigue viva? Dile que no se preocupe por mí. Que aquí abajo se está... tranquilo.", "Mother Ilse... is she still alive? Tell her not to worry about me. That it's... quiet down here."]]]
+						["Tobías", ["Madre Ilse... ¿sigue viva? Dile que no se preocupe por mí. Que aquí abajo se está... tranquilo.", "Mother Ilse... is she still alive? Tell her not to worry about me. That it's... quiet down here."]],
+						["Tobías", ["Toma. Eran los guanteletes del penitente de la celda siete. Pegaba a las paredes hasta que dejó de oír a la Voz.", "Here. These were the gauntlets of the penitent in cell seven. He punched the walls until he stopped hearing the Voice."]]]
+					dialog.play(lp0, func(): Prog.add_weapon("fists"))
+					return
 				if lp0.is_empty():
 					lp0 = Lore.idle_line("preso")
 			Prog.flags["met_preso"] = true
@@ -1839,9 +1854,12 @@ func _talk(id: String) -> void:
 			Prog.flags["met_ozias"] = true
 			dialog.play(l1, _open_service.bind("ozias"))
 		"ilse":
-			var l2 := [["Madre Ilse", ["Siéntate, criatura. Tus Lágrimas están turbias. Puedo aclararlas... si me traes las de otros.", "Sit, child. Your Tears are cloudy. I can clear them... if you bring me the tears of others."]]]
+			var l2 := [["Madre Ilse", ["Siéntate, criatura. Tus Lágrimas están turbias. Puedo aclararlas... si me traes las de otros.", "Sit, child. Your Tears are cloudy. I can clear them... if you bring me the tears of others."]],
+				["Madre Ilse", ["Y llévate esto. Un báculo no corta, pero cura. Ahí abajo hará falta alguien que cure... aunque sea a sí mismo.", "And take this. A staff doesn't cut, but it heals. Down there someone will need to heal... even if only themselves."]]]
 			if Prog.flags.get("met_ilse", false):
 				l2 = Lore.lines_for("ilse", wflags)
+			elif not Prog.weapons.has("staff"):
+				Prog.add_weapon("staff")
 			Prog.flags["met_ilse"] = true
 			dialog.play(l2, _open_service.bind("ilse"))
 		"nyx":
@@ -4402,3 +4420,52 @@ class NpcLife extends Node2D:
 				var np := y + Vector2(3 + sin(_t * 3.0) * 4.0, -6 + cos(_t * 3.0) * 2.0)
 				draw_line(y + Vector2(1, -1), np, Color(1, 0.85, 0.4, 0.8), 1.0)
 				draw_line(np, np + Vector2(2, -2), Color(0.9, 0.9, 1.0), 1.0)
+
+
+class HealZone extends Node2D:
+	## Anillo de luz en el suelo que cura poco a poco a los jugadores que estén dentro
+	var dur := 3.0
+	var radius := 36.0
+	var amount := 10.0
+	var world: Node
+	var _t := 0.0
+	var _tick := 0.0
+	func _ready() -> void:
+		z_index = -3
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = Color(1, 0.85, 0.5)
+		l.texture_scale = radius / 40.0
+		l.energy = 0.8
+		add_child(l)
+		Fx.ring(global_position, 4.0, radius, Color(1, 0.9, 0.5), 0.4, 3.0)
+	func _process(delta: float) -> void:
+		_t += delta
+		_tick -= delta
+		if _tick <= 0.0:
+			_tick = 0.5 if dur > 1.0 else 99.0
+			var share := amount / maxf(1.0, dur / 0.5) if dur > 1.0 else amount
+			for p in world.local_players():
+				if p.is_alive() and p.global_position.distance_to(global_position) < radius:
+					var before: float = p.hp
+					p.hp = min(Prog.max_hp(), p.hp + share)
+					Fx.burst(p.global_position + Vector2(0, -6), Color(1, 0.9, 0.5), 4, 30.0, 0.6, "fx_soft", 60.0, Vector2.UP, 0.35, true)
+					if p.hp - before >= 1.0:
+						Fx.text(p.global_position + Vector2(0, -20), "+%d" % int(p.hp - before), Color(0.6, 1.0, 0.6), 8)
+		if _t > dur:
+			modulate.a -= delta * 3.0
+			if modulate.a <= 0.0:
+				queue_free()
+		queue_redraw()
+	func _draw() -> void:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
+		draw_circle(Vector2.ZERO, radius, Color(1, 0.85, 0.45, 0.12))
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 40, Color(1, 0.9, 0.55, 0.8), 2.0)
+		draw_arc(Vector2.ZERO, radius * 0.7, _t * 1.5, _t * 1.5 + PI * 1.4, 30, Color(1, 0.95, 0.7, 0.5), 1.0)
+		for k in 6:
+			var a := _t * 0.8 + TAU * k / 6.0
+			draw_circle(Vector2.from_angle(a) * radius * 0.85, 2.0, Color(1, 0.95, 0.7, 0.8))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		for k in 4:
+			var fy := -fmod(_t * 20.0 + k * 9.0, 30.0)
+			draw_rect(Rect2(Vector2(sin(_t + k * 1.7) * radius * 0.5, fy), Vector2(1, 3)), Color(1, 0.95, 0.7, 0.6 * (1.0 + fy / 30.0)))

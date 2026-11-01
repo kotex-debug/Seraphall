@@ -446,9 +446,15 @@ func _start_attack() -> void:
 	facing = 1 if aim.x >= 0.0 else -1
 	velocity = aim * (95.0 if not final else 150.0)
 	# cada golpe del combo es distinto: barrido, revés, tajo descendente y un remate propio de cada arma
+	if w.get("ranged", false):
+		_staff_attack(w, final)
+		return
 	var style = ["sweep", "backhand", "overhead", "sweep"][(combo - 1) % 4]
+	if w.get("rapid", false):
+		style = ["jab", "jab", "hook", "jab"][(combo - 1) % 4]
 	if final:
-		style = {"sword": "spin", "spear": "burst", "scythe": "reap", "hammer": "quake", "seravel": "spin", "choir": "spin"}.get(w.sprite, "spin")
+		style = {"sword": "spin", "spear": "burst", "scythe": "reap", "hammer": "quake", "seravel": "spin", "choir": "spin",
+			"reaper": "reap", "fists": "uppercut"}.get(w.sprite, "spin")
 	var dmg := Prog.weapon_damage() * (1.0 if not final else 1.7)
 	var arc: float = w.arc * (1.0 if not final else 1.25)
 	var rng: float = w.range * (1.0 if not final else 1.15)
@@ -465,6 +471,15 @@ func _start_attack() -> void:
 			arc = 300.0
 		"quake":
 			arc = 360.0; rng *= 1.1
+		"jab":
+			arc *= 0.8
+		"hook":
+			arc *= 1.3; dmg *= 1.1
+		"uppercut":
+			arc = 110.0; dmg *= 1.3; rng *= 1.1
+	if w.get("rapid", false):
+		attack_len *= 0.8
+		velocity = aim * (60.0 if not final else 200.0)
 	Audio.sfx("swing" if not final else "swing_heavy", 0.0, 0.12)
 	var cw = style != "backhand"
 	_swing(arc if arc < 300.0 else 300.0, 0.09 / w.speed + 0.04, cw)
@@ -489,6 +504,24 @@ func _start_attack() -> void:
 	if final and w.get("notes", false):
 		for a in [-0.35, 0.0, 0.35]:
 			world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 10, aim.rotated(a) * 230.0, Prog.spell_damage(9.0), "note", "player", Net.my_id(), 6.0, 0.9, 3])
+
+func _staff_attack(w: Dictionary, final: bool) -> void:
+	## Báculo del Alba: orbes de luz a distancia; el remate es una nova curativa
+	attack_len = (0.32 if not final else 0.5) / w.speed
+	velocity = -aim * 30.0
+	_swing(50.0, 0.08, true)
+	_squash(Vector2(0.9, 1.1))
+	var dmg := Prog.weapon_damage() * (1.0 if not final else 1.4)
+	if not final:
+		Audio.sfx("enemy_shot", -8.0, 0.15)
+		var spread := 0.08 * (combo - 2)
+		world.bcast("spawn_projectile", [global_position + Vector2(0, -10) + aim * 14, aim.rotated(spread) * 300.0, dmg, "dawn", "player", Net.my_id(), 6.0, 0.9, 1])
+	else:
+		Audio.sfx("nova", -6.0)
+		for k in 8:
+			var dv := Vector2.from_angle(TAU * k / 8.0)
+			world.bcast("spawn_projectile", [global_position + Vector2(0, -8) + dv * 8, dv * 220.0, dmg * 0.7, "dawn", "player", Net.my_id(), 6.0, 0.6, 1])
+		world.bcast("spawn_heal_zone", [global_position, 0.6, 46.0, Prog.max_hp() * 0.06])
 
 func _heal_fx(amount: float) -> void:
 	## Curación: espiral de luz que sube, anillo cálido y la cifra recuperada
@@ -560,7 +593,10 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 			d *= 1.6 if Prog.has_skill("f5") else 1.3
 			crit = true
 		var inf := Prog.infusion()
-		world.request_damage_enemy(e, d, to.normalized(), poise * (1.4 if inf == "escarcha" else 1.0) * (1.4 if Prog.oath == "carcelero" else 1.0), crit)
+		var hit_dir := to.normalized()
+		if final and Prog.weapon_data().get("pull", false):
+			hit_dir = -hit_dir * 2.2
+		world.request_damage_enemy(e, d, hit_dir, poise * (1.4 if inf == "escarcha" else 1.0) * (1.4 if Prog.oath == "carcelero" else 1.0), crit)
 		_on_hit_landed(d, final or crit)
 		var hp_pos: Vector2 = e.global_position + Vector2(0, -8)
 		if inf != "":
@@ -573,6 +609,16 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 		var bleed: bool = Prog.weapon_data().get("bleed", false)
 		if bleed and randf() < 0.35:
 			world.request_damage_enemy(e, d * 0.4, to.normalized(), 0.0, false)
+		var wd2: Dictionary = Prog.weapon_data()
+		if wd2.get("drain", 0.0) > 0.0 and is_local():
+			# la guadaña bebe: vida y un hilo rojo que vuelve hacia ti
+			hp = min(Prog.max_hp(), hp + d * float(wd2.drain))
+			Fx.burst(hp_pos, Color(1, 0.25, 0.35), 4, 40.0, 0.5, "fx_soft", 40.0, (global_position - hp_pos).normalized(), 0.4)
+		if final and wd2.get("pull", false):
+			Fx.burst(hp_pos, Color(0.7, 0.2, 0.3), 6, 50.0, 0.5, "fx_soft", 40.0, (global_position - hp_pos).normalized(), 0.5)
+		if final and wd2.get("rapid", false):
+			Fx.burst(hp_pos, Color(1, 0.8, 0.5), 10, 120.0, 0.4, "fx_px", 40.0, Vector2.UP, 1.0)
+			G.shockwave(hp_pos, 0.7, 0.3)
 	if hits > 0:
 		crit_next = false
 		_hawk = false
@@ -622,6 +668,17 @@ func _release_heavy() -> void:
 	var lvl := int(heavy_charge / 0.4)
 	if not spend_stamina(w.stam * 1.6):
 		state = "move"
+		return
+	if w.get("ranged", false):
+		# Báculo: círculo de luz que cura a quien esté dentro (tú y tu compañero) durante unos segundos
+		state = "heavy"
+		attack_t = 0.0
+		attack_len = 0.45
+		velocity = Vector2.ZERO
+		_swing(60.0, 0.15, true)
+		_squash(Vector2(0.85, 1.2))
+		Audio.sfx("heal", -2.0)
+		world.bcast("spawn_heal_zone", [global_position, 3.0 + lvl * 1.5, 34.0 + lvl * 8.0, Prog.max_hp() * (0.05 + 0.02 * lvl)])
 		return
 	state = "heavy"
 	attack_t = 0.0

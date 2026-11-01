@@ -1192,6 +1192,46 @@ func _run_autotest() -> void:
 			await _shot(out + "/h3.png")
 			print("AUTOTEST_HAIR3_OK")
 			get_tree().quit()
+		"weapons":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			for ar in ["area_chains", "area_gallery"]:
+				Prog.flags["thought_" + ar] = true
+			for wid in ["reaper", "staff", "fists"]:
+				Prog.add_weapon(wid)
+			var n := 1
+			for wid in ["reaper", "staff", "fists"]:
+				Prog.equipped = wid
+				lp._update_weapon_sprite()
+				lp.respawn_at(w.tile_pos(47, 62))
+				await get_tree().create_timer(1.2).timeout
+				var tgt: Enemy = null
+				for e in w.enemies_alive():
+					if not e.is_boss and e.global_position.distance_to(lp.global_position) < 200.0:
+						tgt = e
+						break
+				if tgt:
+					lp.aim = (tgt.global_position - lp.global_position).normalized()
+				lp.hp = Prog.max_hp() * 0.5
+				var hp0: float = lp.hp
+				for k in 3:
+					lp.stamina = Prog.max_stamina()
+					lp.state = "move"
+					lp.combo_window = 0.3
+					lp._start_attack()
+					await get_tree().create_timer(0.38).timeout
+				await _shot(out + "/w%d_%s.png" % [n, wid])
+				if wid == "staff":
+					lp.state = "move"
+					lp.heavy_charge = 0.8
+					lp.stamina = Prog.max_stamina()
+					lp._release_heavy()
+					await get_tree().create_timer(1.0).timeout
+					await _shot(out + "/w%d_staff_circulo.png" % n)
+				print("WEAPON ", wid, " hp ", hp0, " -> ", lp.hp)
+				n += 1
+			print("AUTOTEST_WEAPONS_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
