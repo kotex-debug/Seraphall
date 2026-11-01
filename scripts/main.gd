@@ -691,13 +691,27 @@ func _run_autotest() -> void:
 			lp.refresh_stats(true)
 			lp._update_weapon_sprite()
 			w.camera.zoom = Vector2(1.35, 1.35)
+			for tid in ["celdas", "atrio", "umbral"]:
+				Prog.flags["trial_" + tid] = true
+				w.wflags["trial_" + tid] = true
+			w._refresh_locks(true)
+			var go := func(tx: float, ty: float) -> void:
+				var pos: Vector2 = w.tile_pos(tx, ty)
+				w._area = w.AREAS.get(w.room_at(pos), "")
+				lp.respawn_at(pos)
+			var clean := func() -> void:
+				for c in w.hud.toast_box.get_children():
+					c.queue_free()
+			await get_tree().create_timer(12.0).timeout
 			# 1. Sala del Nimbo: lámpara de araña, PNJ y sombras de los braseros
-			lp.respawn_at(w.tile_pos(65, 90.5))
-			await get_tree().create_timer(3.0).timeout
+			go.call(63.5, 88.5)
+			await get_tree().create_timer(2.5).timeout
+			clean.call()
 			await _shot(out + "/n01_nimbo_lampara.png")
 			# 2. Diálogo con busto nuevo junto a Brenna
-			lp.respawn_at(w.tile_pos(46, 85.5))
+			go.call(46, 85.5)
 			await get_tree().create_timer(2.0).timeout
+			clean.call()
 			var bx = w.dialog.box
 			bx.visible = true
 			bx.scale = Vector2.ONE
@@ -708,18 +722,23 @@ func _run_autotest() -> void:
 			await get_tree().create_timer(0.5).timeout
 			await _shot(out + "/n02_dialogo_busto.png")
 			bx.visible = false
-			# 3. Eco del pasado en el Patio
-			lp.respawn_at(w.tile_pos(52.5, 46.0))
-			await get_tree().create_timer(1.2).timeout
-			lp.respawn_at(w.tile_pos(51.0, 45.2))
-			await get_tree().create_timer(3.4).timeout
-			await _shot(out + "/n03_eco_del_pasado.png")
 			# 4. Mirador: estatua colosal y relámpago
-			lp.respawn_at(w.tile_pos(32, 87))
+			go.call(32, 87)
 			await get_tree().create_timer(2.5).timeout
+			clean.call()
 			var ab = w.get_node("Abyss")
-			ab._next_bolt = 0.01
-			await get_tree().create_timer(0.07).timeout
+			ab._make_bolt()
+			var sh: float = -240.0 - ab._bolt[0].x
+			var nb := PackedVector2Array()
+			for q in ab._bolt:
+				nb.append(q + Vector2(sh, 0))
+			ab._bolt = nb
+			var nb2 := PackedVector2Array()
+			for q2 in ab._bolt2:
+				nb2.append(q2 + Vector2(sh, 0))
+			ab._bolt2 = nb2
+			ab._next_bolt = 60.0
+			await get_tree().create_timer(0.05).timeout
 			await _shot(out + "/n04_tormenta_coloso.png")
 			# 5. Galería: la Plañidera llora sobre ti
 			var mo: Enemy = null
@@ -728,16 +747,28 @@ func _run_autotest() -> void:
 					mo = e
 					break
 			if mo:
+				w._area = "area_gallery"
 				lp.respawn_at(mo.global_position + Vector2(-60, 40))
 				await get_tree().create_timer(1.6).timeout
+				clean.call()
 				mo.cooldown = 99.0
 				mo.perform("tears", lp.global_position + Vector2(10, 0), 3)
 				await get_tree().create_timer(0.95).timeout
 				await _shot(out + "/n05_planidera.png")
 			# 6. Antesala del Juicio con sus lámparas
-			lp.respawn_at(w.tile_pos(69.5, 25.5))
+			go.call(69.5, 25.5)
 			await get_tree().create_timer(2.2).timeout
+			clean.call()
 			await _shot(out + "/n06_antesala_lamparas.png")
+			# 3. Eco del pasado en el Patio (al final: su diálogo dura un rato)
+			Prog.flags["echo_patio"] = false
+			go.call(52.5, 47.5)
+			await get_tree().create_timer(1.0).timeout
+			go.call(50.5, 45.6)
+			await get_tree().create_timer(3.0).timeout
+			clean.call()
+			await _shot(out + "/n03_eco_del_pasado.png")
+			await get_tree().create_timer(9.0).timeout
 			# 7. Códice: personajes
 			for kn in ["brenna", "carto", "ozias", "ilse", "nyx", "velaria", "preso", "peregrina"]:
 				Prog.flags["known_" + kn] = true
