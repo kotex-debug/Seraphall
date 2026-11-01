@@ -5,6 +5,7 @@ signal language_changed
 signal shake_requested(amount: float, duration: float)
 signal flash_requested(color: Color, duration: float)
 signal toast_requested(text: String, color: Color)
+signal pickup_requested(icon: String, text: String, color: Color)
 signal shockwave_requested(pos: Vector2, strength: float, duration: float)
 signal chroma_requested(amount: float, duration: float)
 signal punch_requested(amount: float)
@@ -451,6 +452,10 @@ func punch(amount := 0.05) -> void:
 
 func toast(text: String, color := Color(1, 0.9, 0.6)) -> void:
 	toast_requested.emit(text, color)
+
+## Aviso de objeto recogido con su icono (columna de la derecha)
+func pickup(icon: String, text: String, color := Color(1, 0.95, 0.85)) -> void:
+	pickup_requested.emit(icon, text, color)
 
 func _process(_delta: float) -> void:
 	var now := Time.get_ticks_msec()

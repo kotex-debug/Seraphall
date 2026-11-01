@@ -22,6 +22,7 @@ var _boss: Enemy
 var minimap: Minimap
 var combo_ui: ComboCounter
 var hurt_ui: HurtIndicator
+var pickups: PickupFeed
 
 func _ready() -> void:
 	layer = 10
@@ -107,6 +108,11 @@ func _ready() -> void:
 	root.add_child(fade_rect)
 	G.flash_requested.connect(_on_flash)
 	G.toast_requested.connect(toast)
+	pickups = PickupFeed.new()
+	pickups.position = Vector2(470, 196)
+	pickups.size = Vector2(166, 100)
+	root.add_child(pickups)
+	G.pickup_requested.connect(pickups.add)
 	Prog.changed.connect(_refresh_quests)
 	Prog.quest_updated.connect(_on_quest_updated)
 	G.language_changed.connect(_refresh_quests)
@@ -176,6 +182,7 @@ func _refresh_quests() -> void:
 		e.title = G.L(q.title).to_upper()
 		e.objective = Prog.quest_text(id)
 		e.main = q.type == "main"
+		e.qtype = q.type
 		if q.has("count"):
 			e.progress = float(Prog.quests[id].progress) / float(q.count)
 		e.custom_minimum_size = Vector2(186, 30)
@@ -860,6 +867,7 @@ class EcosCounter extends Control:
 		draw_texture(Fx.tex("icon_feather"), Vector2(size.x - fw - 18, 19))
 
 class QuestEntry extends Control:
+	var qtype := "side"
 	var title := ""
 	var objective := ""
 	var main := false
@@ -883,6 +891,22 @@ class QuestEntry extends Control:
 		draw_rect(Rect2(Vector2(size.x - 2 + slide, 0), Vector2(2, 11)), accent)
 		f.draw_string_outline(get_canvas_item(), Vector2(x - 3, 9), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
 		f.draw_string(get_canvas_item(), Vector2(x - 3, 9), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, accent)
+		# icono del tipo de misión
+		var ic := Vector2(x - 16, 5)
+		match qtype:
+			"main":
+				UIKit.diamond(self, ic, 5.0, UIKit.INK)
+				UIKit.diamond(self, ic, 4.0, UIKit.GOLD.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(_t * 4.0)))
+				UIKit.diamond(self, ic, 1.5, UIKit.INK)
+			"bounty":
+				draw_line(ic + Vector2(-4, -4), ic + Vector2(4, 4), UIKit.INK, 3.0)
+				draw_line(ic + Vector2(4, -4), ic + Vector2(-4, 4), UIKit.INK, 3.0)
+				draw_line(ic + Vector2(-4, -4), ic + Vector2(4, 4), UIKit.RED, 1.5)
+				draw_line(ic + Vector2(4, -4), ic + Vector2(-4, 4), UIKit.RED, 1.5)
+			_:
+				draw_colored_polygon(PackedVector2Array([ic + Vector2(0, -5), ic + Vector2(3, 0), ic + Vector2(0, 5), ic + Vector2(-3, 0)]), UIKit.INK)
+				draw_colored_polygon(PackedVector2Array([ic + Vector2(0, -4), ic + Vector2(2, 0), ic + Vector2(0, 4), ic + Vector2(-2, 0)]), UIKit.CYAN)
+				draw_line(ic + Vector2(0, -4), ic + Vector2(0, 5), UIKit.INK, 1.0)
 		var ow := b.get_string_size(objective, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 		var ox := size.x - ow - 3 + slide
 		b.draw_string_outline(get_canvas_item(), Vector2(ox, 21), objective, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
@@ -1566,3 +1590,43 @@ class HurtIndicator extends Control:
 			for i in 3:
 				var pp := p + d * (i * 7.0)
 				draw_colored_polygon(PackedVector2Array([pp + d * 8.0, pp + o * (10.0 - i * 2.0), pp - o * (10.0 - i * 2.0)]), Color(1, 0.15, 0.2, a * (0.9 - i * 0.25)))
+
+
+class PickupFeed extends Control:
+	## Columna de objetos recogidos: icono + nombre, entran desde la derecha y se desvanecen
+	var items: Array = []   # [textura, texto, color, tiempo]
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func add(icon: String, text: String, color: Color) -> void:
+		var tex: Texture2D = Fx.tex(icon) if ResourceLoader.exists("res://assets/sprites/%s.png" % icon) else null
+		items.append([tex, text, color, 0.0])
+		while items.size() > 5:
+			items.pop_front()
+		Audio.sfx("pickup", -10.0, 0.05)
+	func _process(delta: float) -> void:
+		for it in items:
+			it[3] += delta
+		items = items.filter(func(it): return it[3] < 3.2)
+		queue_redraw()
+	func _draw() -> void:
+		var f := UIKit.font("title")
+		var y := size.y - 18.0
+		for i in range(items.size() - 1, -1, -1):
+			var it: Array = items[i]
+			var t: float = it[3]
+			var slide := (1.0 - clampf(t / 0.18, 0.0, 1.0)) * 60.0
+			var a := clampf((3.2 - t) / 0.5, 0.0, 1.0)
+			var tw := f.get_string_size(it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var w := tw + 30.0
+			var x := size.x - w + slide
+			var col: Color = it[2]
+			UIKit.slash_band(self, Rect2(Vector2(x - 4, y), Vector2(w + 6, 16)), Color(0, 0, 0, 0.6 * a), 5.0)
+			draw_rect(Rect2(Vector2(size.x - 2 + slide, y), Vector2(2, 16)), Color(col, a))
+			if it[0]:
+				var pop := 1.0 + maxf(0.0, 0.4 - t) * 1.2
+				var tex: Texture2D = it[0]
+				var ts := Vector2(16, 16) * pop
+				draw_texture_rect(tex, Rect2(Vector2(x + 8, y + 8) - ts / 2.0, ts), false, Color(1, 1, 1, a))
+			f.draw_string_outline(get_canvas_item(), Vector2(x + 20, y + 12), it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color(UIKit.INK, a))
+			f.draw_string(get_canvas_item(), Vector2(x + 20, y + 12), it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(col.lerp(Color.WHITE, 0.3), a))
+			y -= 19.0

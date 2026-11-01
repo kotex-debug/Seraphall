@@ -1612,10 +1612,10 @@ func _pickup(id: String) -> void:
 func _grant(d: Dictionary) -> void:
 	if d.has("feathers"):
 		Prog.add_feathers(d.feathers)
-		G.toast("+%d %s" % [d.feathers, G.T("feathers")], Color(0.9, 0.9, 1))
+		G.pickup("icon_feather", "+%d %s" % [d.feathers, G.T("feathers")], Color(0.9, 0.9, 1))
 	if d.has("ecos"):
 		Prog.add_ecos(d.ecos)
-		G.toast("+%d %s" % [d.ecos, G.T("ecos")], Color(0.6, 0.85, 1))
+		G.pickup("icon_eco", "+%d %s" % [d.ecos, G.T("ecos")], Color(0.6, 0.85, 1))
 	if d.has("weapon"):
 		Prog.add_weapon(d.weapon)
 	if d.has("items"):

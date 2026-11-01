@@ -106,23 +106,32 @@ static func ring(pos: Vector2, from_r: float, to_r: float, color: Color, dur := 
 ## Número de daño flotante
 static func number(pos: Vector2, value: float, color := Color.WHITE, big := false) -> void:
 	var l := Label.new()
-	l.text = str(int(round(value)))
+	l.text = str(int(round(value))) + ("!" if big else "")
 	var ls := LabelSettings.new()
-	ls.font_size = 12 if big else 9
+	ls.font = UIKit.font("num")
+	ls.font_size = 16 if big else 8
 	ls.font_color = color
-	ls.outline_size = 3
+	ls.outline_size = 5 if big else 3
 	ls.outline_color = Color(0.05, 0.02, 0.06)
+	if big:
+		ls.shadow_size = 1
+		ls.shadow_color = Color(0.6, 0.1, 0.05, 0.9)
+		ls.shadow_offset = Vector2(1, 2)
 	l.label_settings = ls
-	l.position = pos + Vector2(randf_range(-6, 6) - 8, -22)
+	l.position = pos + Vector2(randf_range(-8, 8) - 10, -24 - (6 if big else 0))
 	l.z_index = 50
 	world().add_child(l)
-	l.pivot_offset = Vector2(8, 6)
-	l.scale = Vector2(1.6, 1.6) if big else Vector2(1.25, 1.25)
+	l.pivot_offset = Vector2(10, 8)
+	l.rotation = randf_range(-0.18, 0.18) if big else 0.0
+	l.scale = Vector2(2.2, 2.2) if big else Vector2(1.35, 1.35)
+	var side := randf_range(-10, 10)
 	var tw := l.create_tween().set_parallel(true)
-	tw.tween_property(l, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK)
-	tw.tween_property(l, "position:y", l.position.y - 18, 0.7).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tw.tween_property(l, "modulate:a", 0.0, 0.3).set_delay(0.45)
+	tw.tween_property(l, "scale", Vector2.ONE, 0.16 if big else 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(l, "position", l.position + Vector2(side, -20 if not big else -26), 0.75).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(l, "modulate:a", 0.0, 0.3).set_delay(0.5 if not big else 0.7)
 	tw.chain().tween_callback(l.queue_free)
+	if big:
+		impact(pos + Vector2(0, -18), Color(1, 0.85, 0.4), 14.0, 8)
 
 static func text(pos: Vector2, t: String, color := Color(1, 0.9, 0.5), size := 10) -> void:
 	var l := Label.new()

@@ -491,7 +491,7 @@ func unlock(id: String) -> bool:
 func add_weapon(id: String) -> void:
 	if not weapons.has(id):
 		weapons[id] = 0
-		G.toast(G.T("new_weapon") % G.L(WEAPONS[id].name), Color(1, 0.8, 0.4))
+		G.pickup("weapon_" + WEAPONS[id].sprite, G.T("new_weapon") % G.L(WEAPONS[id].name), Color(1, 0.8, 0.4))
 	changed.emit()
 
 func upgrade_weapon(id: String) -> bool:
@@ -523,7 +523,7 @@ func add_item(id: String, n := 1, silent := false) -> void:
 	if ITEMS[id].type == "amulet":
 		inventory[id] = 1
 	if not silent:
-		G.toast(G.T("item_got") % (G.L(ITEMS[id].name) + ("" if n <= 1 else " x%d" % n)), RARITY_COLORS[ITEMS[id].rarity])
+		G.pickup("icon_" + ITEMS[id].icon, G.L(ITEMS[id].name) + ("" if n <= 1 else "  x%d" % n), RARITY_COLORS[ITEMS[id].rarity])
 	changed.emit()
 
 func remove_item(id: String, n := 1) -> bool:

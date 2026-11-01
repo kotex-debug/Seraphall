@@ -838,7 +838,10 @@ func _run_autotest() -> void:
 			get_tree().quit()
 		"hud":
 			var lp: Player = w.local_player()
-			await get_tree().create_timer(1.5).timeout
+			await get_tree().create_timer(1.0).timeout
+			w._grant({"feathers": 1, "ecos": 250, "items": {"tear": 1, "iron": 2}})
+			Prog.start_quest("choir")
+			await get_tree().create_timer(0.5).timeout
 			await _shot(out + "/h01_lleno.png")
 			lp.hp -= 37.0
 			lp.stamina = 45.0
