@@ -15,6 +15,7 @@ var _cards: Array[Rect2] = []
 var _rows: Array = []          # [clave, rect de fila, [rects de opciones]]
 var _name_edit: LineEdit
 var _btns: Array[Button] = []
+var _bust_tex: Texture2D
 var _preview_tex: Texture2D
 var _facing := 1
 var _burst := 0.0
@@ -100,6 +101,7 @@ func _on_name(t: String) -> void:
 
 func _refresh_preview() -> void:
 	_preview_tex = Look.texture(look, Prog.WING_MAX)
+	_bust_tex = Look.bust_texture(look, Prog.WING_MAX)
 	_burst = 1.0
 
 func _randomize() -> void:
@@ -325,6 +327,14 @@ func _draw_creator() -> void:
 			draw_set_transform(Vector2(c.x * 2.0, 0), 0.0, Vector2(-1, 1))
 		draw_texture_rect_region(_preview_tex, dest, Rect2(fr * 32, row * 32, 32, 32))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# retrato en primer plano (el mismo del HUD), en un medallón abajo a la izquierda
+	if _bust_tex:
+		var mr := Rect2(pr.position + Vector2(10, pr.size.y - 66), Vector2(56, 56))
+		draw_rect(mr.grow(2), UIKit.INK)
+		draw_rect(mr, Color(0.12, 0.05, 0.16))
+		var bfr := 1 if fmod(_t, 3.6) < 0.12 else (4 if fmod(_t, 9.0) > 7.5 else 0)
+		draw_texture_rect_region(_bust_tex, Rect2(mr.position + Vector2(4, 4), Vector2(48, 48)), Rect2(bfr * 40, 0, 40, 40))
+		draw_rect(mr, Look.color_of(look, "halo"), false, 1.0)
 	var nm := str(look.get("name", "")).strip_edges()
 	if _name_edit:
 		nm = _name_edit.text.strip_edges()
