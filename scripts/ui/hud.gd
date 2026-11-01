@@ -1399,6 +1399,13 @@ class FloatingPrompt extends Control:
 			_pos = (vt0 * (sp.global_position + Vector2(0, sp.cfg.off * 2.0 - 16.0))).round()
 			want = 1.0
 			it = null
+		var ex: Enemy = w.exec_target if w and is_instance_valid(w.exec_target) else null
+		if ex and lp and lp.is_alive() and want == 0.0:
+			_text = G.T("execute_btn")
+			var vt1 := get_viewport().get_canvas_transform()
+			_pos = (vt1 * (ex.global_position + Vector2(0, ex.cfg.off * 2.0 - 12.0))).round()
+			want = 1.0
+			it = null
 		if it:
 			var txt := it.prompt()
 			if txt != "":

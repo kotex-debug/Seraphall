@@ -1134,6 +1134,9 @@ func nearest_interactable(p: Player) -> Interactable:
 	return best
 
 func try_interact(p: Player) -> void:
+	if exec_target and is_instance_valid(exec_target) and exec_target.is_alive() and exec_target.is_staggered():
+		_execute(p, exec_target)
+		return
 	if _spare_target and is_instance_valid(_spare_target) and _spare_target.is_alive():
 		bcast("_spare_boss", [_spare_target.idx])
 		_spare_target = null
@@ -2437,6 +2440,16 @@ func _v04_tick(delta: float, lp: Player) -> void:
 			event_t -= delta
 			if event_t <= 0.0:
 				bcast("_world_event_end", [])
+	# ejecuciones: enemigo normal (o élite) con la postura rota al alcance
+	exec_target = null
+	if lp and lp.is_alive() and not lp.cutscene:
+		var bd := 46.0
+		for e in enemies_alive():
+			if not e.is_boss and e.is_staggered():
+				var dd: float = e.global_position.distance_to(lp.global_position)
+				if dd < bd:
+					bd = dd
+					exec_target = e
 	# perdonar a un Arconte con la postura rota al borde de la muerte
 	_spare_target = null
 	if lp and lp.is_alive() and active_boss and is_instance_valid(active_boss) and active_boss.is_alive() and asc_fight.is_empty():
@@ -3090,6 +3103,35 @@ var _locks := {}
 var _bell_seq: Array = []
 var _cell_doors: Array = []
 var breakables := {}
+var exec_target: Enemy = null
+
+func _execute(p: Player, e: Enemy) -> void:
+	## Remate cinematográfico: te lanzas contra el enemigo aturdido y lo atraviesas
+	var dir: Vector2 = (e.global_position - p.global_position).normalized()
+	if dir == Vector2.ZERO:
+		dir = Vector2.RIGHT
+	exec_target = null
+	p.aim = dir
+	p.global_position = e.global_position - dir * 16.0
+	p.state = "move"
+	p._start_attack()
+	G.slowmo("exec", 0.15, 0.45)
+	G.flash(Color(1, 0.95, 0.85, 0.5), 0.15)
+	hud.letterbox(true)
+	get_tree().create_timer(0.6, true, false, true).timeout.connect(hud.letterbox.bind(false))
+	var c := e.global_position + Vector2(0, -10)
+	Fx.slash(c, dir.angle() + 0.8, 26.0, 140.0, Color(1, 0.95, 0.8), 12.0, 0.3)
+	Fx.slash(c, dir.angle() - 0.8, 26.0, 140.0, Color(1, 0.6, 0.3), 12.0, 0.3, false)
+	Fx.impact(c, Color(1, 0.9, 0.6), 30.0, 10)
+	Fx.sparks(c, dir, Color(1, 0.8, 0.4), 18, 220.0, 120.0)
+	Fx.text(c + Vector2(0, -6), G.T("executed"), Color(1, 0.85, 0.4), 12)
+	Audio.sfx("hit_heavy", 0.0, 0.0)
+	Audio.sfx("slam", -6.0)
+	G.shake(6.0, 0.35)
+	var dmg: float = e.max_hp * (0.35 if e.cfg.get("elite", false) else 1.2) + Prog.weapon_damage() * 2.0
+	request_damage_enemy(e, dmg, dir, 0.0, true)
+	p.hp = min(Prog.max_hp(), p.hp + Prog.max_hp() * 0.06)
+	p.wrath = min(100.0, p.wrath + 18.0)
 
 func hit_breakables(origin: Vector2, rng: float) -> void:
 	for bw in breakables.values():

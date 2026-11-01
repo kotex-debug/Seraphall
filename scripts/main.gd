@@ -785,6 +785,21 @@ func _run_autotest() -> void:
 			w.menu.close()
 			print("AUTOTEST_PROMO7_OK")
 			get_tree().quit()
+		"exec":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			var e: Enemy = w.enemies[0]
+			lp.respawn_at(e.global_position + Vector2(-30, 0))
+			await get_tree().create_timer(1.0).timeout
+			e._start_stagger()
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/y01_prompt.png")
+			w.try_interact(lp)
+			await get_tree().create_timer(0.12).timeout
+			await _shot(out + "/y02_ejecucion.png")
+			await get_tree().create_timer(1.0).timeout
+			print("EXEC dead=", not e.is_alive())
+			get_tree().quit()
 		"death":
 			var lp: Player = w.local_player()
 			lp.respawn_at(w.tile_pos(46, 64))

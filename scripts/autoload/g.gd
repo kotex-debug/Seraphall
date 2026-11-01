@@ -146,6 +146,7 @@ const TXT := {
 	"atrio_fail": ["DISONANCIA", "DISSONANCE"],
 	"ring_bell": ["Tañer la campana", "Ring the bell"],
 	"read": ["Leer", "Read"],
+	"execute_btn": ["Ejecutar", "Execute"], "executed": ["¡EJECUCIÓN!", "EXECUTION!"],
 	"lore_title": ["Inscripción", "Inscription"],
 	"boss_phase": ["FASE %s", "PHASE %s"],
 	"sub_carcelero": ["Guardián de la Llave", "Keeper of the Key"],
