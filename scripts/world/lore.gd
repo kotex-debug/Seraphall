@@ -177,3 +177,29 @@ const GHOST_ECHOES := {
 		[["Tú, antes", "You, before"], ["Lo sé. Por eso te dejo mi nimbo. Para que tengas algo que perseguir.", "I know. That's why I'm leaving you my halo. So you'll have something to chase."]],
 		[["Seravel", "Seravel"], ["...Pues vuelve a buscarlo. Prométemelo.", "...Then come back for it. Promise me."]]],
 }
+
+
+## Susurros de la Brasa al descansar (los dicen los caídos que ardieron en ella). [requisito, [es, en]]
+const BRASA_WHISPERS := [
+	["", ["«Siéntate. Nosotros también llegamos hasta aquí.»", "\"Sit. We made it this far too.\""]],
+	["", ["«Cada pluma que entregas nos calienta un poco más.»", "\"Every feather you give warms us a little more.\""]],
+	["", ["«No cuentes las muertes. Cuenta lo que recuerdas.»", "\"Don't count the deaths. Count what you remember.\""]],
+	["", ["«La Voz nunca se sienta junto al fuego. ¿Te has fijado?»", "\"The Voice never sits by the fire. Have you noticed?\""]],
+	["carcelero_dead", ["«El Carcelero también ardió aquí, una vez. Era tímido.»", "\"The Jailer burned here once, too. He was shy.\""]],
+	["carcelero_dead", ["«La llave abre hacia abajo. Siempre hacia abajo.»", "\"The key opens downwards. Always downwards.\""]],
+	["choir_dead", ["«Ya no cantan. Ahora podemos oír nuestros nombres.»", "\"They no longer sing. Now we can hear our names.\""]],
+	["trial_umbral", ["«El Custodio te llamó por un nombre. No era el tuyo... aún.»", "\"The Warden called you by a name. Not yours... yet.\""]],
+	["seravel_dead", ["«Ella también se sentaba aquí. Siempre de espaldas al abismo.»", "\"She used to sit here too. Always with her back to the abyss.\""]],
+	["seravel_dead", ["«Abajo hay un bosque donde las plumas echan raíces.»", "\"Down below there's a forest where feathers take root.\""]],
+]
+
+static func brasa_whisper() -> String:
+	var pool: Array = []
+	for w in BRASA_WHISPERS:
+		if w[0] == "" or Prog.flags.get(w[0], false):
+			pool.append(w)
+	# las frases de etapas más avanzadas pesan el doble
+	for w in BRASA_WHISPERS:
+		if w[0] != "" and Prog.flags.get(w[0], false):
+			pool.append(w)
+	return G.L(pool[randi() % pool.size()][1])

@@ -920,6 +920,14 @@ func _run_autotest() -> void:
 			await _shot(out + "/storm.png")
 			print("AUTOTEST_STORM_OK")
 			get_tree().quit()
+		"whisper":
+			Prog.flags["carcelero_dead"] = true
+			await get_tree().create_timer(1.0).timeout
+			w.menu.open("char", {"brasa": true})
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/w1.png")
+			print("AUTOTEST_WHISPER_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

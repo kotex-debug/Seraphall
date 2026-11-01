@@ -214,6 +214,11 @@ func _build_char() -> void:
 	_lbl(G.T("buy_level") % cost, Vector2(14, 250), 10, UIKit.GOLD, 0.0, "title")
 	if not at_brasa:
 		_lbl(G.T("only_at_brasa"), Vector2(14, 264), 10, UIKit.PINK, 128, "title")
+	else:
+		if not ctx.has("whisper"):
+			ctx["whisper"] = Lore.brasa_whisper()
+		var wl := _lbl(str(ctx["whisper"]), Vector2(10, 263), 10, Color(0.82, 0.7, 1.0), 132, "title")
+		wl.modulate.a = 0.85
 	# atributos
 	_panel(Rect2(160, 0, 250, 296))
 	var y := 12.0
