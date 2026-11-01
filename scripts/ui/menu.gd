@@ -1095,6 +1095,38 @@ func _build_map() -> void:
 	content.add_child(mv)
 
 # ------------------------------------------------------------------ opciones
+var _slider_theme: Theme
+
+func _style_slider(sl: HSlider) -> void:
+	## Deslizadores con el estilo del juego: carril oscuro con borde, relleno rojo y un rombo dorado
+	if _slider_theme == null:
+		_slider_theme = Theme.new()
+		var track := StyleBoxFlat.new()
+		track.bg_color = Color(0.1, 0.04, 0.13)
+		track.border_color = Color(0.45, 0.25, 0.5)
+		track.set_border_width_all(1)
+		track.content_margin_top = 3
+		track.content_margin_bottom = 3
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = UIKit.RED
+		fill.border_color = UIKit.PINK
+		fill.border_width_top = 1
+		fill.content_margin_top = 3
+		fill.content_margin_bottom = 3
+		var img := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+		for y in 9:
+			for x in 9:
+				var dd := absi(x - 4) + absi(y - 4)
+				if dd <= 4:
+					img.set_pixel(x, y, UIKit.INK if dd == 4 else (UIKit.GOLD if dd > 1 else Color(1, 0.97, 0.85)))
+		var gtex := ImageTexture.create_from_image(img)
+		_slider_theme.set_stylebox("slider", "HSlider", track)
+		_slider_theme.set_stylebox("grabber_area", "HSlider", fill)
+		_slider_theme.set_stylebox("grabber_area_highlight", "HSlider", fill)
+		_slider_theme.set_icon("grabber", "HSlider", gtex)
+		_slider_theme.set_icon("grabber_highlight", "HSlider", gtex)
+	sl.theme = _slider_theme
+
 func _build_options() -> void:
 	# ficha de pausa: tu Desplumado, dónde estás y cuánto llevas
 	_panel(Rect2(0, 0, 132, 296), UIKit.PURPLE)
@@ -1125,6 +1157,7 @@ func _build_options() -> void:
 	_btn(G.fs_label().to_upper(), Vector2(304, 44), _on_fullscreen, true, 144)
 	_lbl(G.T("music_vol").to_upper(), Vector2(160, 82), 8, UIKit.WHITE, 0.0, "head")
 	var ms := HSlider.new()
+	_style_slider(ms)
 	ms.position = Vector2(300, 80)
 	ms.size = Vector2(140, 14)
 	ms.min_value = 0.0; ms.max_value = 1.0; ms.step = 0.05
@@ -1133,6 +1166,7 @@ func _build_options() -> void:
 	content.add_child(ms)
 	_lbl(G.T("sfx_vol").to_upper(), Vector2(160, 106), 8, UIKit.WHITE, 0.0, "head")
 	var ss := HSlider.new()
+	_style_slider(ss)
 	ss.position = Vector2(300, 104)
 	ss.size = Vector2(140, 14)
 	ss.min_value = 0.0; ss.max_value = 1.0; ss.step = 0.05
@@ -1143,19 +1177,26 @@ func _build_options() -> void:
 		var code := Net.online_code()
 		_lbl(G.T("code_online") + ": " + (code if code != "" else "-"), Vector2(160, 134), 15, UIKit.GOLD)
 		_lbl(G.T("code_lan") + ": " + Net.lan_code(), Vector2(160, 152), 15, UIKit.CYAN)
-	_lbl(G.controls_text(), Vector2(160, 176), 10, UIKit.TEXT_DIM, 280, "title")
+	# chuleta de controles con teclas dibujadas
+	_lbl(G.L(["CONTROLES", "CONTROLS"]), Vector2(160, 134), 8, UIKit.GOLD, 0.0, "head")
+	var kh := KeyHints.new()
+	kh.position = Vector2(156, 146)
+	kh.size = Vector2(296, 104)
+	content.add_child(kh)
 	_btn(G.T("save_quit").to_upper(), Vector2(200, 262), _on_save_quit, true, 200)
 	# accesibilidad
 	_panel(Rect2(470, 0, 130, 296), UIKit.CYAN)
 	_lbl(G.T("access").to_upper(), Vector2(480, 10), 8, UIKit.CYAN, 0.0, "head")
 	_lbl(G.T("shake_opt"), Vector2(480, 30), 10, UIKit.WHITE, 110, "title")
 	var sh := HSlider.new()
+	_style_slider(sh)
 	sh.position = Vector2(480, 46); sh.size = Vector2(110, 14)
 	sh.min_value = 0.0; sh.max_value = 1.0; sh.step = 0.1; sh.value = G.shake_mult
 	sh.value_changed.connect(_on_access.bind("shake"))
 	content.add_child(sh)
 	_lbl(G.T("flash_opt"), Vector2(480, 68), 10, UIKit.WHITE, 110, "title")
 	var fl := HSlider.new()
+	_style_slider(fl)
 	fl.position = Vector2(480, 84); fl.size = Vector2(110, 14)
 	fl.min_value = 0.0; fl.max_value = 1.0; fl.step = 0.1; fl.value = G.flash_mult
 	fl.value_changed.connect(_on_access.bind("flash"))
@@ -1368,6 +1409,18 @@ class TabBar2 extends Control:
 			var tx := r.position.x + (r.size.x - f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x) / 2.0
 			f.draw_string_outline(get_canvas_item(), Vector2(tx, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 4, UIKit.INK)
 			f.draw_string(get_canvas_item(), Vector2(tx, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE if sel else Color(0.7, 0.62, 0.75))
+			if not sel:
+				draw_rect(Rect2(Vector2(r.get_center().x - 1, r.end.y - 1), Vector2(2, 2)), Color(0.6, 0.4, 0.65, 0.6))
+		# teclas para cambiar de pestaña a los lados
+		if tabs.size() > 1:
+			for side in [-1, 1]:
+				var kp := Vector2(8 if side < 0 else size.x - 8, 11)
+				var kr := Rect2(kp - Vector2(6, 6), Vector2(12, 12))
+				draw_rect(kr.grow(1), UIKit.INK)
+				draw_rect(kr, Color(0.22, 0.12, 0.28))
+				draw_rect(Rect2(kr.position, Vector2(12, 2)), Color(0.45, 0.3, 0.55))
+				var kl := G.key_label("spell1" if side < 0 else "spell2").left(1)
+				f.draw_string(get_canvas_item(), kr.position + Vector2(3, 10), kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			for t in _rects:
@@ -2389,3 +2442,31 @@ class EquipStrip extends Control:
 					draw_texture_rect(at, Rect2(ar.position + Vector2(4, 4 + bob), Vector2(16, 16)), false)
 			else:
 				draw_circle(ar.get_center(), 2.0, Color(0.4, 0.25, 0.5))
+
+
+class KeyHints extends Control:
+	## Dos columnas de acciones con su tecla en una pequeña tecla dibujada
+	const ACTS := [["move", ["Moverse", "Move"]], ["attack", ["Atacar", "Attack"]], ["heavy", ["Cargado", "Heavy"]], ["dash", ["Esquivar", "Dash"]],
+		["parry", ["Desviar", "Parry"]], ["heal", ["Curarse", "Heal"]], ["interact", ["Interactuar", "Interact"]], ["item", ["Objeto", "Item"]],
+		["map", ["Mapa", "Map"]], ["menu", ["Menú", "Menu"]]]
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var hf := UIKit.font("head")
+		var tf := UIKit.font("title")
+		for i in ACTS.size():
+			var a: Array = ACTS[i]
+			var col := i / 5
+			var row := i % 5
+			var p := Vector2(col * 148, row * 20)
+			var key: String = "WASD" if a[0] == "move" else G.key_label(a[0])
+			key = key.replace("Clic izq", "LMB").replace("Clic der", "RMB").replace("Left click", "LMB").replace("Right click", "RMB")
+			if key.length() > 8:
+				key = key.left(8)
+			var kw := maxf(16.0, hf.get_string_size(key.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 8)
+			var kr := Rect2(p + Vector2(0, 1), Vector2(kw, 14))
+			draw_rect(Rect2(kr.position + Vector2(0, 2), kr.size), UIKit.INK)
+			draw_rect(kr, Color(0.24, 0.13, 0.3))
+			draw_rect(Rect2(kr.position, Vector2(kr.size.x, 2)), Color(0.5, 0.34, 0.6))
+			hf.draw_string(get_canvas_item(), kr.position + Vector2(4, 11), key.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+			tf.draw_string(get_canvas_item(), p + Vector2(kw + 6, 12), G.L(a[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
