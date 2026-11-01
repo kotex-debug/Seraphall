@@ -968,6 +968,16 @@ func _run_autotest() -> void:
 			print("SAEL pos ", w.interactables["peregrina"].global_position / 16.0)
 			print("AUTOTEST_SAEL_OK")
 			get_tree().quit()
+		"nimbo":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			await get_tree().create_timer(1.0).timeout
+			lp.respawn_at(w.tile_pos(66, 92.5))
+			for i in 4:
+				await get_tree().create_timer(0.9).timeout
+				await _shot(out + "/n%d.png" % i)
+			print("AUTOTEST_NIMBO_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

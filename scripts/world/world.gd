@@ -1068,7 +1068,10 @@ func _check_area(lp: Player) -> void:
 		var first := _area == ""
 		_area = a
 		if not first:
-			hud.show_area("", G.T(a))
+			if a == "area_nimbo" and not Prog.flags.get("nimbo_intro", false) and active_boss == null:
+				_nimbo_intro()
+			else:
+				hud.show_area("", G.T(a))
 			if Lore.AREA_THOUGHTS.has(a) and not Prog.flags.get("thought_" + a, false):
 				_area_thoughts(a)
 		var target := Color(0.42, 0.45, 0.6) if a == "area_gallery" else (Color(0.55, 0.45, 0.5) if a == "area_circle" else Color(0.5, 0.46, 0.58))
@@ -3178,6 +3181,12 @@ func _urn_broken(i: int) -> void:
 func _area_thoughts(a: String) -> void:
 	## Monólogo interior al pisar una zona por primera vez (se interrumpe si empieza un combate o una escena)
 	await get_tree().create_timer(2.6).timeout
+	var guard := 0
+	while local_player() != null and local_player().cutscene and guard < 40:
+		await get_tree().create_timer(0.5).timeout
+		guard += 1
+	if guard > 0:
+		await get_tree().create_timer(1.0).timeout
 	for ln in Lore.AREA_THOUGHTS[a]:
 		if not is_inside_tree() or active_boss != null or _trial != "" or _contemplating or dialog.is_open() or _area != a:
 			return
@@ -3784,6 +3793,36 @@ func _enemy_blocked(idx: int) -> void:
 	Fx.sparks(e.global_position + Vector2(float(e.facing) * 8.0, -12), Vector2(float(e.facing), -0.4), Color(1, 0.85, 0.5), 10, 160.0, 70.0)
 	Fx.text(e.global_position + Vector2(0, -6), G.L(["¡BLOQUEADO!", "BLOCKED!"]), Color(0.85, 0.85, 0.95), 9)
 
+
+func _nimbo_intro() -> void:
+	## Primera vez en la Sala del Nimbo: la cámara presenta a los cuatro que viven junto a la mesa redonda
+	Prog.flags["nimbo_intro"] = true
+	var lp := local_player()
+	if lp == null:
+		return
+	lp.cutscene = true
+	lp.velocity = Vector2.ZERO
+	hud.letterbox(true)
+	hud.show_area(G.T("stratum1"), G.T("area_nimbo"))
+	await get_tree().create_timer(2.2 if G.autotest == "" else 0.3).timeout
+	var cast := [["ozias", ["El Grabador de runas", "The Rune Engraver"], ["Ozias", "Ozias"]],
+		["ilse", ["La que cose plumas", "She who sews feathers"], ["Madre Ilse", "Mother Ilse"]],
+		["nyx", ["Mercader de Plumas Negras", "Black-Feathered Merchant"], ["Nyx", "Nyx"]],
+		["velaria", ["Guardiana de los ecos", "Keeper of Echoes"], ["Sor Velaria", "Sister Velaria"]]]
+	for c in cast:
+		if not interactables.has(c[0]):
+			continue
+		var it: Node2D = interactables[c[0]]
+		_cam_focus = it.global_position + Vector2(0, -10)
+		Prog.flags["known_" + c[0]] = true
+		await get_tree().create_timer(0.5 if G.autotest == "" else 0.1).timeout
+		hud.show_area(G.L(c[1]), G.L(c[2]))
+		Audio.voice(G.L(c[2]))
+		await get_tree().create_timer(1.9 if G.autotest == "" else 0.3).timeout
+	_cam_focus = null
+	hud.letterbox(false)
+	if is_instance_valid(lp):
+		lp.cutscene = false
 
 func _escala_pan() -> void:
 	## Primera vez en la Escalinata: la cámara sube hasta la Antesala y vuelve
