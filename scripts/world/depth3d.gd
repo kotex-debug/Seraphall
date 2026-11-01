@@ -220,6 +220,47 @@ class Abyss extends Node2D:
 		var tree := get_tree()
 		if tree:
 			tree.create_timer(randf_range(0.5, 1.1)).timeout.connect(func(): Audio.sfx("slam", -24.0, 0.25))
+	func _colossus(cam: Vector2, base: Vector2, sc: float, flip: bool, t: float) -> void:
+		## Estatua colosal de un ángel orante que emerge del abismo, muy lejos (paralaje profundo)
+		var f := 0.42
+		var p: Vector2 = cam + (base - cam) * f + Vector2(0, sin(t * 0.15) * 4.0)
+		if absf(p.x - cam.x) > 520.0 or absf(p.y - cam.y) > 420.0:
+			return
+		var fx := -1.0 if flip else 1.0
+		var body := Color(0.15, 0.09, 0.18, 0.72)
+		var rim := Color(0.55, 0.36, 0.6, 0.55).lerp(Color(0.95, 0.9, 1.0, 0.9), _flash * 0.8)
+		var s := 1.6 * sc
+		var P := func(v: Vector2) -> Vector2: return p + Vector2(v.x * fx, v.y) * s
+		# alas plegadas detrás
+		for side in [-1.0, 1.0]:
+			var wing := PackedVector2Array([P.call(Vector2(side * 18, -60)), P.call(Vector2(side * 62, -110)), P.call(Vector2(side * 70, -40)),
+				P.call(Vector2(side * 52, 40)), P.call(Vector2(side * 34, 90)), P.call(Vector2(side * 20, 30))])
+			Depth3D.poly(self, wing, body.darkened(0.15))
+			for k in 4:
+				draw_line(P.call(Vector2(side * (30 + k * 9), -70 + k * 20)), P.call(Vector2(side * (24 + k * 7), 10 + k * 18)), Color(rim, 0.25), 1.0)
+			draw_line(P.call(Vector2(side * 62, -110)), P.call(Vector2(side * 70, -40)), rim, 1.0)
+		# túnica y torso
+		var robe := PackedVector2Array([P.call(Vector2(-20, -60)), P.call(Vector2(20, -60)), P.call(Vector2(30, 40)), P.call(Vector2(40, 140)), P.call(Vector2(-40, 140)), P.call(Vector2(-30, 40))])
+		Depth3D.poly(self, robe, body)
+		for k in 4:
+			draw_line(P.call(Vector2(-14 + k * 9, -30)), P.call(Vector2(-22 + k * 14, 140)), Color(0, 0, 0, 0.25), 1.0)
+		# manos juntas en oración
+		Depth3D.poly(self, PackedVector2Array([P.call(Vector2(-6, -40)), P.call(Vector2(0, -58)), P.call(Vector2(6, -40)), P.call(Vector2(4, -26)), P.call(Vector2(-4, -26))]), body.lightened(0.08))
+		# cabeza inclinada, con la cara rota
+		var hc: Vector2 = P.call(Vector2(3, -74))
+		draw_circle(hc, 11.0 * s, body)
+		draw_arc(hc, 11.0 * s, -PI * 0.9, -PI * 0.1, 12, rim, 1.0)
+		Depth3D.poly(self, PackedVector2Array([hc + Vector2(2, -4) * s, hc + Vector2(11, 0) * s, hc + Vector2(6, 8) * s]), Color(0.05, 0.02, 0.06, 0.9))
+		# aureola partida
+		draw_arc(hc + Vector2(0, -16) * s, 15.0 * s, PI * 1.05, PI * 1.75, 16, Color(0.9, 0.7, 0.4, 0.35), 2.0)
+		draw_arc(hc + Vector2(0, -16) * s, 15.0 * s, PI * 1.85, PI * 2.3, 10, Color(0.9, 0.7, 0.4, 0.35), 2.0)
+		# contorno iluminado y niebla que lo traga por abajo
+		draw_line(P.call(Vector2(-20, -60)), P.call(Vector2(-30, 40)), rim, 1.0)
+		draw_line(P.call(Vector2(20, -60)), P.call(Vector2(30, 40)), rim, 1.0)
+		for k in 6:
+			var fy := 70.0 + k * 14.0
+			draw_rect(Rect2(p + Vector2(-80, fy) * s, Vector2(160, 14) * s), Color(0.12, 0.08, 0.2, 0.12 + k * 0.08))
+
 	func _giant(cam: Vector2, t: float) -> void:
 		## Cada ~45 s un ángel enorme cae muy lejos, por detrás de todo, perdiendo plumas
 		var cycle := fmod(t, 45.0)
@@ -243,6 +284,8 @@ class Abyss extends Node2D:
 	func _draw() -> void:
 		var cam := Depth3D.cam_center(self)
 		var t := Time.get_ticks_msec() / 1000.0
+		_colossus(cam, Vector2(150, 1720), 1.0, false, t)
+		_colossus(cam, Vector2(1650, 820), 0.85, true, t)
 		_giant(cam, t)
 		for L in layers:
 			var f: float = L[0]
