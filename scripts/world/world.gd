@@ -3225,6 +3225,7 @@ func _place_ghost_echoes() -> void:
 		["galeria", Vector2(67.5, 61.4), [["enemy_acolito", Rect2(0, 0, 32, 32), Vector2(-12, 0), false], ["enemy_acolito", Rect2(32, 0, 32, 32), Vector2(12, 0), true]]],
 		["patio", Vector2(49.5, 44.2), [["boss_seravel", Rect2(0, 0, 52, 56), Vector2(-16, 0), false], ["enemy_carcelero", Rect2(0, 0, 40, 40), Vector2(18, 0), true]]],
 		["nimbo", Vector2(66, 82.6), [["boss_seravel", Rect2(0, 0, 52, 56), Vector2(-15, 0), false], ["player", Rect2(0, 0, 32, 32), Vector2(14, 0), true]]],
+		["capilla", Vector2(84, 77.2), [["player", Rect2(0, 96, 32, 32), Vector2(0, 0), false]]],
 	]
 	for sp in specs:
 		var g := GhostEcho.new()

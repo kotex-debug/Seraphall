@@ -966,7 +966,9 @@ func _run_autotest() -> void:
 			Prog.flags["thought_area_gallery"] = true
 			Prog.flags["thought_area_yard"] = true
 			var n := 1
-			for sp in [Vector2(66, 86.5), Vector2(67.5, 64.4), Vector2(49.5, 47.5)]:
+			Prog.flags["nimbo_intro"] = true
+			Prog.flags["thought_area_capilla"] = true
+			for sp in [Vector2(66, 86.5), Vector2(67.5, 64.4), Vector2(49.5, 47.5), Vector2(84, 80.5)]:
 				lp.respawn_at(w.tile_pos(sp.x, sp.y))
 				await get_tree().create_timer(1.6).timeout
 				await _shot(out + "/g%d_antes.png" % n)

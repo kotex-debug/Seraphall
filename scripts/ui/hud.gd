@@ -300,7 +300,7 @@ func end_card(title: String, body: String) -> void:
 	c.add_child(b)
 	# resumen del estrato: cinco cifras en fichas
 	var echoes := 0
-	for k in ["galeria", "patio", "nimbo"]:
+	for k in Lore.GHOST_ECHOES.keys():
 		if Prog.flags.get("echo_" + k, false):
 			echoes += 1
 	var stats := [
@@ -308,7 +308,7 @@ func end_card(title: String, body: String) -> void:
 		[G.L(["CAÍDAS", "FALLS"]), str(Prog.deaths)],
 		[G.L(["PLUMAS", "FEATHERS"]), "%d/%d" % [Prog.wing_feathers, Prog.WING_MAX]],
 		[G.L(["RECUERDOS", "MEMORIES"]), "%d/%d" % [Prog.memories.size(), Prog.MEMORIES.size()]],
-		[G.L(["ECOS", "ECHOES"]), "%d/3" % echoes],
+		[G.L(["ECOS", "ECHOES"]), "%d/%d" % [echoes, Lore.GHOST_ECHOES.size()]],
 		[G.L(["LOGROS", "FEATS"]), "%d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()]],
 	]
 	var row := Control.new()

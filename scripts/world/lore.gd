@@ -182,6 +182,9 @@ const GHOST_ECHOES := {
 	"nimbo": [[["Seravel", "Seravel"], ["Si cruzas ese umbral tendré que darte caza. Lo sabes.", "If you cross that threshold I'll have to hunt you down. You know that."]],
 		[["Tú, antes", "You, before"], ["Lo sé. Por eso te dejo mi nimbo. Para que tengas algo que perseguir.", "I know. That's why I'm leaving you my halo. So you'll have something to chase."]],
 		[["Seravel", "Seravel"], ["...Pues vuelve a buscarlo. Prométemelo.", "...Then come back for it. Promise me."]]],
+	"capilla": [[["Tú, antes", "You, before"], ["Siete alas arranqué hoy. Siete. Y Él lo llama misericordia.", "Seven wings I tore off today. Seven. And He calls it mercy."]],
+		[["Tú, antes", "You, before"], ["Solo te pido una cosa a cambio de todo lo que hice por Ti... No quiero recordarlo.", "I ask just one thing for all I did for You... I don't want to remember."]],
+		[["???", "???"], ["Concedido.", "Granted."]]],
 }
 
 
