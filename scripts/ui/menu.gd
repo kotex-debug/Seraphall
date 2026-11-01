@@ -587,7 +587,7 @@ func _grade(v: float, n: String) -> String:
 # ------------------------------------------------------------------ controles
 var _rebinding := ""
 const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left": ["Izquierda", "Left"], "right": ["Derecha", "Right"],
-	"attack": ["Ataque", "Attack"], "heavy": ["Ataque cargado", "Heavy attack"], "dash": ["Esquivar", "Dash"], "parry": ["Bloquear (parry)", "Parry"],
+	"attack": ["Ataque", "Attack"], "heavy": ["Ataque cargado", "Heavy attack"], "dash": ["Esquivar", "Dash"], "parry": ["Desviar (parry)", "Parry"],
 	"spell1": ["Lanza de Luz", "Lance of Light"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"heal": ["Curarse", "Heal"], "item": ["Objeto rápido", "Quick item"], "interact": ["Interactuar", "Interact"], "menu": ["Menú", "Menu"],
 	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"]}
