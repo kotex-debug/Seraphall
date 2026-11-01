@@ -19,6 +19,7 @@ G="*res://scripts/autoload/g.gd"
 Audio="*res://scripts/autoload/audio.gd"
 Prog="*res://scripts/autoload/prog.gd"
 Net="*res://scripts/autoload/net.gd"
+Ach="*res://scripts/autoload/ach.gd"
 
 [display]
 

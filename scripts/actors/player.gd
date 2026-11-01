@@ -364,6 +364,7 @@ func _read_actions() -> void:
 	elif Input.is_action_just_pressed("heal"):
 		if flasks > 0 and hp < Prog.max_hp():
 			flasks -= 1
+			world.note_flask()
 			state = "heal"
 			heal_t = 0.55
 			_squash(Vector2(0.9, 1.1))
@@ -454,7 +455,7 @@ func _start_attack() -> void:
 		style = ["jab", "jab", "hook", "jab"][(combo - 1) % 4]
 	if final:
 		style = {"sword": "spin", "spear": "burst", "scythe": "reap", "hammer": "quake", "seravel": "spin", "choir": "spin",
-			"reaper": "reap", "fists": "uppercut"}.get(w.sprite, "spin")
+			"reaper": "reap", "fists": "uppercut", "verdugo": "verdict"}.get(w.sprite, "spin")
 	var dmg := Prog.weapon_damage() * (1.0 if not final else 1.7)
 	var arc: float = w.arc * (1.0 if not final else 1.25)
 	var rng: float = w.range * (1.0 if not final else 1.15)
@@ -477,6 +478,8 @@ func _start_attack() -> void:
 			arc *= 1.3; dmg *= 1.1
 		"uppercut":
 			arc = 110.0; dmg *= 1.3; rng *= 1.1
+		"verdict":
+			arc = 120.0; dmg *= 1.5; rng *= 1.3
 	if w.get("rapid", false):
 		attack_len *= 0.8
 		velocity = aim * (60.0 if not final else 200.0)
@@ -501,6 +504,10 @@ func _start_attack() -> void:
 	get_tree().create_timer(0.06 / w.speed).timeout.connect(_hit_check.bind(dmg, rng, arc, w.poise * (1.0 if not final else 1.8), final))
 	if final and w.get("wave", false):
 		world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 12, aim * 260.0, Prog.spell_damage(16.0), "wave", "player", Net.my_id(), 12.0, 0.7, 4])
+	if final and w.get("sentence", false):
+		# la Sentencia: el remate de la Hoja del Verdugo lanza una media luna carmesí
+		world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 12, aim * 240.0, Prog.spell_damage(18.0), "verdict", "player", Net.my_id(), 13.0, 0.7, 6])
+		G.shake(3.0, 0.15)
 	if final and w.get("notes", false):
 		for a in [-0.35, 0.0, 0.35]:
 			world.bcast("spawn_projectile", [global_position + Vector2(0, -6) + aim * 10, aim.rotated(a) * 230.0, Prog.spell_damage(9.0), "note", "player", Net.my_id(), 6.0, 0.9, 3])
@@ -607,6 +614,8 @@ func _hit_check(dmg: float, rng: float, arc: float, poise: float, final: bool) -
 			light = min(Prog.max_light(), light + 4.0)
 		if e.is_staggered():
 			d *= 1.6 if Prog.has_skill("f5") else 1.3
+			if Prog.weapon_data().get("sentence", false):
+				d *= 1.3
 			crit = true
 		var inf := Prog.infusion()
 		var hit_dir := to.normalized()
@@ -743,11 +752,31 @@ func _start_dash(input: Vector2) -> void:
 	_dash_hit.clear()
 	Audio.sfx("dash")
 	world.note_dash(peer_id, global_position, dash_dir)
+	if Prog.flags.get("storm_wing", false) and Time.get_ticks_msec() > _storm_cd:
+		_storm_cd = Time.get_ticks_msec() + 900
+		get_tree().create_timer(0.17).timeout.connect(_storm_trail.bind(global_position))
 	_squash(Vector2(1.3, 0.75))
 	Fx.burst(global_position, Color(0.8, 0.8, 0.9, 0.7), 8, 60.0, 0.4, "fx_soft", 40.0, -dash_dir, 0.35, false)
 	Fx.burst(global_position + Vector2(0, -10), Color(1, 1, 1), 4, 70.0, 0.6, "fx_feather", 90.0, -dash_dir, 1.0, false, Vector2(0, 40))
 	if Net.is_online():
 		world.peer_rpc(self, "_net_fx", ["dash", [dash_dir]])
+
+var _storm_cd := 0
+func _storm_trail(from: Vector2) -> void:
+	## Ala de Tormenta (Coloso): rayos a lo largo de la esquiva
+	if not is_inside_tree():
+		return
+	var to := global_position
+	for i in 3:
+		var p := from.lerp(to, (i + 1) / 3.0)
+		var b := BossColoso.Bolt.new()
+		b.position = p
+		world.get_node("FX").add_child(b)
+		Fx.light_flash(p, Color(0.7, 0.9, 1.0), 1.6, 1.0, 0.25)
+		for e in world.enemies_alive():
+			if e.global_position.distance_to(p) < 22.0 + e.body_radius:
+				world.request_damage_enemy(e, Prog.spell_damage(14.0), (e.global_position - p).normalized(), 10.0, false)
+	Audio.sfx("thunder", -10.0)
 
 func _dash_damage() -> void:
 	for e in world.enemies_alive():
@@ -840,6 +869,7 @@ func take_hit(dmg: float, dir: Vector2, enemy_idx: int) -> String:
 		stamina -= 15.0
 	dmg *= Prog.damage_taken_mult()
 	hp -= dmg
+	world.note_player_hit()
 	if world.hud and world.hud.has_method("hurt_from"):
 		world.hud.hurt_from(-dir)
 		world.hud.combo_break()
@@ -881,6 +911,7 @@ func _perfect_dodge() -> void:
 
 func _parry_success(enemy_idx: int) -> void:
 	Audio.sfx("parry")
+	Ach.add("parries")
 	Fx.text(global_position, G.T("parry"), Color(1, 0.95, 0.6), 10)
 	Fx.burst(global_position + aim * 10 + Vector2(0, -8), Color(1, 0.95, 0.7), 20, 140.0, 0.4, "fx_px", 60.0, aim)
 	Fx.ring(global_position + Vector2(0, -8), 6.0, 30.0, Color(1, 0.95, 0.7), 0.25, 3.0)
@@ -1093,4 +1124,5 @@ func hp_ratio() -> float:
 @rpc("any_peer", "call_remote", "reliable")
 func _net_revive() -> void:
 	if is_local() and state == "downed":
-		revive(0.4)
+		revive(0.5)
+		world.on_partner_revived(false)

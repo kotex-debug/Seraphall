@@ -34,6 +34,13 @@ const TYPES := {
 	"sombra": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 240.0, "speed": 96.0, "radius": 7.0, "dmg": 22.0, "poise": 70.0,
 		"ecos": 0, "aggro": 230.0, "range": 150.0, "cd": 0.95, "off": -14.0,
 		"anims": {"idle": [0, 4, 6.0], "walk": [1, 6, 11.0], "attack": [2, 3, 10.0], "dead": [3, 1]}},
+	# v0.8: batallas secretas
+	"verdugo": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 1500.0, "speed": 95.0, "radius": 8.0, "dmg": 24.0, "poise": 190.0,
+		"ecos": 3500, "aggro": 400.0, "range": 160.0, "cd": 0.85, "off": -14.0, "boss": true, "title": "boss_verdugo",
+		"anims": {"idle": [0, 4, 6.0], "walk": [1, 6, 11.0], "attack": [2, 3, 10.0], "dead": [3, 1]}},
+	"coloso": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 2600.0, "speed": 0.0, "radius": 22.0, "dmg": 30.0, "poise": 99999.0,
+		"ecos": 5000, "aggro": 900.0, "range": 900.0, "cd": 1.35, "off": -10.0, "boss": true, "title": "boss_coloso",
+		"anims": {"idle": [0, 1, 1.0], "walk": [0, 1, 1.0], "attack": [0, 1, 1.0], "dead": [0, 1]}},
 	"seravel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 1500.0, "speed": 70.0, "radius": 13.0, "dmg": 24.0, "poise": 200.0,
 		"ecos": 3000, "aggro": 400.0, "range": 200.0, "cd": 1.2, "off": -26.0, "boss": true, "title": "boss_seravel",
 		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},

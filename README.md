@@ -31,7 +31,25 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 
 Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar solo tienes el ataque básico: la **Lanza** se consigue al encender la Brasa del Santuario, la **Nova** en el árbol de habilidades y la **Ira Seráfica** al vencer al Carcelero.
 
-**El gancho:** cada muerte te **arranca una pluma** (se ve en tus alas). Con pocas plumas entras en modo **Desplumado**: más daño y velocidad, menos vida. Encender una Brasa nueva cuesta una pluma. Si mueres dos veces sin recuperar tus Ecos, **tu Sombra** se alza con tu aspecto y tus armas.
+**El gancho:** cada muerte te **arranca una pluma** (se ve en tus alas). Con pocas plumas entras en modo **Desplumado**: más daño y velocidad, menos vida. Si mueres dos veces sin recuperar tus Ecos, **tu Sombra** se alza con tu aspecto y tus armas.
+
+## 🪶 Las plumas: cómo se pierden y cómo se recuperan
+Tienes **10 plumas** en las alas y se ven en tu personaje (y en el HUD, bajo las Lágrimas).
+
+**Se pierden** de una sola forma: **al morir** se arranca una pluma. *(Desde la ALFA 0.8, encender una Brasa **ya no cuesta plumas**: es gratis).*
+
+**Se recuperan** así:
+| Forma | Cómo |
+|---|---|
+| **Recoger tus Ecos caídos** | La pluma arrancada cae al suelo junto a tus Ecos, donde moriste. Vuelve a ese sitio y recógelos: recuperas la pluma. |
+| **Vencer a tu Sombra** | Si mueres otra vez antes de recoger tus Ecos, esos Ecos y sus plumas pasan a tu **Sombra**. Derrótala y recuperas **todas** las plumas que guardaba. |
+| **Madre Ilse** (Sala del Nimbo) | Te **cose una pluma** a cambio de una **Lágrima de Serafín** (las sueltan jefes y cofres). |
+| **Derrotar a un Arconte** | La primera vez que vences a un Arconte, te **devuelve 2 plumas**. |
+| **Dificultad Ala Ligera** | Cada vez que **descansas en una Brasa** te crece una pluma. |
+| **Pluma Áurea** *(recompensa secreta)* | Tras superar el Panteón de los Arcontes, la **primera caída después de cada descanso no arranca ninguna pluma**. |
+
+> Los **Fragmentos de Pluma** son otra cosa: un material para que Brenna mejore tus armas.
+> Quedarte con **3 plumas o menos** activa el modo **Desplumado** (más daño y velocidad, menos vida). Conservar **7 o más** inclina la *balanza del destino* hacia las **Alas**; quedarte con 3 o menos, hacia el **Trono**.
 
 **Consejos:** el dash (Shift) justo antes de un golpe activa el **Instante** (cámara lenta y crítico). Un **parry** (clic derecho) perfecto aturde al enemigo y devuelve sus proyectiles. Rompe la **postura** de los enemigos para hacer daño extra. Sube de nivel descansando en las **Brasas**. Mejora tus armas con **Brenna**, la herrera.
 
@@ -39,6 +57,25 @@ Todos los controles se pueden **reasignar** en *Menú → Controles*. Al empezar
 - **Anfitrión:** *Crear partida cooperativa* → comparte el **código** (online o de red local).
 - **Amigo:** *Unirse con código* → escribe el código.
 - El código online usa UPnP para abrir el puerto automáticamente. Si tu router no lo permite, abre el puerto **UDP 24680** o usad el código LAN en la misma red.
+- **Ficha del compañero** en pantalla: su vida, sus plumas, la distancia y hacia dónde está. Si sale de la pantalla, una **flecha en el borde** te lleva hasta él.
+- **Marcas (tecla G):** apunta con el ratón y marca un sitio, un enemigo («¡ENEMIGO!») o un objeto («¡MIRA ESTO!»). Tu compañero lo ve con una baliza de luz y una flecha si está lejos.
+- **Revivir:** si cae, suelta una pluma que revolotea: **atrápala** para revivirle (vuelve con la mitad de la vida). Al revivir, los dos ganáis **Alas Unidas** (+20% de daño durante 10 s).
+- **Alas Cruzadas:** si los dos hacéis un dash cruzado a la vez, dais un tajo en X devastador.
+- **Viajar al compañero:** al descansar en una Brasa, *Personaje → Viajar al compañero* te lleva junto a él.
+- **Báculo del Alba:** sus círculos de luz curan a los dos.
+
+## 🏆 Logros (estilo consola)
+- Son de **tu perfil**: valen para todas tus partidas. Están en *Menú → Logros*.
+- Al conseguir uno salta un **aviso animado** (medallón que gira, rayos, plumas y fanfarria). Los épicos tienen versión especial.
+- El **juego base reparte el 100 %**. Cada logro da **XP** y vale un % según su dificultad (bronce, plata, oro o épico).
+- Los **dos DLC añadirán un 10 % cada uno**: con ellos se podrá llegar al **120 %** (sus logros ya se ven, bloqueados).
+- Hay logros de **historia** (se consiguen jugando, con barra de progreso), de **exploración**, **combate**, **destino**, **cooperativo**, **desafíos de verdad** (sin recibir golpes, sin beber Lágrimas, con las 10 plumas, sin morir…) y **ocultos**.
+
+## ⚔️ Batallas secretas
+Tres combates épicos escondidos, con recompensas que no se consiguen de otra forma:
+- **El Verdugo** *(el que fuiste)*: presencia los **cuatro ecos del pasado** y se abrirá algo bajo la Capilla Olvidada. Duelo espejo contra tu propio repertorio. Recompensa: la **Hoja del Verdugo** (arma).
+- **El Coloso del Abismo**: hay un muro agrietado al norte del Mirador… y un cuerno que solo responde a quien ha cruzado las Puertas. Solo se le hiere en las runas de sus manos y en su núcleo. Recompensa: **Ala de Tormenta** (tu dash invoca rayos) y **Corazón del Coloso** (+15 % de vida y +1 Lágrima).
+- **Panteón de los Arcontes**: Sor Velaria lo ofrece cuando has vencido a los tres Arcontes y superado alguna Ascensión. Los tres seguidos en Ascensión II. Recompensa: la **Pluma Áurea**.
 
 ## 🧪 Versión ALFA 0.7
 - **Pantalla completa** (F11, Alt+Intro, o desde el inicio y Opciones; se recuerda) y **nuevo icono** de la aplicación.

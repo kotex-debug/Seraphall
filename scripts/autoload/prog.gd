@@ -36,6 +36,9 @@ const WEAPONS := {
 	"fists": {"name": ["Puños del Penitente", "Penitent's Fists"], "sprite": "fists", "dmg": 8.0, "speed": 1.75, "range": 22.0,
 		"arc": 80.0, "combo": 5, "stam": 6.0, "poise": 11.0, "fue": 0.7, "des": 0.5, "fe": 0.0, "rapid": true,
 		"desc": ["Ráfagas de cinco puñetazos que destrozan la postura. El quinto es un gancho que levanta al enemigo.", "Five-punch flurries that shred posture. The fifth is an uppercut that lifts the enemy."]},
+	"verdugo": {"name": ["Hoja del Verdugo", "Executioner's Blade"], "sprite": "verdugo", "dmg": 23.0, "speed": 0.84, "range": 40.0,
+		"arc": 165.0, "combo": 3, "stam": 15.0, "poise": 20.0, "fue": 0.8, "des": 0.1, "fe": 0.3, "sentence": true,
+		"desc": ["La hoja que empuñaste antes de caer. Tajos anchos y pesados; el tercero, la Sentencia, lanza una media luna carmesí. +30% de daño a enemigos aturdidos y cada ejecución te devuelve un 20% de vida.", "The blade you wielded before the fall. Broad, heavy cuts; the third, the Sentence, hurls a crimson crescent. +30% damage to staggered foes and every execution restores 20% health."]},
 	"bow": {"name": ["Arco de Pluma", "Feather Bow"], "sprite": "bow", "dmg": 12.0, "speed": 1.05, "range": 24.0,
 		"arc": 60.0, "combo": 3, "stam": 7.0, "poise": 5.0, "fue": 0.1, "des": 0.9, "fe": 0.0, "ranged": true, "bow": true,
 		"desc": ["Flechas de pluma a distancia; la tercera se abre en abanico. Cargado: una flecha que atraviesa a todos en línea.", "Feather arrows at range; the third fans out. Charged: an arrow that pierces everything in a line."]},
@@ -182,7 +185,16 @@ func weapon_memory_mult(etype: String, wid := "") -> float:
 		return 1.0
 	return 1.2 if int(weapon_kills.get(wid, {}).get(etype, 0)) >= WEAPON_MEMORY[etype][0] else 1.0
 
+const BESTIARY := ["hueco", "acolito", "planidera", "penitente", "bestia", "guardia", "custodio"]
 func record_kill(etype: String) -> void:
+	Ach.add("kills")
+	if etype in BESTIARY:
+		flags["slain_" + etype] = true
+		var n := 0
+		for b in BESTIARY:
+			if flags.get("slain_" + b, false):
+				n += 1
+		Ach.set_max("bestiary", n)
 	if not WEAPON_MEMORY.has(etype):
 		return
 	if not weapon_kills.has(equipped):
@@ -198,6 +210,7 @@ func synergy(id: String) -> bool:
 	var on: bool = has_amulet(a[0]) and has_amulet(a[1])
 	if on and not synergies.has(id):
 		synergies[id] = true
+		Ach.unlock("synergy")
 		G.toast(G.L(["SINERGIA DESCUBIERTA: ", "SYNERGY DISCOVERED: "]) + G.L(SYNERGIES[id].name).to_upper(), Color(0.9, 0.6, 1.0))
 	return on
 
@@ -231,6 +244,7 @@ func route_name() -> String:
 func start_ng() -> void:
 	## Segundo Descenso: conservas personaje, armas y objetos; el mundo vuelve a empezar, más cruel.
 	ng += 1
+	Ach.unlock("ng")
 	flags = {}; quests = {}; last_brasa = "sanct"; dropped_ecos = {}; shadow = {}; unrecovered = 0
 	boss_deaths = {}; spared = {}; shop_bought = {}
 	inventory.erase("key_vestibule")
@@ -359,35 +373,14 @@ var oath := ""                  # juramento activo (jefe)
 var spared := {}                # Arcontes perdonados
 
 # ------------------------------------------------------------------ logros
-const ACHIEVEMENTS := {
-	"first_blood": [["Primera Sangre", "First Blood"], ["Derrota a tu primer enemigo.", "Defeat your first enemy."]],
-	"jailer": [["Sin Llave", "Keyless"], ["Derrota al Carcelero.", "Defeat the Jailer."]],
-	"choir": [["Silencio", "Silence"], ["Haz callar al Coro Hueco.", "Silence the Hollow Choir."]],
-	"seravel": [["Las Puertas", "The Gates"], ["Derrota a Seravel, Guardiana de las Puertas.", "Defeat Seravel, Warden of the Gates."]],
-	"spare": [["Misericordia", "Mercy"], ["Perdona a un Arconte.", "Spare an Archon."]],
-	"secret": [["Lo que se oculta", "What Lies Hidden"], ["Descubre la Capilla Olvidada.", "Discover the Forgotten Chapel."]],
-	"bells": [["Al Revés", "Backwards"], ["Tañe el Himno de la Vigilia como lo cantaba el Coro.", "Ring the Hymn of the Vigil as the Choir sang it."]],
-	"trials": [["Digno del Juicio", "Worthy of Judgement"], ["Supera las tres pruebas de las antesalas.", "Clear all three antechamber trials."]],
-	"executioner": [["Verdugo", "Executioner"], ["Ejecuta a 10 enemigos.", "Execute 10 enemies."]],
-	"featherless": [["Desplumado", "Featherless"], ["Quédate con 3 plumas o menos.", "Be left with 3 feathers or fewer."]],
-	"hymn": [["El Himno Completo", "The Whole Hymn"], ["Reúne las tres páginas del himno.", "Gather all three hymn pages."]],
-	"memories": [["Lo Que Fui", "What I Was"], ["Recupera 4 recuerdos.", "Recover 4 memories."]],
-	"echoes": [["Mil Años Atrás", "A Thousand Years Ago"], ["Presencia todos los ecos del pasado (uno está bien escondido).", "Witness every echo of the past (one is well hidden)."]],
-}
 
 func achieve(id: String) -> void:
-	if flags.get("ach_" + id, false) or not ACHIEVEMENTS.has(id):
-		return
+	## los logros ahora son del perfil (autoload Ach); la partida solo recuerda que ya saltaron
 	flags["ach_" + id] = true
-	G.pickup("icon_quest", G.L(["LOGRO: ", "ACHIEVEMENT: "]) + G.L(ACHIEVEMENTS[id][0]).to_upper(), Color(1, 0.85, 0.35))
-	Audio.sfx("levelup", -10.0)
+	Ach.unlock(id)
 
 func achievements_count() -> int:
-	var n := 0
-	for k in ACHIEVEMENTS:
-		if flags.get("ach_" + k, false):
-			n += 1
-	return n
+	return Ach.count("base")[0]
 var synergies := {}             # sinergias descubiertas
 var ng := 0                     # Segundo Descenso (NG+)
 var spark := false              # Chispa, la brasa viva
@@ -425,6 +418,8 @@ func max_hp() -> float:
 	var hp = (100.0 + (attr.vigor - 1) * 14.0) * (1.0 - 0.3 * desplume())
 	if oath == "choir":
 		hp *= 0.85
+	if flags.get("colossus_heart", false):
+		hp *= 1.15
 	return hp
 
 func diff() -> Dictionary:
@@ -448,7 +443,7 @@ func stamina_regen_mult() -> float:
 	return (1.3 if has_amulet("amulet_wing") else 1.0) * (0.75 if oath == "seravel" else 1.0) * (2.0 if buffs.has("vial_aliento") else 1.0)
 
 func buff_damage_mult() -> float:
-	return 1.3 if buffs.has("incense") else 1.0
+	return (1.3 if buffs.has("incense") else 1.0) * (1.2 if buffs.has("united") else 1.0)
 
 func max_stamina() -> float:
 	return 100.0 + (attr.aguante - 1) * 7.0
@@ -520,6 +515,7 @@ func buy_level(stat: String) -> bool:
 	level += 1
 	attr[stat] += 1
 	skill_points += 1
+	Ach.set_max("level", level)
 	changed.emit()
 	return true
 
@@ -545,6 +541,7 @@ func unlock(id: String) -> bool:
 func add_weapon(id: String) -> void:
 	if not weapons.has(id):
 		weapons[id] = 0
+		Ach.set_max("weapons", weapons.size())
 		G.pickup("weapon_" + WEAPONS[id].sprite, G.T("new_weapon") % G.L(WEAPONS[id].name), Color(1, 0.8, 0.4))
 	changed.emit()
 
@@ -563,6 +560,7 @@ func upgrade_weapon(id: String) -> bool:
 		if c[2] > 0:
 			remove_item("iron", c[2])
 	weapons[id] = lv + 1
+	Ach.set_max("upgrade", lv + 1)
 	changed.emit()
 	return true
 
@@ -629,6 +627,7 @@ func engrave(wid: String, inf: String) -> bool:
 	ecos -= 400
 	remove_item("iron", 1)
 	infusions[wid] = inf
+	Ach.unlock("engrave")
 	changed.emit()
 	return true
 
@@ -675,6 +674,8 @@ func buy(id: String, limit: int) -> bool:
 func grant_ascension(boss: String, level: int) -> void:
 	var first := int(ascension.get(boss, 0)) < level
 	ascension[boss] = max(int(ascension.get(boss, 0)), level)
+	if level >= 3:
+		Ach.unlock("ascension")
 	if first:
 		var r: Dictionary = ASCENSION_REWARDS[level]
 		ecos += r.ecos
@@ -684,11 +685,10 @@ func grant_ascension(boss: String, level: int) -> void:
 	changed.emit()
 
 func unlock_memory(id: String) -> bool:
-	if memories.size() >= 3:
-		achieve("memories")
 	if memories.has(id):
 		return false
 	memories[id] = true
+	Ach.set_max("memories", memories.size())
 	changed.emit()
 	return true
 
@@ -724,6 +724,8 @@ func quest_step(id: String, step_id: String) -> void:
 	if found >= 0:
 		quests[id].step = found + 1
 		st = found
+		if id == "main1":
+			Ach.set_max("main_steps", found + 1)
 		Audio.sfx("quest", -4.0)
 		if quests[id].step >= q.steps.size():
 			_complete(id)
@@ -735,6 +737,8 @@ func quest_progress(id: String, n := 1) -> void:
 		return
 	var q: Dictionary = QUESTS[id]
 	quests[id].progress = min(q.count, quests[id].progress + n)
+	if id == "hymns":
+		Ach.set_max("pages", quests[id].progress)
 	if quests[id].progress >= q.count:
 		_complete(id)
 	quest_updated.emit(id)
@@ -856,5 +860,11 @@ func load_game() -> bool:
 	f.close()
 	if data is Dictionary:
 		from_dict(data)
+		# partidas antiguas: sus logros pasan al perfil sin avisos
+		var legacy := []
+		for k in flags:
+			if str(k).begins_with("ach_"):
+				legacy.append(str(k).substr(4))
+		Ach.import_legacy(legacy)
 		return true
 	return false

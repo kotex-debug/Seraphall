@@ -154,6 +154,8 @@ const STELAE := [
 ## Pensamientos del protagonista (y, a veces, la Voz) la primera vez que entra en cada zona.
 ## "" = pensamiento propio; "???" = la Voz.
 const AREA_THOUGHTS := {
+	"area_cornisa": [["", ["Esto no es una cornisa. Es un hombro. Algo enorme duerme debajo de mí.", "This is no ledge. It's a shoulder. Something enormous sleeps beneath me."]]],
+	"area_cadalso": [["", ["Conozco este sitio. No lo recuerdo... pero mis manos sí.", "I know this place. I don't remember it... but my hands do."]]],
 	"area_chains": [["", ["Cadenas por todas partes. Ninguna atada a nada. Como si lo encadenado se hubiera ido... o aún no hubiera llegado.", "Chains everywhere. None of them tied to anything. As if what they held had left... or had yet to arrive."]],
 		["", ["Me duelen los omóplatos al verlas. Ahí es donde estaban mis alas.", "My shoulder blades ache at the sight. That's where my wings used to be."]]],
 	"area_gallery": [["", ["Retratos sin rostro. Alguien rascó cada cara con las uñas, una a una.", "Faceless portraits. Someone scratched every face away with their nails, one by one."]],

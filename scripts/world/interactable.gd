@@ -124,6 +124,19 @@ func _ready() -> void:
 			light.energy = 0.35
 			light.position = Vector2(0, -14)
 			add_child(light)
+		"altar":
+			# altares de las batallas secretas: el tajo del Verdugo o el Cuerno del Abismo
+			var art := AltarArt.new()
+			art.style = str(data.get("style", "block"))
+			add_child(art)
+			radius = 24.0
+			light = PointLight2D.new()
+			light.texture = Fx.tex("light")
+			light.color = Color(1, 0.3, 0.38) if art.style == "block" else Color(0.55, 0.9, 1.0)
+			light.texture_scale = 1.2
+			light.energy = 0.8
+			light.position = Vector2(0, -10)
+			add_child(light)
 		"lore":
 			spr.texture = Fx.tex("stele")
 			spr.region_enabled = true
@@ -170,8 +183,6 @@ func set_opened() -> void:
 func prompt() -> String:
 	match kind:
 		"brasa":
-			if not used and id != "sanct":
-				return G.T("interact") % (G.T("offer_feather") + " (%d)" % Prog.wing_feathers)
 			return G.T("interact") % (G.T("rest") if used else G.T("light_brasa"))
 		"npc":
 			return G.T("interact") % (G.T("talk") + " - " + G.L(data.get("name", ["", ""])))
@@ -183,6 +194,10 @@ func prompt() -> String:
 			return G.T("interact") % G.T("ring_bell")
 		"lore":
 			return G.T("interact") % G.T("read")
+		"altar":
+			if str(data.get("style", "")) == "horn":
+				return G.T("interact") % G.L(["Soplar el cuerno", "Blow the horn"])
+			return G.T("interact") % G.L(["Tocar la hoja", "Touch the blade"])
 	return ""
 
 ## PNJ que recorre un camino en bucle (Sael sube la Escalinata, se desvanece arriba y reaparece abajo)
@@ -302,3 +317,52 @@ func _draw() -> void:
 	draw_rect(r, Color(0.95, 0.92, 0.86, 0.92 * _bark_a))
 	draw_colored_polygon(PackedVector2Array([Vector2(-3, -36), Vector2(3, -36), Vector2(0, -32)]), Color(0.95, 0.92, 0.86, 0.92 * _bark_a))
 	f.draw_string(get_canvas_item(), Vector2(-w / 2.0, -40), _bark, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.15, 0.08, 0.15, _bark_a))
+
+
+class AltarArt extends Node2D:
+	## Tajo del Verdugo (madera negra con la hoja clavada) o Cuerno del Abismo (hueso encadenado a la roca)
+	var style := "block"
+	var t := 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var ink := Color(0.07, 0.04, 0.1)
+		if style == "block":
+			# tajo
+			draw_rect(Rect2(-13, -9, 26, 11), ink)
+			draw_rect(Rect2(-12, -8, 24, 9), Color(0.2, 0.12, 0.12))
+			draw_rect(Rect2(-12, -8, 24, 2), Color(0.32, 0.2, 0.2))
+			for i in 3:
+				draw_line(Vector2(-10 + i * 8, -5), Vector2(-6 + i * 8, -1), Color(0.12, 0.07, 0.08), 1.0)
+			# hoja clavada en vertical, con runas que laten
+			var p := 0.5 + 0.5 * sin(t * 2.5)
+			draw_rect(Rect2(-4, -34, 8, 28), ink)
+			draw_rect(Rect2(-3, -33, 6, 26), Color(0.3, 0.28, 0.36))
+			draw_rect(Rect2(-3, -33, 1, 26), Color(0.6, 0.58, 0.7))
+			for k in 3:
+				draw_rect(Rect2(-1, -29 + k * 7, 2, 2), Color(1, 0.2 + 0.2 * p, 0.3, 0.7 + 0.3 * p))
+			draw_rect(Rect2(-7, -37, 14, 3), ink)
+			draw_rect(Rect2(-6, -36, 12, 1), Color(0.85, 0.65, 0.25))
+			draw_rect(Rect2(-2, -44, 4, 7), ink)
+			draw_rect(Rect2(-1, -43, 2, 6), Color(0.3, 0.16, 0.2))
+			draw_circle(Vector2(0, -20), 10.0 + p * 2.0, Color(1, 0.2, 0.3, 0.06))
+		else:
+			# roca, cadena y cuerno curvo de hueso
+			draw_colored_polygon(PackedVector2Array([Vector2(-16, 2), Vector2(-12, -10), Vector2(10, -12), Vector2(17, 2)]), ink)
+			draw_colored_polygon(PackedVector2Array([Vector2(-15, 1), Vector2(-11, -9), Vector2(9, -11), Vector2(16, 1)]), Color(0.3, 0.28, 0.36))
+			var pts := PackedVector2Array()
+			for i in 13:
+				var a := PI * 1.05 - i * 0.11
+				pts.append(Vector2(cos(a) * 16.0 + 4.0, sin(a) * 12.0 - 16.0))
+			draw_polyline(pts, ink, 8.0)
+			draw_polyline(pts, Color(0.86, 0.8, 0.66), 5.0)
+			draw_polyline(pts, Color(1, 0.96, 0.85), 1.0)
+			draw_circle(pts[0], 5.0, ink)
+			draw_circle(pts[0], 4.0, Color(0.7, 0.62, 0.5))
+			draw_circle(pts[0], 2.0, Color(0.15, 0.1, 0.12))
+			for k in 4:
+				draw_arc(Vector2(-6 + k * 5, -6), 2.0, 0, TAU, 8, Color(0.45, 0.42, 0.5), 1.5)
+			var g := 0.5 + 0.5 * sin(t * 1.7)
+			for k2 in 3:
+				draw_rect(Rect2(Vector2(-2 + k2 * 5, -23 + k2 * 2), Vector2(1, 1)), Color(0.55, 0.95, 1.0, 0.5 + 0.5 * g))

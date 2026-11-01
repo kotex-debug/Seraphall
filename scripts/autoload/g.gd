@@ -23,7 +23,7 @@ var tele_boost := false   # telegráficos más gruesos y visibles
 var photo_mode := false
 var bindings := {}        # acción -> "k:<keycode>" | "m:<botón>" (personalizadas por el jugador)
 const REBINDABLE := ["up", "down", "left", "right", "attack", "heavy", "dash", "parry", "spell1", "spell2", "wrath",
-	"heal", "item", "interact", "menu", "map", "photo"]
+	"heal", "item", "interact", "menu", "map", "photo", "ping"]
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -134,6 +134,8 @@ const TXT := {
 	"area_atrio": ["Atrio de las Voces", "Atrium of Voices"],
 	"area_juicio": ["Antesala del Juicio", "Antechamber of Judgement"],
 	"area_capilla": ["Capilla Olvidada", "Forgotten Chapel"],
+	"area_cadalso": ["El Cadalso", "The Scaffold"],
+	"area_cornisa": ["Cornisa del Coloso", "Colossus Ledge"],
 	"trial_celdas": ["LAS CELDAS SE ABREN", "THE CELLS OPEN"],
 	"trial_umbral": ["EL UMBRAL DEL JUICIO", "THE THRESHOLD OF JUDGEMENT"],
 	"trial_label": ["PRUEBA", "TRIAL"],
@@ -152,6 +154,8 @@ const TXT := {
 	"sub_carcelero": ["Guardián de la Llave", "Keeper of the Key"],
 	"sub_choir": ["Tres voces, una sola alma", "Three voices, one soul"],
 	"sub_seravel": ["Arconte del Estrato I · La primera en caer", "Archon of Stratum I · The first to fall"],
+	"sub_verdugo": ["Batalla secreta · El que fuiste", "Secret battle · The one you were"],
+	"sub_coloso": ["Batalla secreta · Lo que sostenía la Espiral", "Secret battle · What held the Spiral"],
 	"sub_custodio": ["Estatua que aún recuerda su juramento", "A statue that still remembers its oath"],
 	"sealed_hint": ["Algo cierra el paso. Quizá haya otra forma de abrirlo.", "Something bars the way. Perhaps there's another way to open it."],
 	"contemplate": ["Contemplar", "Contemplate"],
@@ -159,6 +163,7 @@ const TXT := {
 	"tab_inventory": ["Inventario", "Inventory"],
 	"tab_map": ["Mapa", "Map"],
 	"tab_codex": ["Códice", "Codex"],
+	"tab_ach": ["Logros", "Feats"],
 	"use": ["Usar", "Use"],
 	"quick_slot": ["Asignar a [X]", "Assign to [X]"],
 	"consumables": ["Consumibles", "Consumables"],
@@ -178,6 +183,8 @@ const TXT := {
 	"lance": ["Lanza de Luz", "Lance of Light"], "nova": ["Nova de Ceniza", "Ash Nova"], "orbit": ["Espadas Orbitantes", "Orbiting Blades"],
 	"wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"boss_seravel": ["SERAVEL, GUARDIANA DE LAS PUERTAS", "SERAVEL, WARDEN OF THE GATES"],
+	"boss_verdugo": ["EL VERDUGO", "THE EXECUTIONER"],
+	"boss_coloso": ["EL COLOSO DEL ABISMO", "THE ABYSS COLOSSUS"],
 	"boss_carcelero": ["EL CARCELERO", "THE JAILER"],
 	"boss_choir": ["EL CORO HUECO", "THE HOLLOW CHOIR"],
 	"area_nimbo": ["Sala del Nimbo", "Hall of the Nimbus"],
@@ -197,8 +204,6 @@ const TXT := {
 	"svc_nyx": ["NYX - TIENDA", "NYX - SHOP"], "svc_velaria": ["SOR VELARIA - ASCENSIÓN", "SISTER VELARIA - ASCENSION"],
 	"feather_torn": ["TE HAN ARRANCADO UNA PLUMA", "A FEATHER HAS BEEN TORN AWAY"],
 	"desplumado_mode": ["DESPLUMADO", "FEATHERLESS"],
-	"offer_feather": ["Encender (cuesta una pluma)", "Offer a feather and kindle"],
-	"no_feathers": ["No te quedan plumas que ofrecer.", "You have no feathers left to offer."],
 	"shadow_rises": ["TU SOMBRA SE ALZA", "YOUR SHADOW RISES"],
 	"shadow_name": ["Sombra del Desplumado", "Shade of the Featherless"],
 	"spare": ["Perdonar", "Spare"], "spared": ["ARCONTE PERDONADO", "ARCHON SPARED"],
@@ -321,7 +326,7 @@ func _setup_input() -> void:
 		"up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN], "left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SHIFT], "heavy": [KEY_SPACE], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
 		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
-		"map": [KEY_M], "photo": [KEY_P], "shot": [KEY_F12],
+		"map": [KEY_M], "photo": [KEY_P], "shot": [KEY_F12], "ping": [KEY_G],
 	}
 	for action in keys:
 		if not InputMap.has_action(action):

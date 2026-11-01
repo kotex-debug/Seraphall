@@ -22,6 +22,7 @@ var _boss: Enemy
 var minimap: Minimap
 var combo_ui: ComboCounter
 var hurt_ui: HurtIndicator
+var coop: CoopOverlay
 var pickups: PickupFeed
 
 func _ready() -> void:
@@ -58,6 +59,10 @@ func _ready() -> void:
 	hurt_ui = HurtIndicator.new()
 	hurt_ui.size = Vector2(640, 360)
 	root.add_child(hurt_ui)
+	coop = CoopOverlay.new()
+	coop.hud = self
+	coop.size = Vector2(640, 360)
+	root.add_child(coop)
 	prompt = FloatingPrompt.new()
 	prompt.hud = self
 	root.add_child(prompt)
@@ -309,7 +314,7 @@ func end_card(title: String, body: String) -> void:
 		[G.L(["PLUMAS", "FEATHERS"]), "%d/%d" % [Prog.wing_feathers, Prog.WING_MAX]],
 		[G.L(["RECUERDOS", "MEMORIES"]), "%d/%d" % [Prog.memories.size(), Prog.MEMORIES.size()]],
 		[G.L(["ECOS", "ECHOES"]), "%d/%d" % [echoes, Lore.GHOST_ECHOES.size()]],
-		[G.L(["LOGROS", "FEATS"]), "%d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()]],
+		[G.L(["LOGROS", "FEATS"]), Ach.percent_text()],
 	]
 	var row := Control.new()
 	row.position = Vector2(60, 262)
@@ -748,9 +753,9 @@ class StatusCluster extends Control:
 			draw_texture(ic, Vector2(HX + i * 13, y), Color(1, 1, 1, 1.0 if on else 0.25))
 		var bx := HX + Prog.flask_count() * 13 + 6
 		for b in Prog.buffs:
-			var bic := Fx.tex("icon_" + Prog.ITEMS[b].icon)
+			var bic := Fx.tex("icon_" + (str(Prog.ITEMS[b].icon) if Prog.ITEMS.has(b) else "ala"))
 			draw_texture(bic, Vector2(bx, fy))
-			var frac: float = Prog.buffs[b] / 30.0
+			var frac: float = Prog.buffs[b] / (30.0 if Prog.ITEMS.has(b) else 10.0)
 			draw_rect(Rect2(Vector2(bx, fy + 17), Vector2(16, 2)), UIKit.INK)
 			draw_rect(Rect2(Vector2(bx, fy + 17), Vector2(16 * frac, 2)), UIKit.GOLD)
 			bx += 20
@@ -1101,6 +1106,8 @@ class BossPanel extends Control:
 		"choir": {"deep": Color(0.16, 0.03, 0.28), "bright": Color(0.78, 0.42, 1.0), "frame": Color(0.36, 0.25, 0.5), "accent": Color(0.85, 0.7, 1.0), "glow": Color(0.7, 0.45, 1.0)},
 		"seravel": {"deep": Color(0.4, 0.26, 0.04), "bright": Color(1.0, 0.86, 0.42), "frame": Color(0.85, 0.66, 0.25), "accent": Color(1.0, 0.95, 0.75), "glow": Color(1, 0.85, 0.5)},
 		"custodio": {"deep": Color(0.3, 0.27, 0.22), "bright": Color(0.95, 0.88, 0.62), "frame": Color(0.72, 0.7, 0.68), "accent": Color(1.0, 0.85, 0.45), "glow": Color(1, 0.9, 0.6)},
+		"verdugo": {"deep": Color(0.3, 0.02, 0.06), "bright": Color(1.0, 0.25, 0.35), "frame": Color(0.25, 0.22, 0.3), "accent": Color(1.0, 0.8, 0.45), "glow": Color(1, 0.3, 0.4)},
+		"coloso": {"deep": Color(0.05, 0.22, 0.3), "bright": Color(0.5, 0.92, 1.0), "frame": Color(0.42, 0.4, 0.5), "accent": Color(0.7, 1.0, 1.0), "glow": Color(0.5, 0.9, 1.0)},
 	}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1287,6 +1294,27 @@ class BossPanel extends Control:
 				var hr := 14.0 + sin(_t * 2.0)
 				draw_arc(hc, hr, 0, TAU, 32, Color(glow, 0.25), 4.0)
 				draw_arc(hc, hr, 0, TAU, 32, Color(acc, 0.8) if boss.phase != 2 else Color(1, 0.3, 0.35, 0.9), 1.0)
+			"verdugo":
+				# hojas cruzadas a los lados y una gota de sangre que cae
+				for side5 in [-1.0, 1.0]:
+					var bp := Vector2(cx + side5 * (BW / 2.0 + 12.0), BY + BH / 2.0)
+					for k5 in [-1.0, 1.0]:
+						var d5 := Vector2.from_angle(PI / 2.0 + k5 * 0.6) * 12.0
+						draw_line(bp - d5, bp + d5, UIKit.INK, 4.0)
+						draw_line(bp - d5, bp + d5, fr.lightened(0.4), 2.0)
+					draw_rect(Rect2(bp - Vector2(3, 1), Vector2(6, 2)), acc)
+				var dy := fmod(_t * 18.0, 22.0)
+				draw_rect(Rect2(Vector2(cx - 1, BY + BH + 2 + dy), Vector2(2, 3)), Color(1, 0.2, 0.3, 1.0 - dy / 22.0))
+				_secret_tag(cx)
+			"coloso":
+				# bloques de piedra con runas que laten
+				for side6 in [-1.0, 1.0]:
+					for k6 in 3:
+						var sp6 := Vector2(cx + side6 * (BW / 2.0 + 6.0 + k6 * 7.0), BY - 2 + k6 * 3)
+						draw_rect(Rect2(sp6 - Vector2(3, 3), Vector2(7, 7 + k6 * 2)), UIKit.INK)
+						draw_rect(Rect2(sp6 - Vector2(2, 2), Vector2(5, 5 + k6 * 2)), fr)
+						draw_rect(Rect2(sp6, Vector2(1, 1)), Color(acc, 0.5 + 0.5 * sin(_t * 3.0 + k6)))
+				_secret_tag(cx)
 			"custodio":
 				for side4 in [-1.0, 1.0]:
 					var sp := Vector2(cx + side4 * (BW / 2.0 + 10.0), BY + BH / 2.0)
@@ -1318,6 +1346,14 @@ class BossPanel extends Control:
 			var ay := ty - 19.0 if bstyle != "seravel" else ty - 36.0
 			UIKit.slash_band(self, Rect2(Vector2(cx - aw / 2.0 - 7, ay - 10), Vector2(aw + 14, 12)), UIKit.PINK, 4.0)
 			_txt(f, Vector2(cx - aw / 2.0, ay), at, 8, UIKit.WHITE)
+
+	func _secret_tag(cx: float) -> void:
+		var f := UIKit.font("head")
+		var tg := G.L(["BATALLA SECRETA", "SECRET BATTLE"])
+		var w := f.get_string_size(tg, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		var y := BY - 34.0
+		UIKit.slash_band(self, Rect2(Vector2(cx - w / 2.0 - 8, y - 9), Vector2(w + 16, 12)), UIKit.GOLD, 4.0)
+		_txt(f, Vector2(cx - w / 2.0, y), tg, 8, UIKit.INK)
 
 	func _draw_over() -> void:
 		var ci := over
@@ -1587,6 +1623,7 @@ class ComboCounter extends Control:
 	func hit(n: int) -> void:
 		var old := _rank()
 		count += n
+		Ach.set_max("combo", count)
 		timer = KEEP
 		pop = 1.0
 		if _rank() != old and _rank() != "":
@@ -1785,3 +1822,122 @@ class DeathScreen extends Control:
 		var w := f.get_string_size(_line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 		f.draw_string_outline(get_canvas_item(), Vector2(320 - w / 2.0, 244), _line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, Color(0, 0, 0, la))
 		f.draw_string(get_canvas_item(), Vector2(320 - w / 2.0, 244), _line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.95, 0.8, 0.8, la))
+
+
+# ====================================================================== cooperativo
+class CoopOverlay extends Control:
+	## Ficha del compañero (retrato, vida, plumas, distancia) y flechas en el borde hacia él y hacia
+	## las marcas que estén fuera de la pantalla. Si cae, la ficha parpadea y avisa de atrapar su pluma.
+	var hud: Node
+	var t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _screen(p: Vector2) -> Vector2:
+		return get_viewport().get_canvas_transform() * p
+	func _draw() -> void:
+		var w: Node = hud.world
+		if w == null or G.photo_mode:
+			return
+		var lp: Player = w.local_player()
+		var mate: Player = w.partner()
+		var view := Rect2(Vector2(14, 14), size - Vector2(28, 28))
+		if mate and lp:
+			_card(mate, lp)
+			var sp := _screen(mate.global_position + Vector2(0, -12))
+			if not view.has_point(sp):
+				_edge_arrow(sp, Look.color_of(mate.look, "cloak").lightened(0.3), mate.state == "downed", lp.global_position.distance_to(mate.global_position) / 16.0, true)
+		for pid in w.pings:
+			var pm: Node2D = w.pings[pid]
+			if is_instance_valid(pm):
+				var pp := _screen(pm.global_position + Vector2(0, -20))
+				if not view.has_point(pp) and lp:
+					_edge_arrow(pp, pm.get("col"), pm.get("kind") == "enemy", lp.global_position.distance_to(pm.global_position) / 16.0, false)
+	func _card(mate: Player, lp: Player) -> void:
+		var r := Rect2(Vector2(6, 92), Vector2(124, 30))
+		var down := mate.state == "downed"
+		var dead := mate.state == "dead"
+		var bc := UIKit.RED.lerp(UIKit.PINK, 0.5 + 0.5 * sin(t * 8.0)) if down else Color(0.32, 0.2, 0.4)
+		draw_rect(Rect2(r.position + Vector2(2, 2), r.size), Color(0, 0, 0, 0.45))
+		draw_rect(r.grow(1), UIKit.INK)
+		draw_rect(r, Color(0.1, 0.05, 0.14, 0.88))
+		draw_rect(Rect2(r.position, Vector2(2, r.size.y)), bc)
+		# medallón con el color de sus alas
+		var mc := r.position + Vector2(15, 15)
+		var wc := Look.color_of(mate.look, "wing")
+		draw_circle(mc, 11.0, UIKit.INK)
+		draw_circle(mc, 10.0, Look.color_of(mate.look, "cloak"))
+		draw_circle(mc, 7.0, Color(0.13, 0.06, 0.17))
+		UIKit.wing(self, mc + Vector2(-1, 2), -1.0, 7.0, wc, 0.8)
+		UIKit.wing(self, mc + Vector2(1, 2), 1.0, 7.0, wc, 0.8)
+		draw_arc(mc + Vector2(0, -5), 3.5, PI, TAU, 8, Look.color_of(mate.look, "halo"), 1.0)
+		var f := UIKit.font("head")
+		var ft := UIKit.font("title")
+		# distancia y dirección
+		var to := mate.global_position - lp.global_position
+		var dist := "%dm" % int(to.length() / 16.0)
+		var dw := f.get_string_size(dist, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		var nm := Look.display_name(mate.look).to_upper()
+		var nmax := r.size.x - 30.0 - dw - 18.0
+		while nm.length() > 3 and f.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x > nmax:
+			nm = nm.substr(0, nm.length() - 1)
+		f.draw_string_outline(get_canvas_item(), r.position + Vector2(30, 10), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), r.position + Vector2(30, 10), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+		f.draw_string(get_canvas_item(), Vector2(r.end.x - dw - 12, r.position.y + 10), dist, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+		var ac := Vector2(r.end.x - 6, r.position.y + 7)
+		var d := to.normalized() if to.length() > 1.0 else Vector2.DOWN
+		draw_colored_polygon(PackedVector2Array([ac + d * 4.0, ac + d.orthogonal() * 2.5 - d * 2.0, ac - d.orthogonal() * 2.5 - d * 2.0]), UIKit.GOLD)
+		# vida
+		var hb := Rect2(r.position + Vector2(30, 14), Vector2(88, 4))
+		draw_rect(hb.grow(1), UIKit.INK)
+		draw_rect(hb, Color(0.25, 0.08, 0.12))
+		var hr := clampf(mate.hp_ratio(), 0.0, 1.0) if not (down or dead) else 0.0
+		draw_rect(Rect2(hb.position, Vector2(hb.size.x * hr, 4)), UIKit.RED.lerp(UIKit.PINK, 0.3))
+		draw_rect(Rect2(hb.position, Vector2(hb.size.x * hr, 1)), Color(1, 0.7, 0.75))
+		# plumas
+		for i in Prog.WING_MAX:
+			var have := i < int(mate.feathers_shown)
+			draw_rect(Rect2(r.position + Vector2(30 + i * 5, 22), Vector2(3, 4)), wc if have else Color(0.25, 0.16, 0.3))
+		if down:
+			var msg := G.L(["¡CAÍDO! ATRAPA SU PLUMA", "DOWN! CATCH THEIR FEATHER"])
+			var mw := f.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			var mp := Vector2(r.position.x, r.end.y + 11)
+			UIKit.slash_band(self, Rect2(mp - Vector2(2, 9), Vector2(mw + 10, 12)), UIKit.RED, 3.0)
+			f.draw_string(get_canvas_item(), mp + Vector2(3, 0), msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+		elif dead:
+			ft.draw_string(get_canvas_item(), r.position + Vector2(70, 28), G.L(["en la Brasa", "at the Ember"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+	func _edge_arrow(sp: Vector2, col: Color, alert: bool, meters: float, is_mate: bool) -> void:
+		var c := size / 2.0
+		var d := (sp - c)
+		if d.length() < 1.0:
+			return
+		# punto del borde en la dirección del objetivo
+		var hx := size.x / 2.0 - 22.0
+		var hy := size.y / 2.0 - 22.0
+		var k := minf(hx / maxf(0.001, absf(d.x)), hy / maxf(0.001, absf(d.y)))
+		var p := c + d * k
+		var n := d.normalized()
+		var pulse := 1.0 + (0.25 * sin(t * 10.0) if alert else 0.08 * sin(t * 4.0))
+		var tip := p + n * 9.0 * pulse
+		var tri := PackedVector2Array([tip, p - n * 3.0 + n.orthogonal() * 6.0 * pulse, p - n * 3.0 - n.orthogonal() * 6.0 * pulse])
+		var outl := PackedVector2Array()
+		for q in tri:
+			outl.append(q + (q - p).normalized() * 1.5)
+		draw_colored_polygon(outl, UIKit.INK)
+		draw_colored_polygon(tri, UIKit.RED if alert else col)
+		var ic := p - n * 12.0
+		draw_circle(ic, 6.0, UIKit.INK)
+		draw_circle(ic, 5.0, UIKit.RED if alert else col.darkened(0.3))
+		if is_mate:
+			UIKit.wing(self, ic + Vector2(-1, 1), -1.0, 4.0, UIKit.WHITE, 0.8)
+			UIKit.wing(self, ic + Vector2(1, 1), 1.0, 4.0, UIKit.WHITE, 0.8)
+		else:
+			UIKit.diamond(self, ic, 2.5, UIKit.WHITE)
+		var f := UIKit.font("head")
+		var txt := "%dm" % int(meters)
+		var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		var tp := ic - n * 12.0 + Vector2(-w / 2.0, 3)
+		f.draw_string_outline(get_canvas_item(), tp, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), tp, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)

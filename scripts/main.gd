@@ -1192,6 +1192,172 @@ func _run_autotest() -> void:
 			await _shot(out + "/h3.png")
 			print("AUTOTEST_HAIR3_OK")
 			get_tree().quit()
+		"ach":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			Ach.import_legacy(["awaken", "first_brasa", "nimbo", "first_blood", "jailer", "choir", "spare", "secret", "bells", "spark"])
+			Ach.set_max("kills", 63)
+			Ach.set_max("urns", 22)
+			Ach.set_max("parries", 9)
+			Ach.set_max("brasas", 2)
+			await get_tree().create_timer(0.5).timeout
+			Ach.unlock("seravel")
+			for tt in [0.25, 0.6, 1.1, 2.0]:
+				await get_tree().create_timer(tt - (0.0 if tt == 0.25 else 0.0)).timeout
+				await _shot(out + "/a0%d_logro_%d.png" % [int(tt * 10), int(tt * 100)])
+			await get_tree().create_timer(3.0).timeout
+			Ach.unlock("sb_verdugo")
+			await get_tree().create_timer(0.7).timeout
+			await _shot(out + "/a10_epico_a.png")
+			await get_tree().create_timer(0.9).timeout
+			await _shot(out + "/a11_epico_b.png")
+			await get_tree().create_timer(4.5).timeout
+			Ach.add("urns", 0.0)
+			Ach.set_max("kills", 50)
+			Ach.set_max("cross", 12)
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/a12_progreso.png")
+			await get_tree().create_timer(3.0).timeout
+			w.menu.open("ach", {})
+			await get_tree().create_timer(0.9).timeout
+			await _shot(out + "/a20_menu_logros.png")
+			w.menu._on_ach_filter("challenge")
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/a21_desafios.png")
+			w.menu._on_ach_filter("dlc")
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/a22_dlc.png")
+			w.menu._on_ach_filter("secret")
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/a23_secretos.png")
+			print("ACH pct=", Ach.percent(), " xp=", Ach.xp_total(), " count=", Ach.count("base"))
+			print("AUTOTEST_ACH_OK")
+			get_tree().quit()
+		"coopui":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			lp.respawn_at(w.tile_pos(49, 66))
+			var mate: Player = w._spawn_player(77, 2)
+			mate.set_look(Look.defaults_p2(), 7)
+			mate.position = w.tile_pos(49, 60)
+			mate.set("_net_pos", mate.position)
+			mate.set("_net_hp_ratio", 0.62)
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/k01_companero_cerca.png")
+			mate.position = w.tile_pos(80, 62)
+			mate.set("_net_pos", mate.position)
+			await get_tree().create_timer(0.8).timeout
+			await _shot(out + "/k02_flecha.png")
+			w._ping(Net.my_id(), w.tile_pos(56, 63))
+			w._ping(77, w.tile_pos(40, 58))
+			await get_tree().create_timer(0.8).timeout
+			await _shot(out + "/k03_marcas.png")
+			mate.state = "downed"
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/k04_caido.png")
+			w.on_partner_revived(true)
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/k05_alas_unidas.png")
+			print("AUTOTEST_COOPUI_OK")
+			get_tree().quit()
+		"verdugo":
+			var lp: Player = w.local_player()
+			Prog.level = 20
+			Prog.attr.vigor = 12
+			lp.refresh_stats(true)
+			lp.iframes = 9999.0
+			for k in Lore.GHOST_ECHOES.keys():
+				Prog.flags["echo_" + k] = true
+			w._open_cadalso(false)
+			w.wflags["broken_capilla"] = true
+			w._apply_world_flags(true)
+			lp.respawn_at(w.tile_pos(84.5, 85.5))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/v01_reja_abierta.png")
+			lp.respawn_at(w.tile_pos(84.5, 91.5))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/v02_cadalso.png")
+			w._server_secret("verdugo")
+			await get_tree().create_timer(1.6).timeout
+			await _shot(out + "/v03_aparece.png")
+			await get_tree().create_timer(2.6).timeout
+			var vb: Enemy = w._enemy_of("verdugo")
+			print("VERDUGO active=", vb.active, " vis=", vb.visible, " hp=", vb.hp)
+			for k2 in 6:
+				await get_tree().create_timer(0.7).timeout
+				await _shot(out + "/v1%d_duelo.png" % k2)
+			w._server_damage(vb.idx, vb.max_hp * 0.55, Vector2.RIGHT, 0.0, false)
+			await get_tree().create_timer(1.2).timeout
+			await _shot(out + "/v20_fase2.png")
+			for k3 in 6:
+				await get_tree().create_timer(0.8).timeout
+				await _shot(out + "/v3%d_fase2.png" % k3)
+			w._server_damage(vb.idx, vb.max_hp, Vector2.RIGHT, 0.0, false)
+			await get_tree().create_timer(4.5).timeout
+			await _shot(out + "/v40_recompensa.png")
+			print("VERDUGO weapon=", Prog.weapons.has("verdugo"), " ach=", Ach.is_unlocked("sb_verdugo"))
+			Prog.equipped = "verdugo"
+			lp._update_weapon_sprite()
+			for k4 in 3:
+				lp.stamina = Prog.max_stamina()
+				lp.state = "move"
+				lp.combo_window = 0.3
+				lp.aim = Vector2.RIGHT
+				lp._start_attack()
+				await get_tree().create_timer(0.4).timeout
+			await _shot(out + "/v41_hoja.png")
+			print("AUTOTEST_VERDUGO_OK")
+			get_tree().quit()
+		"coloso":
+			var lp: Player = w.local_player()
+			Prog.level = 20
+			Prog.attr.vigor = 12
+			lp.refresh_stats(true)
+			lp.iframes = 9999.0
+			w.wflags["seravel_dead"] = true
+			lp.respawn_at(w.tile_pos(32, 84))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/c01_muro.png")
+			w.wflags["broken_cornisa"] = true
+			w._apply_world_flags(true)
+			lp.respawn_at(w.tile_pos(24, 70))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/c02_cornisa.png")
+			w._server_secret("coloso")
+			for k in 4:
+				await get_tree().create_timer(1.1).timeout
+				await _shot(out + "/c0%d_alzarse.png" % (k + 3))
+			await get_tree().create_timer(1.0).timeout
+			var cb: Enemy = w._enemy_of("coloso")
+			print("COLOSO active=", cb.active, " hp=", cb.hp)
+			for k2 in 10:
+				await get_tree().create_timer(0.75).timeout
+				await _shot(out + "/c1%d_combate.png" % k2)
+				if cb.get("_vuln"):
+					print("COLOSO vulnerable at ", cb.global_position)
+					w._server_damage(cb.idx, 60.0, Vector2.ZERO, 0.0, false)
+			cb.hp = cb.max_hp * 0.52
+			w._server_damage(cb.idx, cb.max_hp * 0.05, Vector2.ZERO, 0.0, false)
+			cb.set("_vuln", true)
+			w._server_damage(cb.idx, cb.max_hp * 0.05, Vector2.ZERO, 0.0, false)
+			await get_tree().create_timer(1.0).timeout
+			await _shot(out + "/c20_fase2.png")
+			for k3 in 8:
+				await get_tree().create_timer(0.8).timeout
+				await _shot(out + "/c3%d_fase2.png" % k3)
+			cb.set("_vuln", true)
+			w._server_damage(cb.idx, cb.max_hp, Vector2.ZERO, 0.0, false)
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/c40_cae.png")
+			await get_tree().create_timer(3.0).timeout
+			await _shot(out + "/c41_recompensa.png")
+			print("COLOSO storm=", Prog.flags.get("storm_wing", false), " ach=", Ach.is_unlocked("sb_coloso"))
+			lp.respawn_at(w.tile_pos(24, 70))
+			lp._start_dash(Vector2.RIGHT)
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/c42_ala_tormenta.png")
+			print("AUTOTEST_COLOSO_OK")
+			get_tree().quit()
 		"weapons":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
@@ -1473,6 +1639,9 @@ func _run_autotest() -> void:
 				Prog.flags["killed_" + kt] = true
 			for ak in ["first_blood", "jailer", "secret", "bells"]:
 				Prog.flags["ach_" + ak] = true
+			Ach.import_legacy(["first_blood", "jailer", "secret", "bells", "awaken", "first_brasa", "nimbo"])
+			Ach.set_max("kills", 37)
+			Ach.set_max("urns", 12)
 			for qid in ["feathers", "husks", "hymns", "jailer_hunt"]:
 				Prog.start_quest(qid)
 			Prog.quest_progress("feathers", 3)

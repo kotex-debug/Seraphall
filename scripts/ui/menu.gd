@@ -17,9 +17,9 @@ var _inv_filter := "all"
 var _info: Control
 var _anim_dir := 1
 
-const TABS := ["char", "skills", "inventory", "weapons", "quests", "codex", "map", "controls", "options"]
+const TABS := ["char", "skills", "inventory", "weapons", "quests", "codex", "ach", "map", "controls", "options"]
 const TAB_KEYS := {"char": "tab_char", "skills": "tab_skills", "inventory": "tab_inventory", "weapons": "tab_weapons",
-	"quests": "tab_quests", "codex": "tab_codex", "map": "tab_map", "controls": "tab_controls", "options": "tab_options"}
+	"quests": "tab_quests", "codex": "tab_codex", "ach": "tab_ach", "map": "tab_map", "controls": "tab_controls", "options": "tab_options"}
 
 func _ready() -> void:
 	layer = 20
@@ -150,6 +150,7 @@ func _rebuild(animate := true) -> void:
 		"service": _build_service()
 		"controls": _build_controls()
 		"codex": _build_codex()
+		"ach": _build_ach()
 	if animate:
 		content.position.x = 20 + 40 * _anim_dir
 		content.modulate.a = 0.0
@@ -259,6 +260,11 @@ func _build_char() -> void:
 		["memory", G.T("memories"), "%d/%d" % [Prog.memories.size(), Prog.MEMORIES.size()]],
 		["quest", G.L(["Tiempo", "Playtime"]), "%d min" % int(Prog.playtime / 60.0)],
 	]
+	if at_brasa and Net.is_online():
+		var mate: Player = world.partner()
+		if mate:
+			var tb := _btn(G.L(["VIAJAR AL COMPAÑERO", "TRAVEL TO PARTNER"]), Vector2(426, 268), _on_travel_partner, mate.is_alive() and world.active_boss == null, 168)
+			tb.add_theme_color_override("font_color", Color(0.6, 1.0, 0.75))
 	var yy := 30.0
 	for row in s:
 		var ic := TextureRect.new()
@@ -270,6 +276,10 @@ func _build_char() -> void:
 		vv.size = Vector2(50, 0)
 		vv.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		yy += 25.0
+
+func _on_travel_partner() -> void:
+	close()
+	world.travel_to_partner()
 
 func _on_buy(k: String) -> void:
 	if Prog.buy_level(k):
@@ -620,7 +630,7 @@ const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left"
 	"attack": ["Ataque", "Attack"], "heavy": ["Ataque cargado", "Heavy attack"], "dash": ["Esquivar", "Dash"], "parry": ["Desviar (parry)", "Parry"],
 	"spell1": ["Lanza de Luz", "Lance of Light"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"heal": ["Curarse", "Heal"], "item": ["Objeto rápido", "Quick item"], "interact": ["Interactuar", "Interact"], "menu": ["Menú", "Menu"],
-	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"]}
+	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"], "ping": ["Marcar (coop.)", "Ping (co-op)"]}
 
 # ------------------------------------------------------------------ códice (bestiario)
 const CODEX := [
@@ -665,9 +675,7 @@ func _build_codex() -> void:
 	var nb := _btn(G.L(["PERSONAJES", "CHARACTERS"]) + "  %d/%d" % [met, CODEX_NPCS.size()], Vector2(12, 240), _on_codex.bind("_npc"), true, 176)
 	if _codex_sel == "_npc":
 		nb.add_theme_color_override("font_color", UIKit.GOLD)
-	var ab := _btn(G.L(["LOGROS", "ACHIEVEMENTS"]) + "  %d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()], Vector2(12, 266), _on_codex.bind("_ach"), true, 176)
-	if _codex_sel == "_ach":
-		ab.add_theme_color_override("font_color", UIKit.GOLD)
+	_btn(G.L(["LOGROS", "ACHIEVEMENTS"]) + "  " + Ach.percent_text(), Vector2(12, 266), switch_tab.bind("ach"), true, 176)
 	_panel(Rect2(210, 0, 390, 296), UIKit.PURPLE)
 	if _codex_sel == "_npc":
 		var i2 := 0
@@ -684,19 +692,6 @@ func _build_codex() -> void:
 			_lbl(G.L(np[2]).to_upper() if kn else "???", Vector2(cx, cy + 60), 8, UIKit.GOLD if kn else UIKit.TEXT_DIM, 90, "head")
 			_lbl(G.L(np[3]) if kn else G.L(["Aún no os conocéis.", "You haven't met yet."]), Vector2(cx, cy + 74), 10, UIKit.WHITE if kn else Color(0.5, 0.45, 0.55), 90, "title")
 			i2 += 1
-		return
-	if _codex_sel == "_ach":
-		var yy := 14.0
-		var i := 0
-		for k in Prog.ACHIEVEMENTS:
-			var got: bool = Prog.flags.get("ach_" + k, false)
-			var a: Array = Prog.ACHIEVEMENTS[k]
-			var x := 222.0 + (i % 2) * 190.0
-			_lbl(("+ " if got else "- ") + G.L(a[0]).to_upper(), Vector2(x, yy), 8, UIKit.GOLD if got else UIKit.TEXT_DIM, 180, "head")
-			_lbl(G.L(a[1]), Vector2(x + 10, yy + 12), 10, UIKit.WHITE if got else Color(0.5, 0.45, 0.55), 175, "title")
-			if i % 2 == 1:
-				yy += 40.0
-			i += 1
 		return
 	for e2 in CODEX:
 		if e2[0] != _codex_sel:
@@ -722,6 +717,93 @@ func _build_codex() -> void:
 func _on_codex(id: String) -> void:
 	_codex_sel = id
 	Audio.sfx("ui_move", -10.0)
+	_rebuild(false)
+
+# ------------------------------------------------------------------ logros (estilo consola)
+const ACH_FILTERS := ["all", "story", "explore", "combat", "fate", "challenge", "secret", "coop", "dlc"]
+var _ach_filter := "all"
+var _ach_scroll := 0
+var _ach_news := {}
+var _ach_list: ScrollContainer
+
+func _build_ach() -> void:
+	if _ach_news.is_empty() and not Ach.data.new.is_empty():
+		_ach_news = Ach.data.new.duplicate()
+		Ach.clear_new()
+	var sm := AchSummary.new()
+	sm.position = Vector2(0, 0)
+	sm.size = Vector2(178, 296)
+	content.add_child(sm)
+	# filtros por categoría
+	var fx := 188.0
+	for f in ACH_FILTERS:
+		var chip := AchChip.new()
+		chip.cat = f
+		chip.sel = f == _ach_filter
+		chip.position = Vector2(fx, 0)
+		chip.size = Vector2(44, 20)
+		chip.pressed.connect(_on_ach_filter.bind(f))
+		content.add_child(chip)
+		fx += 46.0
+	var cap := AchCaption.new()
+	cap.cat = _ach_filter
+	cap.position = Vector2(188, 22)
+	cap.size = Vector2(412, 14)
+	content.add_child(cap)
+	_ach_list = ScrollContainer.new()
+	_ach_list.position = Vector2(186, 38)
+	_ach_list.size = Vector2(414, 258)
+	_ach_list.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_ach_list.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	content.add_child(_ach_list)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 3)
+	vb.custom_minimum_size = Vector2(406, 0)
+	_ach_list.add_child(vb)
+	var ids := []
+	for k in Ach.LIST:
+		var c: String = Ach.LIST[k].c
+		if _ach_filter == "all" or c == _ach_filter:
+			ids.append(k)
+	ids.sort_custom(_ach_order)
+	for k in ids:
+		var card := AchCard.new()
+		card.id = k
+		card.is_new = _ach_news.has(k)
+		card.custom_minimum_size = Vector2(404, 40)
+		vb.add_child(card)
+	var sb := AchScrollHint.new()
+	sb.sc = _ach_list
+	sb.position = Vector2(594, 40)
+	sb.size = Vector2(6, 254)
+	content.add_child(sb)
+	_ach_list.set_deferred("scroll_vertical", _ach_scroll)
+	_ach_list.get_v_scroll_bar().value_changed.connect(func(v: float) -> void: _ach_scroll = int(v))
+
+func _ach_rank(k: String) -> int:
+	if Ach.is_unlocked(k):
+		return 0
+	if not Ach.owned.get(Ach.pack_of(k), false):
+		return 4
+	if Ach.progress(k) > 0.0:
+		return 1
+	return 3 if Ach.LIST[k].get("h", false) else 2
+
+func _ach_order(a: String, b: String) -> bool:
+	var ra := _ach_rank(a)
+	var rb := _ach_rank(b)
+	if ra != rb:
+		return ra < rb
+	if ra == 0:
+		return int(Ach.data.un[a]) > int(Ach.data.un[b])
+	if ra == 1:
+		return Ach.progress(a) > Ach.progress(b)
+	return Ach.LIST.keys().find(a) < Ach.LIST.keys().find(b)
+
+func _on_ach_filter(f: String) -> void:
+	_ach_filter = f
+	_ach_scroll = 0
+	Audio.sfx("ui_move", -8.0)
 	_rebuild(false)
 
 func _build_controls() -> void:
@@ -976,6 +1058,10 @@ func _svc_velaria() -> void:
 		var can_ng := not Net.is_online() or multiplayer.is_server()
 		_btn(G.T("ng_plus") + " (NG+%d)" % (Prog.ng + 1), Vector2(172, 244), _on_ng, can_ng, 200)
 		_lbl(G.L(["Conservas nivel, armas y objetos. El Estrato renace más cruel.", "Keep level, weapons and items. The Stratum is reborn crueler."]), Vector2(380, 242), 10, UIKit.TEXT_DIM, 210, "title")
+	if world.pantheon_open():
+		var pb := _btn(G.L(["PANTEÓN DE LOS ARCONTES", "PANTHEON OF THE ARCHONS"]), Vector2(172, 270), _on_pantheon, not Net.is_online() or multiplayer.is_server(), 200)
+		pb.add_theme_color_override("font_color", UIKit.GOLD)
+		_lbl(G.L(["Los tres Arcontes seguidos, en Ascensión II. Sin descanso.", "All three Archons in a row, on Ascension II. No rest."]), Vector2(380, 268), 10, UIKit.GOLD, 210, "title")
 	if Prog.oath != "":
 		var cur: Dictionary = Prog.OATHS[Prog.oath]
 		_lbl(G.L(cur.name).to_upper() + ": " + G.L(cur.desc), Vector2(172, 210), 10, cur.color, 416, "title")
@@ -993,6 +1079,10 @@ func _on_velaria_asc(b: String, lvl: int) -> void:
 	else:
 		world._rpc_start_ascension.rpc_id(1, b, lvl)
 
+func _on_pantheon() -> void:
+	close()
+	world.start_pantheon()
+
 func _on_ng() -> void:
 	Prog.start_ng()
 	close()
@@ -1000,6 +1090,7 @@ func _on_ng() -> void:
 
 func _on_oath(b: String) -> void:
 	Prog.oath = b
+	Ach.unlock("oath")
 	Audio.sfx("roar", -10.0)
 	G.flash(Color(Prog.OATHS[b].color, 0.35), 0.4)
 	G.toast(G.L(Prog.OATHS[b].name).to_upper(), Prog.OATHS[b].color)
@@ -2588,7 +2679,8 @@ class LockedWeaponCard extends Control:
 		"seravel": ["Vence a la Guardiana de las Puertas.", "Defeat the Warden of the Gates."], "spear": ["Duerme en un cofre de la Galería Rota.", "It sleeps in a chest in the Broken Gallery."],
 		"scythe": ["Encargo del Cartógrafo.", "The Cartographer's errand."], "reaper": ["Un cofre en lo alto de la Escalinata.", "A chest atop the Stairway."],
 		"staff": ["Habla con Madre Ilse en el Nimbo.", "Talk to Mother Ilse in the Nimbus."], "fists": ["Tobías, tras abrir las Celdas.", "Tobias, after the Cells open."],
-		"bow": ["El cofre del Mirador del Ala Rota.", "The chest at the Broken Wing Overlook."]}
+		"bow": ["El cofre del Mirador del Ala Rota.", "The chest at the Broken Wing Overlook."],
+		"verdugo": ["Lo que fuiste te espera bajo la Capilla, tras los cuatro ecos.", "What you were awaits beneath the Chapel, after the four echoes."]}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
@@ -2598,3 +2690,270 @@ class LockedWeaponCard extends Control:
 		var f := UIKit.font("title")
 		f.draw_string(get_canvas_item(), Vector2(76, 18), "???", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
 		f.draw_string(get_canvas_item(), Vector2(76, 32), G.L(HINTS.get(id, ["Sigue descendiendo.", "Keep descending."])), HORIZONTAL_ALIGNMENT_LEFT, size.x - 80, 10, Color(0.55, 0.45, 0.6))
+
+
+# ====================================================================== logros: piezas de la pantalla
+class AchSummary extends Control:
+	## ficha izquierda: anillo de compleción, XP, rangos y paquetes (juego base y DLC)
+	var t := 0.0
+	var shown := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		shown = lerpf(shown, Ach.percent(), clampf(delta * 3.0, 0.0, 1.0))
+		queue_redraw()
+	func _draw() -> void:
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.GOLD_DARK, Color(0.1, 0.04, 0.14, 0.92), 4.0, t)
+		var fh := UIKit.font("head")
+		var ft := UIKit.font("title")
+		var c := Vector2(size.x / 2.0, 62)
+		# rayos suaves y anillo de progreso
+		for i in 16:
+			var a := t * 0.25 + i * TAU / 16.0
+			draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a - 0.08) * 40.0, c + Vector2.from_angle(a) * 56.0, c + Vector2.from_angle(a + 0.08) * 40.0]), Color(1, 0.8, 0.35, 0.07))
+		draw_circle(c, 41.0, UIKit.INK)
+		draw_arc(c, 36.0, 0, TAU, 64, Color(0.24, 0.13, 0.3), 7.0)
+		var mx := Ach.max_percent()
+		var k := clampf(shown / mx, 0.0, 1.0)
+		if k > 0.001:
+			draw_arc(c, 36.0, -PI / 2.0, -PI / 2.0 + TAU * k, 64, UIKit.GOLD_DARK, 7.0)
+			draw_arc(c, 37.5, -PI / 2.0, -PI / 2.0 + TAU * k, 64, UIKit.GOLD, 3.0)
+			var tip := c + Vector2.from_angle(-PI / 2.0 + TAU * k) * 36.0
+			draw_circle(tip, 3.0 + sin(t * 6.0) * 0.6, UIKit.GOLD_HOT)
+		# muescas cada 10 %
+		for i in 10:
+			var a2 := -PI / 2.0 + i * TAU / 10.0
+			draw_line(c + Vector2.from_angle(a2) * 31.0, c + Vector2.from_angle(a2) * 33.0, Color(0, 0, 0, 0.6), 1.0)
+		draw_circle(c, 29.0, Color(0.13, 0.06, 0.17))
+		var pt := Ach.percent_text(shown)
+		var w := ft.get_string_size(pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+		ft.draw_string_outline(get_canvas_item(), c + Vector2(-w / 2.0, 9), pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, 4, UIKit.INK)
+		ft.draw_string(get_canvas_item(), c + Vector2(-w / 2.0, 9), pt, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIKit.GOLD_HOT)
+		var sub := G.L(["de %d%%", "of %d%%"]) % int(mx)
+		var sw := fh.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string(get_canvas_item(), c + Vector2(-sw / 2.0, 21), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+		var y := 118.0
+		_row(y, G.L(["EXPERIENCIA", "EXPERIENCE"]), "%d XP" % Ach.xp_total(), UIKit.GOLD)
+		var cb: Array = Ach.count("base")
+		_row(y + 13, G.L(["LOGROS", "ACHIEVEMENTS"]), "%d/%d" % [cb[0], cb[1]], UIKit.WHITE)
+		# medallas por rango
+		var tiers := ["bronze", "silver", "gold", "epic"]
+		for i in 4:
+			var got := 0
+			var tot := 0
+			for kk in Ach.LIST:
+				if Ach.pack_of(kk) == "base" and Ach.tier(kk) == tiers[i]:
+					tot += 1
+					if Ach.is_unlocked(kk):
+						got += 1
+			var mc := Vector2(26 + i * 42, y + 40)
+			var tc: Color = Ach.tier_col(tiers[i])
+			draw_circle(mc, 8.0, UIKit.INK)
+			draw_circle(mc, 7.0, tc.darkened(0.3))
+			draw_circle(mc, 4.5, tc if got > 0 else Color(0.3, 0.25, 0.35))
+			draw_circle(mc + Vector2(-1.5, -1.5), 1.2, Color(1, 1, 1, 0.5))
+			fh.draw_string(get_canvas_item(), mc + Vector2(10, 4), "%d" % got, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, tc)
+			fh.draw_string(get_canvas_item(), mc + Vector2(10, 13), "/%d" % tot, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+		# paquetes: juego base 100 %, cada DLC +10 %
+		y += 66.0
+		UIKit.flourish(self, Vector2(size.x / 2.0, y - 6), 56.0, Color(UIKit.GOLD_DARK, 0.8))
+		for p in ["base", "dlc1", "dlc2"]:
+			var own: bool = Ach.owned.get(p, false)
+			var share: float = Ach.PACKS[p].share
+			var pg := 0.0
+			for kk in Ach.data.un:
+				if Ach.LIST.has(kk) and Ach.pack_of(kk) == p:
+					pg += Ach.weight(kk)
+			var full: String = G.L(Ach.PACKS[p].name)
+			var name := G.L(["JUEGO BASE", "BASE GAME"]) if p == "base" else full.split(" · ")[0]
+			fh.draw_string(get_canvas_item(), Vector2(12, y + 8), name.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 110, 8, UIKit.WHITE if own else UIKit.TEXT_DIM)
+			var tag := ("%d%% / %d%%" % [int(floor(pg)), int(share)]) if p == "base" else ("+%d%%" % int(share))
+			var tw := fh.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			fh.draw_string(get_canvas_item(), Vector2(size.x - 12 - tw, y + 8), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD if own else Color(0.6, 0.5, 0.7))
+			var bar := Rect2(Vector2(12, y + 12), Vector2(size.x - 24, 4))
+			draw_rect(bar.grow(1), UIKit.INK)
+			draw_rect(bar, Color(0.22, 0.12, 0.28))
+			if own:
+				draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(pg / share, 0.0, 1.0), 4)), UIKit.GOLD)
+			else:
+				for i in int(bar.size.x / 6.0):
+					draw_rect(Rect2(bar.position + Vector2(i * 6, 0), Vector2(3, 4)), Color(0.35, 0.28, 0.42))
+				var subn: String = full.split(" · ")[1] if full.contains(" · ") else ""
+				ft.draw_string(get_canvas_item(), Vector2(12, y + 27), subn + G.L([" · no instalado", " · not installed"]), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 10, Color(0.6, 0.5, 0.68))
+			y += 32.0 if own else 34.0
+		var note := G.L(["Hasta el 120% con los dos DLC", "Up to 120% with both DLCs"])
+		var nw := ft.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+		ft.draw_string(get_canvas_item(), Vector2((size.x - nw) / 2.0, size.y - 10), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.75, 0.65, 0.8))
+	func _row(y: float, a: String, b: String, col: Color) -> void:
+		var fh := UIKit.font("head")
+		fh.draw_string(get_canvas_item(), Vector2(12, y), a, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+		var w := fh.get_string_size(b, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string_outline(get_canvas_item(), Vector2(size.x - 12 - w, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		fh.draw_string(get_canvas_item(), Vector2(size.x - 12 - w, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
+
+class AchChip extends Control:
+	## filtro de categoría: un medallón pequeño con su glifo
+	signal pressed
+	var cat := "all"
+	var sel := false
+	var _hover := false
+	var t := 0.0
+	const GLYPHS := {"all": "star", "story": "book", "explore": "map", "combat": "sword", "fate": "scale", "challenge": "skull", "secret": "mask", "coop": "two", "dlc": "lock"}
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_entered.connect(func() -> void: _hover = true)
+		mouse_exited.connect(func() -> void: _hover = false)
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _gui_input(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			pressed.emit()
+	func _draw() -> void:
+		var col: Color = UIKit.GOLD if cat == "all" else Ach.CATS[cat].col
+		var r := Rect2(Vector2.ZERO, size)
+		UIKit.slash_band(self, Rect2(r.position + Vector2(2, 2), r.size), Color(0, 0, 0, 0.5), 4.0)
+		UIKit.slash_band(self, r, col.darkened(0.15) if sel else (Color(0.24, 0.13, 0.3) if not _hover else Color(0.32, 0.18, 0.4)), 4.0)
+		if sel:
+			UIKit.slash_band(self, Rect2(r.position, Vector2(r.size.x, 2)), col.lightened(0.4), 1.0)
+		var got := 0
+		var tot := 0
+		for k in Ach.LIST:
+			if cat == "all" or Ach.LIST[k].c == cat:
+				tot += 1
+				if Ach.is_unlocked(k):
+					got += 1
+		Ach.draw_glyph(self, Vector2(11, 10 - (sin(t * 8.0) if sel else 0.0)), 5.5, GLYPHS[cat], UIKit.INK if sel else col)
+		var fh := UIKit.font("head")
+		var txt := "%d" % got if cat != "dlc" else "DLC"
+		fh.draw_string(get_canvas_item(), Vector2(20, 14), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.INK if sel else UIKit.WHITE)
+
+class AchCaption extends Control:
+	var cat := "all"
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var fh := UIKit.font("head")
+		var name := G.L(["TODOS LOS LOGROS", "ALL ACHIEVEMENTS"]) if cat == "all" else G.L(Ach.CATS[cat].n).to_upper()
+		var got := 0
+		var tot := 0
+		for k in Ach.LIST:
+			if cat == "all" or Ach.LIST[k].c == cat:
+				tot += 1
+				if Ach.is_unlocked(k):
+					got += 1
+		var col: Color = UIKit.GOLD if cat == "all" else Ach.CATS[cat].col
+		fh.draw_string_outline(get_canvas_item(), Vector2(4, 10), name, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		fh.draw_string(get_canvas_item(), Vector2(4, 10), name, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
+		var nw := fh.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string(get_canvas_item(), Vector2(12 + nw, 10), "%d/%d" % [got, tot], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+		var hint := G.L(["RUEDA: DESPLAZAR", "WHEEL: SCROLL"])
+		var hw := fh.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string(get_canvas_item(), Vector2(size.x - hw - 4, 10), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.55, 0.45, 0.62))
+
+class AchCard extends Control:
+	## tarjeta de un logro: medallón, nombre, descripción, XP, % del juego y barra si es progresivo
+	var id := ""
+	var is_new := false
+	var t := 0.0
+	var _hover := false
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_PASS
+		mouse_entered.connect(func() -> void: _hover = true)
+		mouse_exited.connect(func() -> void: _hover = false)
+		t = randf() * 3.0
+	func _process(delta: float) -> void:
+		t += delta
+		if is_visible_in_tree():
+			queue_redraw()
+	func _draw() -> void:
+		var a: Dictionary = Ach.LIST[id]
+		var got := Ach.is_unlocked(id)
+		var own: bool = Ach.owned.get(Ach.pack_of(id), false)
+		var hidden: bool = a.get("h", false) and not got
+		var tc: Color = Ach.tier_col(Ach.tier(id))
+		var cc: Color = Ach.CATS[a.c].col
+		var r := Rect2(Vector2.ZERO, size)
+		var fill := Color(0.16, 0.07, 0.2, 0.95) if got else Color(0.1, 0.05, 0.13, 0.92)
+		if _hover:
+			fill = fill.lightened(0.06)
+		draw_rect(Rect2(r.position + Vector2(2, 2), r.size), Color(0, 0, 0, 0.45))
+		draw_rect(r.grow(1), UIKit.INK)
+		draw_rect(r, fill)
+		draw_rect(Rect2(r.position, Vector2(3, r.size.y)), tc if got else Color(0.3, 0.24, 0.36))
+		if got:
+			draw_rect(Rect2(r.position + Vector2(3, 0), Vector2(r.size.x - 3, 1)), Color(tc, 0.5))
+		var mc := Vector2(22, r.size.y / 2.0)
+		if got and Ach.tier(id) in ["gold", "epic"]:
+			for i in 8:
+				var ang := t * 0.6 + i * TAU / 8.0
+				draw_colored_polygon(PackedVector2Array([mc, mc + Vector2.from_angle(ang - 0.15) * 22.0, mc + Vector2.from_angle(ang + 0.15) * 22.0]), Color(tc, 0.1))
+		Ach.draw_medal(self, mc, 14.0, id, got, t, not own)
+		var fh := UIKit.font("head")
+		var ft := UIKit.font("title")
+		var fb := UIKit.font("body")
+		var nm := G.L(["Logro oculto", "Hidden achievement"]) if hidden else G.L(a.n)
+		var desc := G.L(["Sigue explorando la Espiral para descubrirlo.", "Keep exploring the Spiral to reveal it."]) if hidden else G.L(a.d)
+		var tx := 44.0
+		ft.draw_string_outline(get_canvas_item(), Vector2(tx, 15), nm, HORIZONTAL_ALIGNMENT_LEFT, 250, 14, 3, UIKit.INK)
+		ft.draw_string(get_canvas_item(), Vector2(tx, 15), nm, HORIZONTAL_ALIGNMENT_LEFT, 250, 14, UIKit.WHITE if got else Color(0.78, 0.72, 0.82))
+		var nw := minf(250.0, ft.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x)
+		if is_new:
+			var bw := fh.get_string_size(G.L(["NUEVO", "NEW"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 7
+			var nr := Rect2(Vector2(tx + nw + 6, 5), Vector2(bw, 11))
+			draw_rect(nr.grow(1), UIKit.INK)
+			draw_rect(nr, UIKit.RED if int(t * 3.0) % 2 == 0 else UIKit.PINK)
+			fh.draw_string(get_canvas_item(), nr.position + Vector2(3, 9), G.L(["NUEVO", "NEW"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
+		var dfs := 13
+		while dfs > 10 and fb.get_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs).x > 282.0:
+			dfs -= 1
+		fb.draw_string(get_canvas_item(), Vector2(tx, 29), desc, HORIZONTAL_ALIGNMENT_LEFT, 286, dfs, Color(0.86, 0.8, 0.88) if got else Color(0.55, 0.5, 0.6))
+		# columna derecha: XP y % del juego
+		var xr := "+%d XP" % int(a.xp)
+		var xw := fh.get_string_size(xr, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string_outline(get_canvas_item(), Vector2(r.size.x - 8 - xw, 13), xr, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		fh.draw_string(get_canvas_item(), Vector2(r.size.x - 8 - xw, 13), xr, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, tc if got else Color(0.55, 0.48, 0.6))
+		var wt := "%.1f%%" % Ach.weight(id)
+		if not own:
+			wt = G.L(Ach.PACKS[Ach.pack_of(id)].name).split(" · ")[0]
+		var ww := fh.get_string_size(wt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		fh.draw_string(get_canvas_item(), Vector2(r.size.x - 8 - ww, 24), wt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.6, 0.52, 0.66))
+		if got:
+			var d := Time.get_datetime_dict_from_unix_time(int(Ach.data.un[id]))
+			var ds := "%02d/%02d/%d" % [int(d.day), int(d.month), int(d.year)]
+			var dw := fh.get_string_size(ds, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			fh.draw_string(get_canvas_item(), Vector2(r.size.x - 8 - dw, 35), ds, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.5, 0.42, 0.56))
+		elif a.has("s") and own:
+			var pr := Ach.progress(id)
+			var bar := Rect2(Vector2(tx, 33), Vector2(220, 3))
+			draw_rect(bar.grow(1), UIKit.INK)
+			draw_rect(bar, Color(0.22, 0.12, 0.28))
+			draw_rect(Rect2(bar.position, Vector2(bar.size.x * pr, 3)), cc)
+			var ptx := Ach.progress_text(id)
+			var pw := fh.get_string_size(ptx, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			fh.draw_string(get_canvas_item(), Vector2(r.size.x - 8 - pw, 36), ptx, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, cc)
+		if not own:
+			var rb := G.L(["DLC", "DLC"])
+			draw_rect(Rect2(Vector2(r.size.x - 34, r.size.y - 11), Vector2(26, 9)), Color(0.3, 0.24, 0.38))
+			fh.draw_string(get_canvas_item(), Vector2(r.size.x - 31, r.size.y - 4), rb, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.TEXT_DIM)
+
+class AchScrollHint extends Control:
+	var sc: ScrollContainer
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(_d: float) -> void:
+		queue_redraw()
+	func _draw() -> void:
+		if sc == null or not is_instance_valid(sc):
+			return
+		var vb := sc.get_v_scroll_bar()
+		var total := vb.max_value
+		var page := vb.page
+		draw_rect(Rect2(Vector2(2, 0), Vector2(2, size.y)), Color(0.25, 0.15, 0.3))
+		if total <= page + 1.0:
+			return
+		var h := maxf(16.0, size.y * page / total)
+		var y := (size.y - h) * vb.value / maxf(1.0, total - page)
+		draw_rect(Rect2(Vector2(1, y), Vector2(4, h)), UIKit.INK)
+		draw_rect(Rect2(Vector2(2, y + 1), Vector2(2, h - 2)), UIKit.GOLD)

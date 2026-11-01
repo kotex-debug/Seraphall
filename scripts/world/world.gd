@@ -35,13 +35,19 @@ const ROOMS := [
 	# v0.8: capilla secreta bajo la Galería Rota (tras un muro agrietado)
 	{"id": "cap_link", "rect": Rect2i(83, 71, 3, 6)},
 	{"id": "capilla", "rect": Rect2i(79, 76, 11, 7)},
+	# v0.8: batallas secretas. El Cadalso (bajo la Capilla) y la Cornisa del Coloso (tras el Mirador)
+	{"id": "cad_link", "rect": Rect2i(83, 83, 3, 3)},
+	{"id": "cadalso", "rect": Rect2i(77, 86, 15, 9)},
+	{"id": "cor_link", "rect": Rect2i(31, 77, 3, 5)},
+	{"id": "cornisa", "rect": Rect2i(13, 63, 21, 14)},
 ]
 const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
 	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
 	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_atrio",
 	"celdas": "area_celdas", "cel_link": "area_celdas", "cel_up": "area_celdas", "atrio": "area_atrio", "atr_link": "area_atrio",
 	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio",
-	"cap_link": "area_capilla", "capilla": "area_capilla"}
+	"cap_link": "area_capilla", "capilla": "area_capilla", "cad_link": "area_cadalso", "cadalso": "area_cadalso",
+	"cor_link": "area_cornisa", "cornisa": "area_cornisa"}
 const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo", "area_capilla"]
 
 var main: Node
@@ -231,8 +237,10 @@ func _build_map() -> void:
 					t = 26
 				if rid == "antesala" and (x == 69) and y >= 7:
 					t = 26
-				if rid == "mirador" or rid == "alcove":
+				if rid == "mirador" or rid == "alcove" or rid == "cornisa" or rid == "cor_link":
 					t = 19 if rng.randf() < 0.6 else t
+				if rid == "cadalso" or rid == "cad_link":
+					t = 20 + rng.randi_range(0, 1)
 				floor_layer.set_cell(c, 0, Vector2i(t, 0))
 			elif g == 2:
 				var below := y + 1 < MAPH and grid[(y + 1) * MAPW + x] == 1
@@ -356,7 +364,8 @@ func is_wall_at(p: Vector2) -> bool:
 const AREA_COLORS := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
 	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
 	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0), "area_celdas": Color(0.85, 0.45, 0.35),
-	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55), "area_capilla": Color(0.7, 1.0, 0.85)}
+	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55), "area_capilla": Color(0.7, 1.0, 0.85),
+	"area_cadalso": Color(1, 0.35, 0.4), "area_cornisa": Color(0.55, 0.95, 1.0)}
 var _map_tex: ImageTexture
 var _map_seen := -1
 
@@ -952,6 +961,9 @@ func _spawn_enemies() -> void:
 	]
 	for e in list:
 		_add_enemy(e[0], tile_pos(e[1], e[2]), false)
+	# jefes secretos: ocultos hasta que se les invoca
+	_add_enemy("verdugo", tile_pos(84.5, 90.5), false)
+	_add_enemy("coloso", BossColoso.ANCHOR, false)
 
 func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 	var e: Enemy
@@ -962,6 +974,10 @@ func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 			e = preload("res://scripts/actors/boss_carcelero.gd").new()
 		"choir":
 			e = preload("res://scripts/actors/boss_choir.gd").new()
+		"verdugo":
+			e = preload("res://scripts/actors/boss_verdugo.gd").new()
+		"coloso":
+			e = preload("res://scripts/actors/boss_coloso.gd").new()
 		_:
 			e = Enemy.new()
 	e.setup(enemies.size(), type, pos, self)
@@ -1023,7 +1039,7 @@ func _apply_world_flags(instant: bool) -> void:
 			e.die(); e.visible = false
 		if e.type == "choir" and wflags.get("choir_dead", false):
 			e.die(); e.visible = false
-	if Prog.dropped_ecos.has("amount") and Prog.dropped_ecos.amount > 0:
+	if Prog.dropped_ecos.has("amount") and (int(Prog.dropped_ecos.amount) > 0 or int(Prog.dropped_ecos.get("feather", 0)) > 0):
 		_spawn_ecos_drop()
 
 func _spawn_ecos_drop() -> void:
@@ -1031,7 +1047,7 @@ func _spawn_ecos_drop() -> void:
 		interactables["ecosdrop"].queue_free()
 		interactables.erase("ecosdrop")
 	var p: Array = Prog.dropped_ecos.pos
-	_add_inter("ecos", "ecosdrop", Vector2(p[0], p[1]), {"amount": Prog.dropped_ecos.amount})
+	_add_inter("ecos", "ecosdrop", Vector2(p[0], p[1]), {"amount": Prog.dropped_ecos.amount, "feather": int(Prog.dropped_ecos.get("feather", 0))})
 
 func _after_load() -> void:
 	var p := local_player()
@@ -1101,7 +1117,11 @@ func _process(delta: float) -> void:
 	if lp:
 		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
 		if active_boss and active_boss.is_alive() and active_boss.active:
-			target = target.lerp(active_boss.global_position + Vector2(0, -20), 0.28)
+			if active_boss.has_method("cam_point"):
+				target = target.lerp(active_boss.cam_point(), 0.42)
+			else:
+				target = target.lerp(active_boss.global_position + Vector2(0, -20), 0.28)
+		_track_fight()
 		if _cam_focus != null:
 			target = _cam_focus
 		camera.position = camera.position.lerp(target, clamp(delta * 6.0, 0.0, 1.0))
@@ -1153,6 +1173,10 @@ func _input(event: InputEvent) -> void:
 			menu.open("map", {})
 	elif event.is_action_pressed("menu") and not dialog.is_open():
 		menu.toggle("char")
+	elif event.is_action_pressed("ping") and not menu.visible and not dialog.is_open():
+		var lp := local_player()
+		if lp and lp.is_alive():
+			bcast("_ping", [Net.my_id(), get_global_mouse_position()])
 	elif event.is_action_pressed("pause") and not dialog.is_open():
 		if menu.visible:
 			menu.close()
@@ -1169,6 +1193,12 @@ func _check_area(lp: Player) -> void:
 		return
 	if not Prog.flags.get("seen_" + r, false):
 		Prog.flags["seen_" + r] = true
+		var seen := 0
+		for rr in ROOMS:
+			if Prog.flags.get("seen_" + rr.id, false):
+				seen += 1
+		Ach.set_goal("cartographer", ROOMS.size())
+		Ach.set_max("rooms", seen)
 	var a: String = AREAS[r]
 	if a != _area:
 		var first := _area == ""
@@ -1264,13 +1294,8 @@ func try_interact(p: Player) -> void:
 	match it.kind:
 		"brasa":
 			if not it.used:
-				if it.id != "sanct":
-					if Prog.wing_feathers <= 0:
-						G.toast(G.T("no_feathers"), UIKit.PINK)
-						return
-					Prog.lose_wing_feather()
-					send_look()
-					Fx.burst(p.global_position + Vector2(0, -12), Look.color_of(G.look, "wing"), 10, 60.0, 1.0, "fx_feather", 60.0, (it.global_position - p.global_position).normalized(), 1.0, false, Vector2(0, 10))
+				# encender una Brasa es gratis: solo la muerte arranca plumas
+				Fx.burst(it.global_position + Vector2(0, -10), Color(1, 0.7, 0.35), 14, 70.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6)
 				bcast("_light_brasa", [it.id])
 			else:
 				_rest_at(it.id)
@@ -1282,7 +1307,11 @@ func try_interact(p: Player) -> void:
 			_contemplate(it)
 		"bell":
 			bcast("_ring_bell", [it.id])
+		"altar":
+			_altar(it)
 		"lore":
+			Prog.flags["read_" + it.id] = true
+			_count_lore()
 			var ll := []
 			for l in it.data.lines:
 				ll.append([G.T(l[0]), l[1]])
@@ -1298,7 +1327,10 @@ func _physics_process(_delta: float) -> void:
 		if (it.kind == "pickup" or it.kind == "ecos") and it.global_position.distance_to(lp.global_position) < it.radius:
 			if it.kind == "ecos":
 				Prog.ecos += int(it.data.amount)
+				var fb := int(Prog.dropped_ecos.get("feather", 0))
 				Prog.dropped_ecos = {}
+				if fb > 0 and Prog.regrow_wing_feather():
+					_feather_recovered(1, it.global_position)
 				Prog.unrecovered = 0
 				Prog.changed.emit()
 				Audio.sfx("levelup", -6.0)
@@ -1343,6 +1375,7 @@ func _req_join(_weapon: String) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2, host_diff: int) -> void:
+	Ach.unlock("coop_join")
 	wflags = flags
 	world_difficulty = host_diff
 	G.set_meta("lightwing", world_difficulty == 0)
@@ -1384,6 +1417,7 @@ func _player_look(peer: int, l: Dictionary, feathers: int) -> void:
 		players[peer].set_look(l, feathers)
 
 func _on_peer_joined_net(_id: int) -> void:
+	Ach.unlock("coop_join")
 	pass  # el jugador se crea al recibir _req_join
 
 func _on_peer_left(id: int) -> void:
@@ -1484,7 +1518,14 @@ func _enemy_die(idx: int) -> void:
 	if e.type == "sombra":
 		if int(e.get_meta("owner", -1)) == Net.my_id():
 			Prog.ecos += int(e.get_meta("amount", 0))
+			var sfb := int(Prog.shadow.get("feathers", 0))
 			Prog.shadow = {}
+			var got := 0
+			for _k in sfb:
+				if Prog.regrow_wing_feather():
+					got += 1
+			if got > 0:
+				_feather_recovered(got, e.global_position)
 			Prog.unrecovered = 0
 			Prog.changed.emit()
 			hud.big_message(G.L(["SOMBRA DISIPADA", "SHADOW DISPELLED"]), Color(0.75, 0.55, 1.0), 2.5)
@@ -1501,8 +1542,16 @@ func _enemy_die(idx: int) -> void:
 	Prog.add_ecos(e.cfg.ecos)
 	Fx.text(e.global_position + Vector2(0, 26), "+%d %s" % [int(e.cfg.ecos * Prog.ecos_mult()), G.T("ecos")], Color(0.6, 0.85, 1.0), 8)
 	Fx.souls(e.global_position + Vector2(0, -8), local_player(), 5 if not e.is_boss else 24)
+	if e.is_boss:
+		_boss_feats(e)
 	if e.is_boss and not asc_fight.is_empty() and asc_fight.boss == e.type:
-		_end_ascension(true)
+		if _pantheon_on and not _pantheon_left.is_empty():
+			_pantheon_step()
+		elif _pantheon_on:
+			_end_ascension(true)
+			_pantheon_victory()
+		else:
+			_end_ascension(true)
 		return
 	_drop_loot(e)
 	match e.type:
@@ -1514,6 +1563,8 @@ func _enemy_die(idx: int) -> void:
 			_on_choir_dead(e)
 		"seravel":
 			_on_seravel_dead(e)
+		"verdugo", "coloso":
+			_on_secret_dead(e)
 
 const LOOT := {"hueco": [["bomb", 0.14], ["incense", 0.05]], "acolito": [["incense", 0.14], ["bomb", 0.08]],
 	"bestia": [["ointment", 0.16], ["bomb", 0.1]], "carcelero": [["key_vestibule", 1.0], ["amulet_ash", 1.0], ["iron", 1.0]],
@@ -1585,6 +1636,7 @@ func spawn_heal_zone(pos: Vector2, dur: float, radius: float, amount: float) -> 
 	hz.radius = radius
 	hz.amount = amount
 	hz.world = self
+	hz.partner = multiplayer.get_remote_sender_id() != 0
 	entities.add_child(hz)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1684,6 +1736,13 @@ func _light_brasa(id: String) -> void:
 	Fx.burst(it.global_position + Vector2(0, -8), Color(1, 0.7, 0.3), 40, 120.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.4)
 	hud.big_message(G.T("brasa_lit"), Color(1, 0.75, 0.4), 2.2)
 	Prog.last_brasa = id
+	Prog.achieve("first_brasa")
+	var lit := 0
+	for b in interactables.values():
+		if is_instance_valid(b) and b.kind == "brasa" and b.used:
+			lit += 1
+	Ach.set_goal("brasas", _count_kind("brasa"))
+	Ach.set_max("brasas", lit)
 	if id == "sanct":
 		Prog.quest_step("main1", "brasa")
 		get_tree().create_timer(1.6).timeout.connect(Prog.grant_ability.bind("lance"))
@@ -1699,6 +1758,7 @@ func _light_brasa(id: String) -> void:
 func _rest_at(id: String) -> void:
 	var lp := local_player()
 	Prog.last_brasa = id
+	Prog.flags.erase("golden_used")
 	if diff().get("regrow", false) and Prog.regrow_wing_feather():
 		G.toast(G.L(["La Brasa te devuelve una pluma.", "The Ember returns a feather."]), Color(1, 0.9, 0.7))
 		send_look()
@@ -1714,6 +1774,7 @@ func _rest_at(id: String) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func _reset_enemies() -> void:
 	unseal_arena()
+	secret_fight = ""
 	_trial_reset()
 	_bell_seq.clear()
 	_reset_urns()
@@ -1751,6 +1812,7 @@ func _open_chest(id: String) -> void:
 	it.set_opened()
 	wflags["used_" + id] = true
 	Prog.flags["used_" + id] = true
+	_count_chests()
 	Audio.sfx("pickup")
 	Audio.sfx("levelup", -8.0)
 	Fx.burst(it.global_position + Vector2(0, -8), Color(1, 0.85, 0.4), 30, 90.0, 0.8, "fx_px", 70.0, Vector2.UP)
@@ -1977,7 +2039,9 @@ func _end_ascension(won: bool) -> void:
 		Audio.play_music("victory", 0.2)
 		G.slowmo("kill", 0.25, 0.8)
 	else:
-		hud.big_message(G.T("asc_failed"), Color(0.8, 0.2, 0.25), 2.5, true)
+		hud.big_message(G.T("asc_failed") if not _pantheon_on else G.L(["EL PANTEÓN TE VENCE", "THE PANTHEON DEFEATS YOU"]), Color(0.8, 0.2, 0.25), 2.5, true)
+		_pantheon_on = false
+		_pantheon_left = []
 		for e in enemies:
 			if e.type == info.boss and e.is_alive():
 				e.die()
@@ -2242,30 +2306,39 @@ func on_local_player_died(p: Player) -> void:
 	var wc := Look.color_of(G.look, "wing")
 	Fx.burst(p.global_position + Vector2(0, -12), wc, 28, 160.0, 1.8, "fx_feather", 180.0, Vector2.UP, 1.3, false, Vector2(0, 45))
 	var had := Prog.wing_feathers
-	Prog.lose_wing_feather()
+	if Prog.flags.get("golden_feather", false) and not Prog.flags.get("golden_used", false):
+		# Pluma Áurea (Panteón): la primera caída tras descansar no arranca ninguna pluma
+		Prog.flags["golden_used"] = true
+		had = 0
+		get_tree().create_timer(1.5).timeout.connect(G.toast.bind(G.L(["La Pluma Áurea te protege: no pierdes ninguna pluma.", "The Golden Feather shields you: no feather is lost."]), UIKit.GOLD))
+	else:
+		Prog.lose_wing_feather()
 	if Prog.wing_feathers <= 3:
 		Prog.achieve("featherless")
 	if had > 0:
 		get_tree().create_timer(1.5).timeout.connect(_feather_torn_msg)
 	# Ecos: si ya había Ecos sin recuperar, se convierten en tu Sombra
 	var shadow_new := false
-	if Prog.dropped_ecos.has("amount") and int(Prog.dropped_ecos.amount) > 0:
+	if Prog.dropped_ecos.has("amount") and (int(Prog.dropped_ecos.amount) > 0 or int(Prog.dropped_ecos.get("feather", 0)) > 0):
 		if Prog.shadow.is_empty():
 			Prog.shadow = {"amount": int(Prog.dropped_ecos.amount), "pos": Prog.dropped_ecos.pos}
 		else:
 			Prog.shadow.amount = int(Prog.shadow.amount) + int(Prog.dropped_ecos.amount)
+		Prog.shadow["feathers"] = int(Prog.shadow.get("feathers", 0)) + int(Prog.dropped_ecos.get("feather", 0))
 		Prog.dropped_ecos = {}
 		Prog.shadow["new"] = true
 		shadow_new = true
 		if interactables.has("ecosdrop"):
 			interactables["ecosdrop"].queue_free()
 			interactables.erase("ecosdrop")
-	if Prog.ecos > 0:
-		var keep := int(Prog.ecos * diff().keep)
+	# la pluma arrancada cae junto a tus Ecos: recógelos y la recuperas
+	var torn := 1 if had > 0 else 0
+	var keep := int(Prog.ecos * diff().keep)
+	if Prog.ecos - keep > 0 or torn > 0:
+		Prog.dropped_ecos = {"amount": Prog.ecos - keep, "pos": [p.global_position.x, p.global_position.y], "feather": torn}
 		if Prog.ecos - keep > 0:
-			Prog.dropped_ecos = {"amount": Prog.ecos - keep, "pos": [p.global_position.x, p.global_position.y]}
 			Prog.unrecovered += 1
-		Prog.ecos = keep
+	Prog.ecos = keep
 	Prog.changed.emit()
 	if Prog.deaths == 1 and G.autotest == "":
 		get_tree().create_timer(2.6).timeout.connect(_first_death_scene)
@@ -2386,6 +2459,467 @@ func _contemplate(it: Interactable) -> void:
 	lp.cutscene = false
 	_contemplating = false
 	Audio.play_music("peace", 3.0)
+
+
+# ====================================================================== logros: contadores del mundo
+var _fight_boss: Enemy = null
+var _fight_hits := 0
+var _fight_flasks := 0
+
+func _track_fight() -> void:
+	if active_boss != _fight_boss:
+		_fight_boss = active_boss
+		_fight_hits = 0
+		_fight_flasks = 0
+
+func note_player_hit() -> void:
+	if active_boss:
+		_fight_hits += 1
+
+func note_flask() -> void:
+	if active_boss:
+		_fight_flasks += 1
+
+func _count_kind(kind: String) -> int:
+	var n := 0
+	for it in interactables.values():
+		if is_instance_valid(it) and it.kind == kind:
+			n += 1
+	return n
+
+func _count_chests() -> void:
+	var tot := 0
+	var got := 0
+	for it in interactables.values():
+		if is_instance_valid(it) and it.kind == "chest":
+			tot += 1
+			if it.used:
+				got += 1
+	Ach.set_goal("chests", tot + (TRIALS.size() - _count_trial_chests()))
+	Ach.set_max("chests", got)
+
+func _count_trial_chests() -> int:
+	var n := 0
+	for id in TRIALS:
+		if interactables.has("chest_trial_" + id):
+			n += 1
+	return n
+
+func _count_lore() -> void:
+	var tot := 0
+	var got := 0
+	for it in interactables.values():
+		if is_instance_valid(it) and it.kind == "lore":
+			tot += 1
+			if Prog.flags.get("read_" + it.id, false):
+				got += 1
+	Ach.set_goal("lore", tot)
+	Ach.set_max("lore", got)
+
+func _boss_feats(e: Enemy) -> void:
+	## logros al caer un jefe: sin golpes, sin Lágrimas, alas intactas, dificultad máxima, cooperativo...
+	var lp := local_player()
+	if lp == null or lp.global_position.distance_to(e.global_position) > 520.0:
+		return
+	var main := e.type in ["carcelero", "choir", "seravel"]
+	var secret := e.type in ["verdugo", "coloso"]
+	if _fight_boss == e and _fight_hits == 0 and lp.is_alive():
+		if main:
+			Prog.achieve("untouched")
+	if not main:
+		return
+	var n := 0
+	var hard := 0
+	if world_difficulty >= 3:
+		Prog.flags["hard_" + e.type] = true
+	for b in ["carcelero", "choir", "seravel"]:
+		if b == e.type or wflags.get(b + "_dead", false):
+			n += 1
+		if Prog.flags.get("hard_" + b, false):
+			hard += 1
+	Ach.set_max("archons", n)
+	Ach.set_max("hard_archons", hard)
+	Ach.set_max("spared", Prog.spared.size())
+	if Net.is_online() and players.size() >= 2:
+		Prog.achieve("coop_boss")
+	if e.type == "seravel" and asc_fight.is_empty():
+		if _fight_boss == e and _fight_flasks == 0:
+			Prog.achieve("dry")
+		if Prog.wing_feathers >= Prog.WING_MAX:
+			Prog.achieve("full_wings")
+		if Prog.deaths == 0:
+			Prog.achieve("deathless")
+		if Prog.playtime < 40.0 * 60.0:
+			Prog.achieve("speedrun")
+		Prog.achieve("route_wings" if Prog.route_score() >= 0 else "route_throne")
+
+# ====================================================================== batallas secretas
+const SECRET_ARENAS := {"verdugo": ["cadalso", "luz"], "coloso": ["cornisa", "luz"]}
+var secret_fight := ""
+var _pantheon_on := false
+var _pantheon_left: Array = []
+
+func _enemy_of(type: String) -> Enemy:
+	for e in enemies:
+		if e.type == type:
+			return e
+	return null
+
+@rpc("any_peer", "call_remote", "reliable")
+func _open_cadalso(fx: bool) -> void:
+	## los cuatro ecos del pasado abren la reja de luz bajo la Capilla
+	if wflags.get("trial_cadalso", false):
+		return
+	wflags["trial_cadalso"] = true
+	Prog.flags["trial_cadalso"] = true
+	_refresh_locks(not fx)
+	if fx:
+		get_tree().create_timer(3.0).timeout.connect(func() -> void:
+			hud.big_message(G.L(["ALGO SE ABRE BAJO LA CAPILLA", "SOMETHING OPENS BENEATH THE CHAPEL"]), Color(1, 0.4, 0.45), 3.0)
+			Audio.sfx("gate", -4.0))
+
+func _build_secret_rooms() -> void:
+	# --- El Cadalso: tajo, hoja clavada, velas rojas y cadenas
+	_add_inter("altar", "altar_cadalso", tile_pos(84.5, 88.6), {"style": "block"})
+	for cp in [Vector2(79, 87), Vector2(90, 87), Vector2(79, 93.5), Vector2(90, 93.5), Vector2(82, 87), Vector2(87, 87)]:
+		_prop("candle", tile_pos(cp.x, cp.y), 4, int(cp.x) % 4, 0.0, Color(1, 0.35, 0.4), 1.0)
+	for hp in [Vector2(80, 89), Vector2(89, 89), Vector2(84.5, 92)]:
+		var hc := Depth3D.HangingChain.new()
+		hc.position = tile_pos(hp.x, hp.y)
+		hc.low_h = 34.0 + fmod(hp.x * 5.0, 20.0)
+		add_child(hc)
+	var amb := RoomAmbience.new()
+	amb.rect = Rect2(77 * TS, 86 * TS, 15 * TS, 9 * TS)
+	amb.kind = "spores"
+	add_child(amb)
+	# --- La Cornisa del Coloso: tras un muro agrietado al norte del Mirador
+	var bw := BreakableWall.new()
+	bw.id = "cornisa"
+	bw.world = self
+	bw.position = tile_pos(32, 80)
+	entities.add_child(bw)
+	breakables["cornisa"] = bw
+	_add_inter("altar", "altar_cornisa", tile_pos(23, 64.6), {"style": "horn"})
+	_add_inter("lore", "lore_cornisa", tile_pos(30.5, 64.4), {"lines": [["lore_title", ["«No es una estatua. Nunca lo fue. Sostuvo la Espiral sobre los hombros hasta que el Arquitecto le dio la orden de dormir.»", "\"It is no statue. It never was. It held the Spiral upon its shoulders until the Architect ordered it to sleep.\""]],
+		["lore_title", ["«Solo despertará con el cuerno, y solo para quien haya cruzado las Puertas.»", "\"It wakes only to the horn, and only for one who has passed the Gates.\""]]]})
+	for rp in [Vector2(15, 66), Vector2(30, 74), Vector2(17, 74.5), Vector2(27, 66.5)]:
+		_prop("rubble", tile_pos(rp.x, rp.y), 3, int(rp.x) % 3)
+	for cp in [Vector2(14.5, 64.5), Vector2(32.5, 64.5), Vector2(32.5, 75.5)]:
+		var col := Depth3D.Column.new()
+		col.position = tile_pos(cp.x, cp.y)
+		col.height = 40.0 + fmod(cp.y * 7.0, 24.0)
+		col.radius = 5.0
+		entities.add_child(col)
+	_prop("broken_wing", tile_pos(20, 73.5))
+	_prop("statue", tile_pos(28.5, 63.6)).flip_h = true
+	var stars2 := ShootingStars.new()
+	stars2.position = tile_pos(6, 66)
+	add_child(stars2)
+	var amb2 := RoomAmbience.new()
+	amb2.rect = Rect2(13 * TS, 63 * TS, 21 * TS, 14 * TS)
+	amb2.kind = "mist"
+	add_child(amb2)
+	for tp in [Vector2(16, 62.7), Vector2(31, 62.7)]:
+		var wt := WallTorch.new()
+		wt.position = tile_pos(tp.x, tp.y)
+		wt.col = Color(0.55, 0.9, 1.0)
+		entities.add_child(wt)
+
+func _altar(it: Interactable) -> void:
+	var lp := local_player()
+	if lp == null or active_boss != null or secret_fight != "":
+		return
+	match str(it.data.get("style", "")):
+		"block":
+			var lines := []
+			if not Prog.flags.get("sb_verdugo", false):
+				lines = [["", ["Un tajo de madera negra. La hoja clavada en él lleva un nombre grabado... el tuyo.", "A block of black wood. The blade driven into it bears a name... yours."]],
+					[G.L(["El Verdugo", "The Executioner"]), ["Mil años esperando a que bajaras. Pediste olvidar y te lo concedieron.", "A thousand years waiting for you to come down. You asked to forget, and it was granted."]],
+					[G.L(["El Verdugo", "The Executioner"]), ["Yo no olvidé. Levántate y mírame: esto es lo que fuiste.", "I did not forget. Rise and look at me: this is what you were."]]]
+			else:
+				lines = [["", ["La hoja vuelve a estar clavada en el tajo. Él te espera de rodillas.", "The blade is driven into the block once more. He waits for you on his knees."]],
+					[G.L(["El Verdugo", "The Executioner"]), ["¿Otra vez? Bien. Nunca te cansaste de esto.", "Again? Good. You never tired of this."]]]
+			dialog.play(lines, _request_secret.bind("verdugo"))
+		"horn":
+			if not wflags.get("seravel_dead", false):
+				dialog.play([["", ["Un cuerno de hueso, más grande que tú, encadenado a la roca. Está frío.", "A bone horn, larger than you, chained to the rock. It is cold."]],
+					["", ["Algo en el Círculo de las Puertas aún retiene su eco. No responderá todavía.", "Something in the Circle of the Gates still holds its echo. It will not answer yet."]]], Callable())
+				return
+			var l2 := [["", ["El cuerno vibra contra tu pecho. Al otro lado de la cornisa, algo enorme respira.", "The horn hums against your chest. Beyond the ledge, something enormous breathes."]]]
+			if Prog.flags.get("sb_coloso", false):
+				l2 = [["", ["El cuerno guarda aún el eco del Coloso. ¿Despertarlo otra vez?", "The horn still holds the Colossus's echo. Wake it once more?"]]]
+			dialog.play(l2, _request_secret.bind("coloso"))
+
+func _request_secret(kind: String) -> void:
+	if multiplayer.is_server():
+		_server_secret(kind)
+	else:
+		_rpc_request_secret.rpc_id(1, kind)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_secret(kind: String) -> void:
+	if multiplayer.is_server():
+		_server_secret(kind)
+
+func _server_secret(kind: String) -> void:
+	if active_boss != null or secret_fight != "" or not asc_fight.is_empty():
+		return
+	bcast("_secret_start", [kind])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _secret_start(kind: String) -> void:
+	var e := _enemy_of(kind)
+	if e == null:
+		return
+	secret_fight = kind
+	e.asc = 0
+	e.reset_state()
+	e.call("summon")
+	var lp := local_player()
+	seal_arena(SECRET_ARENAS[kind][0], SECRET_ARENAS[kind][1])
+	if lp:
+		lp.cutscene = true
+	hud.letterbox(true)
+	Audio.play_music("shadow" if kind == "verdugo" else "boss2", 0.6)
+	if kind == "verdugo":
+		_cam_focus = e.global_position + Vector2(0, -16)
+		Fx.burst(e.global_position + Vector2(0, -10), Color(1, 0.35, 0.4), 40, 120.0, 1.2, "fx_feather", 180.0, Vector2.UP, 1.2, false, Vector2(0, 30))
+		G.flash(Color(1, 0.3, 0.35, 0.35), 0.4)
+		Audio.sfx("shadow_rise", 0.0, 0.0)
+		await get_tree().create_timer(1.4).timeout
+		show_boss_line(["Empuña lo que fuiste... o vuelve a olvidarlo.", "Wield what you were... or forget it again."], "verdugo")
+		await get_tree().create_timer(1.6).timeout
+	else:
+		_cam_focus = Vector2(BossColoso.ARENA.position.x + 40.0, BossColoso.ANCHOR.y - 80.0)
+		e.perform("rise", e.global_position, 0)
+		await get_tree().create_timer(4.6).timeout
+	_cam_focus = null
+	hud.letterbox(false)
+	if lp:
+		lp.cutscene = false
+	if not is_instance_valid(e) or not e.is_alive() or secret_fight != kind:
+		return
+	e.active = true
+	e.state = "chase"
+	e.cooldown = 1.0
+	active_boss = e
+	hud.show_boss(e)
+	G.shockwave(e.global_position + Vector2(0, -20), 1.4, 0.5)
+
+func _on_secret_dead(e: Enemy) -> void:
+	unseal_arena()
+	secret_fight = ""
+	active_boss = null
+	hud.hide_boss()
+	G.slowmo("kill", 0.3, 1.2)
+	Audio.play_music("victory", 0.4)
+	wflags["sb_" + e.type] = true
+	var first = not Prog.flags.get("sb_reward_" + e.type, false)
+	Prog.flags["sb_" + e.type] = true
+	Prog.flags["sb_reward_" + e.type] = true
+	Prog.achieve("sb_" + e.type)
+	var lp := local_player()
+	if _fight_boss == e and _fight_hits == 0 and lp and lp.is_alive():
+		Prog.achieve("sb_legend")
+	hud.big_message(G.L(["BATALLA SECRETA SUPERADA", "SECRET BATTLE WON"]), UIKit.GOLD, 3.2, true)
+	if first:
+		get_tree().create_timer(3.0).timeout.connect(_secret_reward.bind(e.type))
+	if multiplayer.is_server():
+		Prog.save_game()
+
+func _secret_reward(type: String) -> void:
+	match type:
+		"verdugo":
+			Prog.add_weapon("verdugo")
+			dialog.play([[G.L(["El Verdugo", "The Executioner"]), ["Concedido. Llévala. Y esta vez... recuerda por qué la empuñas.", "Granted. Take it. And this time... remember why you wield it."]]], Callable())
+		"coloso":
+			Prog.flags["storm_wing"] = true
+			Prog.flags["colossus_heart"] = true
+			Prog.flasks_max += 1
+			G.pickup("icon_quest", G.L(["HABILIDAD: ALA DE TORMENTA", "ABILITY: STORM WING"]), Color(0.6, 0.95, 1.0))
+			get_tree().create_timer(1.6).timeout.connect(G.pickup.bind("icon_quest", G.L(["MEJORA: CORAZÓN DEL COLOSO (+15% vida, +1 Lágrima)", "UPGRADE: COLOSSUS HEART (+15% health, +1 Tear)"]), Color(0.6, 0.95, 1.0)))
+			get_tree().create_timer(3.2).timeout.connect(G.toast.bind(G.L(["Ala de Tormenta: tu esquiva invoca rayos que hieren a los enemigos.", "Storm Wing: your dash calls down lightning that strikes enemies."]), Color(0.6, 0.95, 1.0)))
+			var lp := local_player()
+			if lp:
+				lp.refresh_stats(true)
+	Prog.changed.emit()
+	if multiplayer.is_server():
+		Prog.save_game()
+
+# ---------------------------------------------------------------------- Panteón de los Arcontes (Sor Velaria)
+func pantheon_open() -> bool:
+	for b in ["carcelero", "choir", "seravel"]:
+		if not Prog.flags.get(b + "_dead", false):
+			return false
+	return not Prog.ascension.is_empty()
+
+func start_pantheon() -> void:
+	if multiplayer.is_server():
+		if active_boss == null and asc_fight.is_empty() and secret_fight == "":
+			bcast("_pantheon_begin", [])
+	else:
+		_rpc_pantheon.rpc_id(1)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_pantheon() -> void:
+	start_pantheon()
+
+@rpc("any_peer", "call_remote", "reliable")
+func _pantheon_begin() -> void:
+	_pantheon_on = true
+	_pantheon_left = ["carcelero", "choir", "seravel"]
+	hud.big_message(G.L(["PANTEÓN DE LOS ARCONTES", "PANTHEON OF THE ARCHONS"]), UIKit.GOLD, 2.6, true)
+	Audio.sfx("roar", -6.0)
+	await get_tree().create_timer(2.2).timeout
+	_pantheon_next()
+
+func _pantheon_next() -> void:
+	if _pantheon_left.is_empty():
+		return
+	var b: String = _pantheon_left.pop_front()
+	_ascension_start(b, 2)
+
+func _pantheon_step() -> void:
+	unseal_arena()
+	hud.hide_boss()
+	active_boss = null
+	asc_fight = {}
+	var left := _pantheon_left.size()
+	hud.big_message(G.L(["PRUEBA SUPERADA  ·  QUEDAN %d", "TRIAL CLEARED  ·  %d LEFT"]) % left, UIKit.GOLD, 2.4)
+	var lp := local_player()
+	if lp and lp.is_alive():
+		lp.flasks = mini(lp.flasks + 1, Prog.flask_count())
+		G.toast(G.L(["El Panteón te concede una Lágrima.", "The Pantheon grants you a Tear."]), Color(1, 0.6, 0.5))
+	await get_tree().create_timer(3.4).timeout
+	if _pantheon_on:
+		_pantheon_next()
+
+func _pantheon_victory() -> void:
+	_pantheon_on = false
+	var first = not Prog.flags.get("pantheon_won", false)
+	Prog.flags["pantheon_won"] = true
+	Prog.achieve("sb_panteon")
+	hud.big_message(G.L(["EL PANTEÓN SE INCLINA ANTE TI", "THE PANTHEON BOWS TO YOU"]), UIKit.GOLD, 3.4, true)
+	if first:
+		Prog.flags["golden_feather"] = true
+		Prog.add_ecos(6000)
+		get_tree().create_timer(2.0).timeout.connect(G.pickup.bind("icon_quest", G.L(["MEJORA: PLUMA ÁUREA", "UPGRADE: GOLDEN FEATHER"]), UIKit.GOLD))
+		get_tree().create_timer(3.6).timeout.connect(G.toast.bind(G.L(["Pluma Áurea: la primera caída tras cada descanso no te arranca ninguna pluma.", "Golden Feather: the first fall after each rest tears no feather."]), UIKit.GOLD))
+
+
+# ====================================================================== cooperativo: compañero, marcas y viaje
+func partner() -> Player:
+	for pid in players:
+		if pid != Net.my_id() and is_instance_valid(players[pid]):
+			return players[pid]
+	return null
+
+var pings := {}   # peer -> PingMarker
+
+@rpc("any_peer", "call_remote", "reliable")
+func _ping(by: int, pos: Vector2) -> void:
+	## Marca para el compañero (tecla G): sobre un enemigo, un objeto o el suelo
+	var kind := "go"
+	var label := G.L(["¡POR AQUÍ!", "THIS WAY!"])
+	for e in enemies_alive():
+		if e.global_position.distance_to(pos) < 26.0 + e.body_radius:
+			kind = "enemy"
+			label = G.L(["¡ENEMIGO!", "ENEMY!"])
+			pos = e.global_position
+			break
+	if kind == "go":
+		for it in interactables.values():
+			if is_instance_valid(it) and not it.used and it.global_position.distance_to(pos) < 26.0:
+				kind = "item"
+				label = G.L(["¡MIRA ESTO!", "LOOK HERE!"])
+				pos = it.global_position
+				break
+	if pings.has(by) and is_instance_valid(pings[by]):
+		pings[by].queue_free()
+	var pm := PingMarker.new()
+	pm.position = pos
+	pm.kind = kind
+	pm.label = label
+	var who: Player = players.get(by)
+	pm.col = Color(1, 0.85, 0.4) if who == null or who.variant == 1 else Color(0.5, 0.9, 1.0)
+	pm.mine = by == Net.my_id()
+	fx_layer.add_child(pm)
+	pings[by] = pm
+	Audio.sfx("ui_ok", -2.0, 0.0)
+	Audio.sfx("bell_0" if kind != "enemy" else "enemy_shot", -10.0, 0.0)
+	if by == Net.my_id() and Net.is_online():
+		Ach.add("pings")
+
+func travel_to_partner() -> void:
+	var mate := partner()
+	var lp := local_player()
+	if mate == null or lp == null or not mate.is_alive():
+		return
+	hud.fade_to(1.0, 0.35)
+	await get_tree().create_timer(0.4).timeout
+	lp.respawn_at(mate.global_position + Vector2(-16, 6))
+	hud.fade_to(0.0, 0.5)
+	Fx.burst(lp.global_position + Vector2(0, -10), Color(1, 0.8, 0.5), 30, 90.0, 0.9, "fx_feather", 180.0, Vector2.UP, 1.0, false, Vector2(0, -20))
+	Fx.ring(lp.global_position + Vector2(0, -6), 4.0, 40.0, Color(1, 0.85, 0.5), 0.5, 3.0)
+	Audio.sfx("heal")
+	G.toast(G.L(["Las Brasas te llevan junto a tu compañero.", "The Embers carry you to your partner."]), Color(1, 0.8, 0.5))
+
+func on_partner_revived(by_me: bool) -> void:
+	## Alas Unidas: al revivir, los dos ganan +20% de daño durante 10 s
+	Prog.buffs["united"] = 10.0
+	Prog.changed.emit()
+	var lp := local_player()
+	if lp:
+		Fx.ring(lp.global_position + Vector2(0, -8), 4.0, 50.0, Color(1, 0.9, 0.6), 0.6, 4.0)
+		Fx.text(lp.global_position + Vector2(0, -26), G.L(["ALAS UNIDAS", "UNITED WINGS"]), Color(1, 0.9, 0.6), 10)
+	if by_me:
+		G.toast(G.L(["Alas Unidas: +20% de daño para los dos durante 10 s.", "United Wings: +20% damage for both for 10 s."]), Color(1, 0.9, 0.6))
+
+class PingMarker extends Node2D:
+	## Baliza de una marca: columna de luz, rombo que flota, anillos y un rótulo
+	var kind := "go"
+	var label := ""
+	var col := Color(1, 0.85, 0.4)
+	var mine := false
+	var t := 0.0
+	func _ready() -> void:
+		z_index = 40
+		var l := PointLight2D.new()
+		l.texture = Fx.tex("light")
+		l.color = col
+		l.texture_scale = 0.8
+		l.energy = 0.9
+		add_child(l)
+	func _process(delta: float) -> void:
+		t += delta
+		if t > 7.0:
+			queue_free()
+		queue_redraw()
+	func _draw() -> void:
+		var a := clampf(7.0 - t, 0.0, 1.0)
+		var c := col if kind != "enemy" else Color(1, 0.35, 0.35)
+		# columna de luz
+		draw_rect(Rect2(Vector2(-2, -70), Vector2(4, 70)), Color(c, 0.18 * a))
+		draw_rect(Rect2(Vector2(-1, -70), Vector2(2, 70)), Color(c, 0.35 * a))
+		# anillos en el suelo
+		for i in 2:
+			var k := fmod(t * 0.9 + i * 0.5, 1.0)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.45))
+			draw_arc(Vector2.ZERO, 4.0 + k * 22.0, 0, TAU, 24, Color(c, (1.0 - k) * a), 1.5)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# rombo que flota
+		var y := -26.0 + sin(t * 4.0) * 3.0
+		UIKit.diamond(self, Vector2(0, y), 7.0, Color(UIKit.INK, a))
+		UIKit.diamond(self, Vector2(0, y), 5.0, Color(c, a))
+		if kind == "enemy":
+			draw_line(Vector2(-3, y - 3), Vector2(3, y + 3), Color(UIKit.INK, a), 1.5)
+			draw_line(Vector2(3, y - 3), Vector2(-3, y + 3), Color(UIKit.INK, a), 1.5)
+		else:
+			draw_rect(Rect2(Vector2(-1, y - 2), Vector2(2, 2)), Color(UIKit.INK, a))
+		var f := UIKit.font("head")
+		var w := f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		f.draw_string_outline(get_canvas_item(), Vector2(-w / 2.0, y - 12), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, Color(UIKit.INK, a))
+		f.draw_string(get_canvas_item(), Vector2(-w / 2.0, y - 12), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(c, a))
 
 class RoundTable extends Node2D:
 	## Mesa redonda de piedra con velas y el emblema del Nimbo roto
@@ -2616,6 +3150,7 @@ func _v04_tick(delta: float, lp: Player) -> void:
 		entities.add_child(_spark)
 
 func _spark_joins() -> void:
+	Prog.achieve("spark")
 	hud.big_message(G.L(["CHISPA SE UNE A TI", "SPARK JOINS YOU"]), Color(1, 0.75, 0.35), 2.2)
 	G.toast(G.L(["Una brasa viva te seguirá: ilumina y presiente secretos.", "A living ember follows you: it lights the way and senses secrets."]), Color(1, 0.8, 0.5))
 
@@ -2623,6 +3158,13 @@ func _feather_torn_msg() -> void:
 	G.toast(G.T("feather_torn") + "  %d/%d" % [Prog.wing_feathers, Prog.WING_MAX], Look.color_of(G.look, "wing"))
 	if Prog.is_desplumado():
 		G.toast(G.T("desplumado_mode") + ": " + G.L(["más daño y velocidad, menos vida.", "more damage and speed, less health."]), UIKit.PINK)
+
+func _feather_recovered(n: int, at: Vector2) -> void:
+	Fx.burst(at + Vector2(0, -10), Look.color_of(G.look, "wing"), 18, 90.0, 1.2, "fx_feather", 180.0, Vector2.UP, 1.0, false, Vector2(0, 20))
+	G.toast(G.L(["Recuperas tu pluma arrancada", "You recover your torn feather"]) + ("" if n == 1 else " x%d" % n) + "  %d/%d" % [Prog.wing_feathers, Prog.WING_MAX], Look.color_of(G.look, "wing"))
+	Audio.sfx("heal", -3.0)
+	send_look()
+	Prog.stat_add("feathers_recovered", n)
 
 func _feathers_back(n: int) -> void:
 	G.toast(G.L(["El Arconte te devuelve %d plumas.", "The Archon returns %d feathers."]) % n, Color(1, 0.95, 0.8))
@@ -2751,6 +3293,7 @@ func _cross_slash(mid: Vector2, by: int) -> void:
 	G.flash(Color(1, 1, 1, 0.3), 0.12)
 	Audio.sfx("hit_heavy")
 	Audio.sfx("parry", -4.0)
+	Ach.add("cross")
 	if by == Net.my_id():
 		for e in enemies_alive():
 			if e.global_position.distance_to(mid) < 86.0 + e.body_radius:
@@ -2836,6 +3379,8 @@ class ReviveFeather extends Node2D:
 			Fx.text(position + Vector2(0, -10), G.L(["¡ATRAPADA!", "CAUGHT!"]), Color(1, 0.95, 0.7), 10)
 			Audio.sfx("levelup", -4.0)
 			owner_p._net_revive.rpc_id(owner_p.peer_id)
+			Ach.add("revives")
+			world.on_partner_revived(true)
 			owner_p.remove_meta("rfeather")
 			queue_free()
 			return
@@ -3241,7 +3786,8 @@ const TRIALS := {
 		"reward": {"feathers": 2, "ecos": 600, "items": {"iron": 1}}, "chest": Vector2(69, 7.4)},
 }
 ## Cierres que siguen puestos hasta superar la prueba: [prueba, casillas, estilo]
-const LOCKS := [["celdas", Rect2i(47, 46, 4, 1), "celda"], ["atrio", Rect2i(81, 47, 3, 1), "coro"], ["umbral", Rect2i(64, 12, 1, 3), "luz"]]
+const LOCKS := [["celdas", Rect2i(47, 46, 4, 1), "celda"], ["atrio", Rect2i(81, 47, 3, 1), "coro"], ["umbral", Rect2i(64, 12, 1, 3), "luz"],
+	["cadalso", Rect2i(83, 84, 3, 1), "luz"]]
 const BELL_ORDER := [0, 1, 2]       # orden correcto (aguda, media, grave): el himno escrito era grave-media-aguda
 const CELL_DOORS := [18.5, 22.5, 26.5, 30.5]
 var _trial := ""
@@ -3281,8 +3827,10 @@ func _execute(p: Player, e: Enemy) -> void:
 	p.hp = min(Prog.max_hp(), p.hp + Prog.max_hp() * 0.06)
 	p.wrath = min(100.0, p.wrath + 18.0)
 	Prog.flags["executions"] = int(Prog.flags.get("executions", 0)) + 1
-	if int(Prog.flags.executions) >= 10:
-		Prog.achieve("executioner")
+	Ach.add("executions")
+	if Prog.weapon_data().get("sentence", false):
+		p.hp = min(Prog.max_hp(), p.hp + Prog.max_hp() * 0.2)
+		Fx.burst(p.global_position + Vector2(0, -10), Color(1, 0.3, 0.4), 16, 60.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.4)
 
 var urns: Array = []
 
@@ -3294,6 +3842,7 @@ func hit_breakables(origin: Vector2, rng: float) -> void:
 		var u: Urn = urns[i]
 		if is_instance_valid(u) and not u.broken and u.global_position.distance_to(origin) < rng + 6.0:
 			u.smash(true)
+			Ach.add("urns")
 			bcast("_urn_broken", [i])
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -3362,7 +3911,7 @@ func _place_fallen() -> void:
 	## Ángeles caídos hace siglos: esqueletos con las alas abiertas, algunos con su espada clavada
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 31337
-	for rid in ["chains", "gallery", "east", "hall1", "celdas", "escala", "mirador", "alcove", "hall2"]:
+	for rid in ["chains", "gallery", "east", "hall1", "celdas", "escala", "mirador", "alcove", "hall2", "cornisa"]:
 		for r in ROOMS:
 			if r.id != rid:
 				continue
@@ -3458,9 +4007,10 @@ func _hit_breakable(id: String) -> void:
 	if bw.hp <= 0:
 		wflags["broken_" + id] = true
 		Prog.flags["broken_" + id] = true
-		Prog.achieve("secret")
+		if id == "capilla":
+			Prog.achieve("secret")
 		bw.set_broken(false)
-		hud.big_message(G.L(["PASADIZO SECRETO", "SECRET PASSAGE"]), Color(0.7, 1.0, 0.85), 2.2)
+		hud.big_message(G.L(["PASADIZO SECRETO", "SECRET PASSAGE"]), Color(0.7, 1.0, 0.85) if id == "capilla" else Color(0.6, 0.9, 1.0), 2.2)
 		if multiplayer.is_server():
 			Prog.save_game()
 
@@ -3644,6 +4194,7 @@ func _build_antechambers() -> void:
 	shafts.position = tile_pos(69, 15)
 	shafts.col = Color(1, 0.9, 0.6)
 	add_child(shafts)
+	_build_secret_rooms()
 
 func k_frame(v: Vector2) -> int:
 	return int(v.x) % 2
@@ -3932,6 +4483,7 @@ func _enemy_blocked(idx: int) -> void:
 
 
 func _nimbo_intro() -> void:
+	Prog.achieve("nimbo")
 	## Primera vez en la Sala del Nimbo: la cámara presenta a los cuatro que viven junto a la mesa redonda
 	Prog.flags["nimbo_intro"] = true
 	var lp := local_player()
@@ -4223,8 +4775,14 @@ class GhostEcho extends Node2D:
 			Fx.burst((sp as Sprite2D).global_position + Vector2(0, -14), Color(0.55, 0.8, 1.0), 10, 30.0, 1.0, "fx_soft", 60.0, Vector2.UP, 0.5, true)
 		Prog.add_ecos(25)
 		G.pickup("icon_memory", G.L(["Eco del pasado", "Echo of the past"]) + "  +25", Color(0.68, 0.86, 1.0))
+		var seen_e := 0
+		for k in Lore.GHOST_ECHOES.keys():
+			if Prog.flags.get("echo_" + k, false):
+				seen_e += 1
+		Ach.set_max("echoes", seen_e)
 		if _all_echoes():
 			Prog.achieve("echoes")
+			world.bcast("_open_cadalso", [true])
 	func _all_echoes() -> bool:
 		for k in Lore.GHOST_ECHOES.keys():
 			if not Prog.flags.get("echo_" + k, false):
@@ -4428,6 +4986,7 @@ class HealZone extends Node2D:
 	var radius := 36.0
 	var amount := 10.0
 	var world: Node
+	var partner := false
 	var _t := 0.0
 	var _tick := 0.0
 	func _ready() -> void:
@@ -4452,6 +5011,8 @@ class HealZone extends Node2D:
 					Fx.burst(p.global_position + Vector2(0, -6), Color(1, 0.9, 0.5), 4, 30.0, 0.6, "fx_soft", 60.0, Vector2.UP, 0.35, true)
 					if p.hp - before >= 1.0:
 						Fx.text(p.global_position + Vector2(0, -20), "+%d" % int(p.hp - before), Color(0.6, 1.0, 0.6), 8)
+						if partner:
+							Ach.add("coop_heal", p.hp - before)
 		if _t > dur:
 			modulate.a -= delta * 3.0
 			if modulate.a <= 0.0:

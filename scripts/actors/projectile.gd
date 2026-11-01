@@ -47,6 +47,10 @@ func _ready() -> void:
 		"wave":
 			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.95, 0.7); _spr.scale = Vector2(1.6, 2.6)
 			_spr.material = Fx.add_material()
+		"verdict":
+			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.25, 0.35); _spr.scale = Vector2(1.8, 3.0)
+			_spr.modulate = Color(1, 0.3, 0.4)
+			_spr.material = Fx.add_material()
 		_:
 			_spr.texture = Fx.tex("proj_orb"); col = Color(0.75, 0.4, 1)
 	add_child(_spr)
@@ -91,7 +95,7 @@ func _physics_process(delta: float) -> void:
 	if life <= 0.0:
 		_die(false)
 		return
-	if kind == "wave":
+	if kind == "wave" or kind == "verdict":
 		_spr.modulate.a = clamp(life * 3.0, 0.0, 1.0)
 	_check_hits()
 	_check_walls()
