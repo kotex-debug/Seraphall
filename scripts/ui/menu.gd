@@ -610,6 +610,16 @@ const CODEX := [
 	["seravel", "boss_seravel", Rect2(0, 0, 52, 56), ["Seravel, Guardiana de las Puertas", "Seravel, Warden of the Gates"], ["La primera de los serafines. Confió en el verdugo que le arrancó la primera pluma. Todavía lo espera a las puertas... del mismo lado, si la perdonas.", "First of the seraphim. She trusted the executioner who tore out her first feather. She still waits for them at the gates... on the same side, if you spare her."]],
 ]
 var _codex_sel := "hueco"
+const CODEX_NPCS := [
+	["brenna", "brenna", ["Brenna", "Brenna"], ["Herrera del Santuario. Forjó la primera espada de Seravel y aún habla de ella con orgullo.", "Smith of the Sanctuary. She forged Seravel's first sword and still speaks of it with pride."]],
+	["carto", "carto", ["El Cartógrafo", "The Cartographer"], ["Dibuja la Espiral desde hace siglos. Su mapa termina donde empieza su miedo.", "He has drawn the Spiral for centuries. His map ends where his fear begins."]],
+	["ozias", "ozias", ["Ozias", "Ozias"], ["Grabador de runas. Talló el Himno en las campanas y olvidó para qué servía.", "Rune engraver. He carved the Hymn into the bells and forgot what it was for."]],
+	["ilse", "ilse", ["Madre Ilse", "Mother Ilse"], ["Cose plumas a quien las pierde. Reza por todos, incluso por los que ya no recuerdan su nombre.", "She sews feathers for those who lose them. She prays for everyone, even those who forgot their name."]],
+	["nyx", "nyx", ["Nyx", "Nyx"], ["Mercader de la máscara de pico. Compra barato, vende caro y nunca pregunta de dónde vienes.", "Beak-masked merchant. Buys cheap, sells dear and never asks where you come from."]],
+	["velaria", "velaria", ["Sor Velaria", "Sister Velaria"], ["Guarda los ecos de los Arcontes caídos y deja que vuelvas a enfrentarte a ellos.", "Keeper of the fallen Archons' echoes; she lets you face them again."]],
+	["preso", "preso", ["Tobías", "Tobias"], ["Preso de las Celdas de Espera. Lleva tanto tiempo esperando que ya no recuerda a quién.", "Prisoner of the Waiting Cells. He's waited so long he no longer remembers for whom."]],
+	["peregrina", "peregrina", ["Sael, la Peregrina", "Sael, the Pilgrim"], ["Sube la Escalinata del Juicio desde hace trescientos años. Siempre despierta abajo.", "She has climbed the Stairs of Judgement for three hundred years. She always wakes at the bottom."]],
+]
 
 func _build_codex() -> void:
 	_panel(Rect2(0, 0, 200, 296), UIKit.RED)
@@ -621,11 +631,34 @@ func _build_codex() -> void:
 		var b := _btn(nm.to_upper() if known else nm, Vector2(12, y), _on_codex.bind(e[0]), true, 176)
 		if e[0] == _codex_sel:
 			b.add_theme_color_override("font_color", UIKit.GOLD)
-		y += 29.0
+		y += 26.0
+	var met := 0
+	for np in CODEX_NPCS:
+		if Prog.flags.get("known_" + np[0], false):
+			met += 1
+	var nb := _btn(G.L(["PERSONAJES", "CHARACTERS"]) + "  %d/%d" % [met, CODEX_NPCS.size()], Vector2(12, 240), _on_codex.bind("_npc"), true, 176)
+	if _codex_sel == "_npc":
+		nb.add_theme_color_override("font_color", UIKit.GOLD)
 	var ab := _btn(G.L(["LOGROS", "ACHIEVEMENTS"]) + "  %d/%d" % [Prog.achievements_count(), Prog.ACHIEVEMENTS.size()], Vector2(12, 266), _on_codex.bind("_ach"), true, 176)
 	if _codex_sel == "_ach":
 		ab.add_theme_color_override("font_color", UIKit.GOLD)
 	_panel(Rect2(210, 0, 390, 296), UIKit.PURPLE)
+	if _codex_sel == "_npc":
+		var i2 := 0
+		for np in CODEX_NPCS:
+			var kn: bool = Prog.flags.get("known_" + np[0], false)
+			var cx := 218.0 + (i2 % 4) * 95.0
+			var cy := 10.0 + (i2 / 4) * 142.0
+			var bp := CodexBust.new()
+			bp.sheet = "bust_" + np[1]
+			bp.known = kn
+			bp.position = Vector2(cx + 16, cy)
+			bp.size = Vector2(56, 56)
+			content.add_child(bp)
+			_lbl(G.L(np[2]).to_upper() if kn else "???", Vector2(cx, cy + 60), 8, UIKit.GOLD if kn else UIKit.TEXT_DIM, 90, "head")
+			_lbl(G.L(np[3]) if kn else G.L(["Aún no os conocéis.", "You haven't met yet."]), Vector2(cx, cy + 74), 10, UIKit.WHITE if kn else Color(0.5, 0.45, 0.55), 90, "title")
+			i2 += 1
+		return
 	if _codex_sel == "_ach":
 		var yy := 14.0
 		var i := 0
@@ -1865,3 +1898,25 @@ class CodexPortrait extends Control:
 		if not known:
 			var f := UIKit.font("logo")
 			f.draw_string(get_canvas_item(), Vector2(size.x / 2.0 - 8, size.y / 2.0 + 14), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(0.7, 0.5, 0.8, 0.6))
+
+
+class CodexBust extends Control:
+	## Busto de PNJ en el Códice (en silueta si aún no lo conoces), con parpadeo
+	var sheet := ""
+	var known := false
+	var _t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_t = randf() * 3.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.GOLD_DARK if known else UIKit.PURPLE, Color(0.12, 0.05, 0.16), 3.0)
+		var fr := 2 if fmod(_t, 3.6) < 0.13 else 0
+		var tex := Fx.tex(sheet)
+		var dst := Rect2(Vector2(4, 4), Vector2(48, 48))
+		if known:
+			draw_texture_rect_region(tex, dst, Rect2(fr * 48, 0, 48, 48))
+		else:
+			draw_texture_rect_region(tex, dst, Rect2(0, 0, 48, 48), Color(0.05, 0.02, 0.08))

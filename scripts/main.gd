@@ -1197,6 +1197,13 @@ func _run_autotest() -> void:
 					await get_tree().create_timer(0.6).timeout
 					await _shot(out + "/m_logros.png")
 					w.menu.close()
+					for kn in ["brenna", "ozias", "nyx", "preso", "ilse"]:
+						Prog.flags["known_" + kn] = true
+					w.menu.open("codex", {})
+					w.menu._on_codex("_npc")
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_personajes.png")
+					w.menu.close()
 			print("AUTOTEST_MENUS_OK")
 			get_tree().quit()
 		"flow":

@@ -1669,6 +1669,7 @@ func _grant(d: Dictionary) -> void:
 		Prog.quest_progress(d.quest)
 
 func _talk(id: String) -> void:
+	Prog.flags["known_" + id] = true
 	var lines := []
 	match id:
 		"peregrina":
