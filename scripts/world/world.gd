@@ -3230,6 +3230,14 @@ func _build_antechambers() -> void:
 	sanct_rays.position = tile_pos(49, 85)
 	sanct_rays.col = Color(1, 0.8, 0.55)
 	add_child(sanct_rays)
+	# --- ambiente propio de cada sala (goteo, notas, polvo dorado, niebla fría)
+	for spec in [["celdas", "drip"], ["chains", "drip"], ["atrio", "notes"], ["choir", "notes"], ["antesala", "gold"], ["escala", "gold"], ["gallery", "mist"], ["capilla", "spores"]]:
+		for r in ROOMS:
+			if r.id == spec[0]:
+				var amb := RoomAmbience.new()
+				amb.rect = Rect2(Vector2(_rect_of(r).position) * TS, Vector2(_rect_of(r).size) * TS)
+				amb.kind = spec[1]
+				add_child(amb)
 	# --- Mirador: estrellas fugaces sobre el abismo
 	var stars := ShootingStars.new()
 	stars.position = tile_pos(24, 84)
@@ -3576,3 +3584,62 @@ class ShootingStars extends Node2D:
 			var a := sin(k * PI)
 			draw_line(p, p - tr[1].normalized() * 26.0, Color(1, 0.9, 0.7, 0.6 * a), 1.5)
 			draw_circle(p, 1.5, Color(1, 1, 0.9, a))
+
+
+class RoomAmbience extends Node2D:
+	## Partículas de ambiente de una sala: gotas que caen y salpican, notas que flotan,
+	## polvo dorado que baja en haces, niebla fría a ras de suelo o esporas que brillan
+	var rect := Rect2()
+	var kind := "drip"
+	var parts: Array = []
+	var t := 0.0
+	func _ready() -> void:
+		z_index = 3 if kind != "mist" else -7
+		if kind in ["gold", "notes", "spores"]:
+			material = Fx.add_material()
+	func _process(delta: float) -> void:
+		t += delta
+		var cam := Depth3D.cam_center(self)
+		if not rect.grow(200).has_point(cam):
+			if not parts.is_empty():
+				parts.clear()
+				queue_redraw()
+			return
+		var rate: float = {"drip": 3.0, "notes": 2.0, "gold": 7.0, "mist": 2.5, "spores": 3.0}[kind]
+		if randf() < delta * rate:
+			var p := Vector2(randf_range(rect.position.x, rect.end.x), randf_range(rect.position.y, rect.end.y))
+			parts.append([p, 0.0, randf_range(0.7, 1.3)])
+		for pp in parts:
+			pp[1] += delta
+		parts = parts.filter(func(pp): return pp[1] < 3.0)
+		queue_redraw()
+	func _draw() -> void:
+		for pp in parts:
+			var p: Vector2 = pp[0]
+			var k: float = pp[1]
+			match kind:
+				"drip":
+					if k < 0.5:
+						var fall := Vector2(0, -60.0 * (1.0 - k / 0.5))
+						draw_rect(Rect2(p + fall, Vector2(1, 3)), Color(0.6, 0.7, 0.9, 0.7))
+					elif k < 1.0:
+						var r := (k - 0.5) * 16.0
+						draw_set_transform(p, 0.0, Vector2(1.0, 0.4))
+						draw_arc(Vector2.ZERO, r, 0, TAU, 12, Color(0.6, 0.7, 0.9, 0.6 * (1.0 - (k - 0.5) * 2.0)), 1.0)
+						draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				"notes":
+					var q := p + Vector2(sin(k * 2.0 + p.x) * 8.0, -k * 18.0)
+					var a := sin(k / 3.0 * PI) * 0.8
+					draw_circle(q, 1.6, Color(0.8, 0.65, 1.0, a))
+					draw_line(q + Vector2(1.4, 0), q + Vector2(1.4, -6), Color(0.8, 0.65, 1.0, a), 1.0)
+				"gold":
+					var q2 := p + Vector2(sin(k * 1.5 + p.y) * 6.0, k * 14.0)
+					draw_rect(Rect2(q2, Vector2(1, 1)), Color(1, 0.88, 0.55, sin(k / 3.0 * PI) * 0.9))
+				"mist":
+					var a2 := sin(k / 3.0 * PI) * 0.12
+					draw_set_transform(p + Vector2(k * 10.0, 0), 0.0, Vector2(1.0, 0.35))
+					draw_circle(Vector2.ZERO, 22.0 * pp[2], Color(0.7, 0.8, 1.0, a2))
+					draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				"spores":
+					var q3 := p + Vector2(sin(k * 3.0 + p.x) * 5.0, -k * 8.0)
+					draw_circle(q3, 1.2, Color(0.7, 1.0, 0.85, sin(k / 3.0 * PI) * 0.9))
