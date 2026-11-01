@@ -89,9 +89,11 @@ func _ready() -> void:
 			G.look = Look.sane({"body": "f", "hair": 1})
 			var film := preload("res://scripts/ui/intro_film.gd").new()
 			add_child(film)
-			for k in 6:
-				await get_tree().create_timer(4.2 if k == 0 else 6.6).timeout
-				await _shot(sd2 + "/f%d.png" % k)
+			await get_tree().create_timer(1.0).timeout
+			for k in film.SCENES.size():
+				film.debug_seek(k, 0.72 if k != 4 else 0.7)
+				await get_tree().create_timer(0.35).timeout
+				await _shot(sd2 + "/f%02d.png" % k)
 			get_tree().quit()
 		"title":
 			_build_title()
