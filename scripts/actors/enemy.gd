@@ -10,6 +10,9 @@ const TYPES := {
 	"acolito": {"sheet": "enemy_acolito", "fw": 32, "fh": 32, "hp": 36.0, "speed": 52.0, "radius": 7.0, "dmg": 12.0, "poise": 14.0,
 		"ecos": 38, "aggro": 190.0, "range": 160.0, "cd": 2.0, "off": -14.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
+	"planidera": {"sheet": "enemy_planidera", "fw": 32, "fh": 32, "hp": 44.0, "speed": 42.0, "radius": 7.0, "dmg": 14.0, "poise": 18.0,
+		"ecos": 46, "aggro": 200.0, "range": 175.0, "cd": 2.8, "off": -16.0,
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	"bestia": {"sheet": "enemy_bestia", "fw": 38, "fh": 28, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
 		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -12.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
@@ -112,6 +115,8 @@ func _ready() -> void:
 		var el := PointLight2D.new()
 		el.texture = Fx.tex("light")
 		el.color = Color(1, 0.45, 0.3) if type != "acolito" else Color(0.7, 0.45, 1)
+		if type == "planidera":
+			el.color = Color(0.5, 0.8, 1.0)
 		if type == "custodio":
 			el.color = Color(1, 0.85, 0.5)
 			el.texture_scale = 1.4
@@ -198,6 +203,17 @@ func _chase(target: Node2D, delta: float) -> void:
 	facing = 1 if to.x >= 0.0 else -1
 	var want := Vector2.ZERO
 	match type:
+		"planidera":
+			# flota a media distancia y llora sobre ti
+			if d < 90.0:
+				want = -to.normalized()
+			elif d > 150.0:
+				want = to.normalized()
+			else:
+				want = to.normalized().orthogonal() * (1.0 if (idx % 2) == 0 else -1.0) * 0.4
+			if cooldown <= 0.0 and d < cfg.range:
+				_trigger("tears", target.global_position)
+				return
 		"acolito":
 			if d < 80.0:
 				want = -to.normalized()
@@ -317,6 +333,22 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 				var a := dir.angle() + (i - (n - 1) / 2.0) * 0.26
 				world.spawn_projectile_local(global_position + Vector2(0, -12), Vector2.from_angle(a) * 125.0, cfg.dmg, "orb", "enemy", 1, 5.0, 3.0, 0)
 			if not await _wait(0.6, my_id): return
+		"tears":
+			# alza el vial y tres lágrimas enormes caen desde lo alto sobre ti (sombra de aviso en el suelo)
+			_play("attack", 0)
+			Fx.light_flash(global_position + Vector2(0, -20), Color(0.5, 0.85, 1.0), 1.0, 0.6, 0.7)
+			_tell(0.55, Color(0.55, 0.85, 1.0))
+			if not await _wait(0.4, my_id): return
+			_play("attack", 1)
+			Audio.sfx("charge", -10.0)
+			if not await _wait(0.25, my_id): return
+			_play("attack", 2)
+			var rng2 := RandomNumberGenerator.new()
+			rng2.seed = seed
+			for i in 3:
+				var tp: Vector2 = tpos + (Vector2.ZERO if i == 0 else Vector2.from_angle(rng2.randf() * TAU) * rng2.randf_range(18.0, 34.0))
+				_drop_tear(tp, 0.55 + i * 0.18)
+			if not await _wait(1.0, my_id): return
 		"blink":
 			Fx.burst(global_position + Vector2(0, -10), Color(0.7, 0.4, 1), 16, 60.0, 0.5, "fx_soft", 180.0, Vector2.UP, 0.4)
 			Audio.sfx("dash", -4.0)
@@ -420,6 +452,26 @@ func _slam_at(p: Vector2, r: float, dmg: float) -> void:
 	Fx.light_flash(p, Color(1, 0.6, 0.3), 1.6, 1.0, 0.35)
 	world.get_node("FX").add_child(Depth3D.Debris.new().setup(p, 10 if is_boss else 6, Color(0.42, 0.34, 0.38), 1.0 if is_boss else 0.7))
 	_hit_circle(p, r, dmg, Vector2.ZERO)
+
+func _drop_tear(p: Vector2, dur: float) -> void:
+	var f := Depth3D.Faller.new()
+	f.tex = Fx.tex("proj_orb")
+	f.height = 170.0
+	f.dur = dur
+	f.linger = 0.05
+	f.additive = true
+	f.modulate = Color(0.55, 0.9, 1.0)
+	f.position = p
+	f.on_land = _tear_splash.bind(p)
+	world.get_node("FX").add_child(f)
+
+func _tear_splash(p: Vector2) -> void:
+	Audio.sfx("hit", -12.0, 0.3)
+	Fx.ring(p, 4.0, 22.0, Color(0.55, 0.9, 1.0), 0.35, 3.0)
+	Fx.burst(p, Color(0.6, 0.9, 1.0), 12, 70.0, 0.5, "fx_px", 180.0, Vector2.UP, 1.0, true, Vector2(0, 120))
+	Fx.light_flash(p, Color(0.5, 0.85, 1.0), 1.0, 0.7, 0.3)
+	if state != "dead":
+		_hit_circle(p, 14.0, cfg.dmg, Vector2.ZERO)
 
 func _wait(t: float, my_id: int) -> bool:
 	await get_tree().create_timer(t, false).timeout

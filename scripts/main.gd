@@ -978,6 +978,29 @@ func _run_autotest() -> void:
 				await _shot(out + "/n%d.png" % i)
 			print("AUTOTEST_NIMBO_OK")
 			get_tree().quit()
+		"mourner":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			Prog.flags["thought_area_gallery"] = true
+			Prog.flags["echo_galeria"] = true
+			var mo: Enemy = null
+			for e in w.enemies_alive():
+				if e.type == "planidera":
+					mo = e
+					break
+			print("MOURNER at ", mo.global_position / 16.0 if mo else null)
+			lp.respawn_at(mo.global_position + Vector2(-60, 40))
+			await get_tree().create_timer(2.0).timeout
+			mo.cooldown = 99.0
+			mo.perform("tears", lp.global_position, 7)
+			await get_tree().create_timer(0.75).timeout
+			await _shot(out + "/m1.png")
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/m2.png")
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/m3.png")
+			print("AUTOTEST_MOURNER_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

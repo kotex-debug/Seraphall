@@ -602,6 +602,7 @@ const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left"
 const CODEX := [
 	["hueco", "enemy_hueco", Rect2(0, 0, 32, 32), ["Hueco", "Husk"], ["Ángeles a los que la Voz vació por dentro. Arrastran cadenas que ya nadie sujeta y repiten, sin saberlo, la última orden que recibieron.", "Angels the Voice hollowed out. They drag chains no one holds anymore and repeat, unknowingly, the last order they were given."]],
 	["acolito", "enemy_acolito", Rect2(0, 0, 32, 32), ["Acólito", "Acolyte"], ["Rezan con los ojos abiertos para no ver lo que adoran. Sus velas no queman: iluminan lo justo para que nadie se pierda... ni escape.", "They pray with open eyes so they won't see what they worship. Their candles don't burn: they shed just enough light so no one gets lost... or escapes."]],
+	["planidera", "enemy_planidera", Rect2(0, 0, 32, 32), ["Plañidera", "Mourner"], ["Lloró tanto por los que cayeron que sus lágrimas aprendieron a caer también. Mira al suelo: la sombra avisa antes que la pena.", "She wept so much for the fallen that her tears learned to fall too. Watch the floor: the shadow warns before the grief does."]],
 	["bestia", "enemy_bestia", Rect2(0, 0, 38, 28), ["Bestia de Ceniza", "Ash Beast"], ["Lo que queda cuando un ángel olvida que lo fue. Huele el miedo y la luz por igual.", "What remains when an angel forgets it ever was one. It smells fear and light alike."]],
 	["guardia", "enemy_guardia", Rect2(0, 0, 32, 32), ["Guardia de las Celdas", "Cell Guard"], ["Llevan la puerta de su propia celda como escudo. Ataca por la espalda o rompe su postura: de frente, nada pasa.", "They carry the door of their own cell as a shield. Strike from behind or break their stance: from the front, nothing gets through."]],
 	["custodio", "enemy_custodio", Rect2(0, 0, 48, 48), ["El Custodio del Umbral", "The Threshold Warden"], ["Estatua jurada a una sola puerta. Esperó mil años a que volviera el verdugo... y lo reconoció al instante.", "A statue sworn to a single door. It waited a thousand years for the executioner's return... and recognised it at once."]],
@@ -624,14 +625,14 @@ const CODEX_NPCS := [
 func _build_codex() -> void:
 	_panel(Rect2(0, 0, 200, 296), UIKit.RED)
 	_lbl(G.L(["CÓDICE", "CODEX"]), Vector2(14, 10), 8, UIKit.GOLD, 0.0, "head")
-	var y := 30.0
+	var y := 28.0
 	for e in CODEX:
 		var known: bool = Prog.flags.get("killed_" + e[0], false)
 		var nm := G.L(e[3]) if known else "???"
 		var b := _btn(nm.to_upper() if known else nm, Vector2(12, y), _on_codex.bind(e[0]), true, 176)
 		if e[0] == _codex_sel:
 			b.add_theme_color_override("font_color", UIKit.GOLD)
-		y += 26.0
+		y += 23.0
 	var met := 0
 	for np in CODEX_NPCS:
 		if Prog.flags.get("known_" + np[0], false):
