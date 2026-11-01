@@ -1089,7 +1089,7 @@ func _check_area(lp: Player) -> void:
 		var peaceful := a in PEACE_AREAS
 		create_tween().tween_property(self, "_calm", 1.0 if peaceful else 0.0, 2.0)
 		if active_boss == null and not _contemplating:
-			Audio.play_music("peace" if peaceful else "explore", 2.5)
+			Audio.play_music("chapel" if a == "area_capilla" else ("peace" if peaceful else "explore"), 2.5)
 	if r == "yard" and not wflags.get("carcelero_intro", false) and not wflags.get("carcelero_dead", false) and lp.is_alive() and lp.global_position.y < 43 * TS:
 		if multiplayer.is_server():
 			_server_start_carcelero()

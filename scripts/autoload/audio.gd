@@ -45,7 +45,8 @@ func play_music(name: String, fade := 1.2) -> void:
 	nw.volume_db = -40.0
 	nw.play()
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(nw, "volume_db", linear_to_db(max(0.001, G.music_volume)), fade)
+	var trim := -3.5 if name == "chapel" else 0.0
+	tw.tween_property(nw, "volume_db", linear_to_db(max(0.001, G.music_volume)) + trim, fade)
 	tw.tween_property(old, "volume_db", -60.0, fade)
 	tw.chain().tween_callback(old.stop)
 

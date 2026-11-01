@@ -382,6 +382,20 @@ def trial():
     s.seq(bass, CADENA * 4, 16, 0.45, dist=0.5)
     return reverb(s.loop(), 0.22, 1.8)
 
+def chapel():
+    """Capilla Olvidada (v0.8): órgano muy suave y coro que tararea en re menor; la PLUMA en campanas
+    lejanas, lenta y rota, como una nana que alguien intenta recordar."""
+    s = Song(54, 48)
+    prog = [Dm, Bb, Gm, A, Dm, F, Gm, A, Dm, Bb, Eb, A]
+    for i, ch in enumerate(prog):
+        s.chord(organ, ch, i * 4, 4, 0.32)
+        s.chord(choir, [m + 12 for m in ch[1:]], i * 4, 4, 0.22, vowel="o")
+        s.add(bass(mf(ch[0] - 12), 3.8 * s.spb, 0.4), i * 4)
+    s.seq(bell, [(m, d * 2) for m, d in PLUMA[:7]], 8, 0.32)
+    s.seq(mbox, [(m + 12, d * 2) for m, d in PLUMA[:6]], 30, 0.25)
+    s.add(wind(48 * s.spb, 0.12), 0)
+    return reverb(tape(s.loop(), 0.002, 0.3), 0.5, 3.6)
+
 def shadow():
     """La Sombra: PLUMA al revés, desafinada y triturada, con latido."""
     s = Song(84, 32)
