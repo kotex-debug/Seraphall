@@ -824,6 +824,17 @@ func save_game() -> void:
 func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
 
+## Lee la partida guardada sin cargarla (para la ficha de "Continuar" en la pantalla de inicio)
+func peek_save() -> Dictionary:
+	if not has_save():
+		return {}
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if f == null:
+		return {}
+	var data = JSON.parse_string(f.get_as_text())
+	f.close()
+	return data if data is Dictionary else {}
+
 func load_game() -> bool:
 	if not has_save():
 		return false

@@ -252,7 +252,12 @@ func _build_menu() -> void:
 	menu_box.add_theme_constant_override("separation", 2)
 	add_child(menu_box)
 
+var _save_card: Control
+
 func _clear_menu() -> void:
+	if is_instance_valid(_save_card):
+		_save_card.queue_free()
+	_save_card = null
 	for c in menu_box.get_children():
 		c.queue_free()
 	if panel:
@@ -301,6 +306,16 @@ func show_main_menu() -> void:
 	var items := []
 	if Prog.has_save():
 		items.append([G.T("continue"), "continue"])
+		var sd := Prog.peek_save()
+		if not sd.is_empty():
+			var card := SaveCard.new()
+			card.data = sd
+			card.position = Vector2(494, 152)
+			card.size = Vector2(134, 128)
+			card.modulate.a = 0.0
+			add_child(card)
+			_save_card = card
+			card.create_tween().tween_property(card, "modulate:a", 1.0, 0.4).set_delay(0.3)
 	items.append([G.T("new_game"), "new"])
 	items.append([G.T("host"), "host"])
 	items.append([G.T("join"), "join_menu"])
@@ -684,3 +699,48 @@ class TitleFalls extends Control:
 				var fk := fmod(f[1] * 0.8 + q * 0.33, 1.0)
 				var fp := p + Vector2((q - 1) * 10.0 * fk, -fk * 26.0)
 				draw_line(fp, fp + Vector2(2, 4), Color(1, 0.97, 0.92, a * (1.0 - fk)), 1.5)
+
+
+class SaveCard extends Control:
+	## Ficha de la partida guardada junto a "Continuar": busto, nombre, nivel, Brasa, tiempo y plumas
+	var data := {}
+	var _t := 0.0
+	var _bust: Texture2D
+	const BRASAS := {"sanct": "area_sanct", "gate": "area_yard", "nimbo": "area_nimbo", "umbral": "area_juicio"}
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var lk: Dictionary = data.get("look", {})
+		if not lk.is_empty():
+			_bust = Look.bust_texture(Look.sane(lk), int(data.get("wing_feathers", 10)))
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.GOLD_DARK, Color(0.08, 0.03, 0.11, 0.9), 3.0, _t)
+		var hf := UIKit.font("head")
+		var tf := UIKit.font("title")
+		hf.draw_string(get_canvas_item(), Vector2(8, 13), G.L(["TU DESCENSO", "YOUR DESCENT"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD)
+		var br := Rect2(Vector2(8, 20), Vector2(44, 44))
+		draw_rect(br, Color(0.14, 0.06, 0.18))
+		if _bust:
+			var fr := 1 if fmod(_t, 3.4) < 0.12 else 0
+			draw_texture_rect_region(_bust, Rect2(br.position + Vector2(2, 2), Vector2(40, 40)), Rect2(fr * 40, 0, 40, 40))
+		draw_rect(br, UIKit.GOLD_DARK, false, 1.0)
+		var lk: Dictionary = data.get("look", {})
+		var nm := Look.display_name(Look.sane(lk)) if not lk.is_empty() else "?"
+		hf.draw_string(get_canvas_item(), Vector2(58, 30), nm.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 72, 8, UIKit.WHITE)
+		tf.draw_string(get_canvas_item(), Vector2(58, 44), "%s %d" % [G.T("level"), int(data.get("level", 1))], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.GOLD)
+		var ng := int(data.get("ng", 0))
+		if ng > 0:
+			tf.draw_string(get_canvas_item(), Vector2(58, 58), "NG+%d" % ng, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.RED)
+		var area: String = G.T(BRASAS.get(str(data.get("last_brasa", "sanct")), "area_sanct"))
+		tf.draw_string(get_canvas_item(), Vector2(8, 78), area, HORIZONTAL_ALIGNMENT_LEFT, size.x - 14, 10, UIKit.CYAN)
+		var pt := float(data.get("playtime", 0.0))
+		var rows := [[G.L(["Tiempo", "Time"]), "%d:%02d" % [int(pt / 3600.0), int(pt / 60.0) % 60]],
+			[G.L(["Plumas", "Feathers"]), "%d/10" % int(data.get("wing_feathers", 10))],
+			[G.L(["Recuerdos", "Memories"]), "%d/4" % (data.get("memories", {}) as Dictionary).size()]]
+		var y := 93.0
+		for r in rows:
+			tf.draw_string(get_canvas_item(), Vector2(8, y), r[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+			tf.draw_string(get_canvas_item(), Vector2(8, y), r[1], HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 10, UIKit.WHITE)
+			y += 12.0

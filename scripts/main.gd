@@ -106,6 +106,24 @@ func _ready() -> void:
 				await get_tree().create_timer(0.35).timeout
 				await _shot(sd3 + "/t%02d.png" % k)
 			get_tree().quit()
+		"title2":
+			# ficha de "Continuar" con una partida de ejemplo
+			Prog.reset()
+			Prog.level = 9
+			Prog.playtime = 5400.0
+			Prog.wing_feathers = 7
+			Prog.last_brasa = "nimbo"
+			Prog.memories = {"m1": true, "m2": true}
+			G.look = Look.sane({"body": "f", "hair": 1, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": "Aurel"})
+			Prog.save_game()
+			_build_title()
+			title._skip_intro()
+			await get_tree().create_timer(0.5).timeout
+			title.show_main_menu()
+			await get_tree().create_timer(1.2).timeout
+			await _shot(OS.get_environment("SERAPHALL_SHOTS") + "/t2_continuar.png")
+			print("AUTOTEST_TITLE2_OK")
+			get_tree().quit()
 		"title":
 			_build_title()
 			await get_tree().create_timer(1.2).timeout
