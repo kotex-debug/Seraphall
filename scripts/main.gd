@@ -1204,6 +1204,10 @@ func _run_autotest() -> void:
 					await get_tree().create_timer(0.6).timeout
 					await _shot(out + "/m_personajes.png")
 					w.menu.close()
+					w.menu.open("service", {"npc": "nyx"})
+					await get_tree().create_timer(0.6).timeout
+					await _shot(out + "/m_servicio.png")
+					w.menu.close()
 			print("AUTOTEST_MENUS_OK")
 			get_tree().quit()
 		"flow":

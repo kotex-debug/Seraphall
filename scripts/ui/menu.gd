@@ -1170,9 +1170,18 @@ class NpcBust extends Control:
 			var a := TAU * i / 10.0 + t * 0.4
 			var d := Vector2.from_angle(a)
 			draw_colored_polygon(PackedVector2Array([c + d * 26.0 + d.orthogonal() * 4.0, c + d * 72.0, c + d * 26.0 - d.orthogonal() * 4.0]), Color(col, 0.1))
-		var fr := int(t * 4.0) % 4
 		var bob := roundf(sin(t * 2.0) * 2.0)
-		draw_texture_rect_region(Fx.tex(sheet), Rect2(c + Vector2(-60, -70 + bob), Vector2(120, 130)), Rect2(fr * 32, 0, 32, 32))
+		var bust := "bust_" + sheet.trim_prefix("npc_")
+		if ResourceLoader.exists("res://assets/sprites/%s.png" % bust):
+			# busto grande a 2x con parpadeo
+			var fb := 2 if fmod(t, 3.4) < 0.13 else 0
+			var r := Rect2(c + Vector2(-48, -58 + bob), Vector2(96, 96))
+			draw_rect(r.grow(3), Color(0.05, 0.02, 0.07, 0.8))
+			draw_texture_rect_region(Fx.tex(bust), r, Rect2(fb * 48, 0, 48, 48))
+			draw_rect(r.grow(3), col, false, 2.0)
+		else:
+			var fr := int(t * 4.0) % 4
+			draw_texture_rect_region(Fx.tex(sheet), Rect2(c + Vector2(-60, -70 + bob), Vector2(120, 130)), Rect2(fr * 32, 0, 32, 32))
 		for i in 6:
 			var p := Vector2(fmod(i * 37.0 + t * 12.0, size.x - 10) + 5, 200.0 - fmod(t * 20.0 + i * 31.0, 160.0))
 			draw_rect(Rect2(p.round(), Vector2(2, 2)), Color(col, 0.6))
