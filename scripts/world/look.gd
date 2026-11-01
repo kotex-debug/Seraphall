@@ -12,14 +12,16 @@ const OPTIONS := {
 	"skin": [["Alba", "Dawn", "f8e0d0"], ["Marfil", "Ivory", "f2d0b0"], ["Miel", "Honey", "e0b090"], ["Canela", "Cinnamon", "c89878"],
 		["Bronce", "Bronze", "a07050"], ["Ébano", "Ebony", "7a5038"]],
 	"eye": [["Cielo", "Sky", "3a7bd5"], ["Ámbar", "Amber", "ff9a30"], ["Sangre", "Blood", "ff4050"], ["Jade", "Jade", "40c070"],
-		["Amatista", "Amethyst", "a060ff"], ["Nimbo", "Nimbus", "e8f0ff"]],
+		["Amatista", "Amethyst", "a060ff"], ["Nimbo", "Nimbus", "e8f0ff"], ["Oro", "Gold", "ffcc30"]],
 	"cloak": [["Carmesí", "Crimson", "9a2a34"], ["Marea", "Tide", "1e6a70"], ["Penumbra", "Gloom", "5a2a7a"], ["Ceniza", "Ash", "2a2430"],
 		["Oro viejo", "Old gold", "b08a30"], ["Abismo", "Abyss", "2a4a9a"], ["Rosa", "Rose", "c05a8a"], ["Sudario", "Shroud", "d8d4cc"]],
 	"armor": [["Marfil", "Ivory", "d8d2c4", "5a5068", "e0b040"], ["Acero negro", "Black steel", "3e3a52", "2a2638", "40c0b0"],
-		["Bronce", "Bronze", "9a6a3a", "4a3428", "ffd070"], ["Ónice", "Onyx", "2a2430", "1a1620", "ff4060"], ["Plata lunar", "Moon silver", "b8c0d0", "404858", "80d0ff"]],
+		["Bronce", "Bronze", "9a6a3a", "4a3428", "ffd070"], ["Ónice", "Onyx", "2a2430", "1a1620", "ff4060"], ["Plata lunar", "Moon silver", "b8c0d0", "404858", "80d0ff"],
+		["Rosa sacra", "Sacred rose", "d8a0b8", "4a3048", "fff0c0"], ["Hueso", "Bone", "e0d4b8", "5a4a40", "c83838"]],
 	"wing": [["Alba", "Dawn", "f4f0ea"], ["Ceniza", "Ash", "6a6478"], ["Áurea", "Golden", "f0d070"], ["Carmesí", "Crimson", "d04050"],
-		["Celeste", "Celestial", "90c8ff"], ["Vacío", "Void", "3a2a4a"]],
-	"halo": [["Oro", "Gold", "ffe27a"], ["Cian", "Cyan", "8af0ff"], ["Rosa", "Rose", "ff9ad0"], ["Blanco", "White", "ffffff"], ["Brasa", "Ember", "ff6a3a"]],
+		["Celeste", "Celestial", "90c8ff"], ["Vacío", "Void", "3a2a4a"], ["Fénix", "Phoenix", "ff8a3a"], ["Esmeralda", "Emerald", "60d098"]],
+	"halo": [["Oro", "Gold", "ffe27a"], ["Cian", "Cyan", "8af0ff"], ["Rosa", "Rose", "ff9ad0"], ["Blanco", "White", "ffffff"], ["Brasa", "Ember", "ff6a3a"],
+		["Violeta", "Violet", "b890ff"], ["Esmeralda", "Emerald", "80ffb0"]],
 }
 const DEFAULT := {"body": "f", "hair": 0, "hair_col": 0, "skin": 1, "eye": 0, "cloak": 0, "armor": 0, "wing": 0, "halo": 0, "name": ""}
 ## Orden en que se caen las plumas (alternando alas, de las puntas hacia dentro)
