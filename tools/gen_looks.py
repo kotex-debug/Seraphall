@@ -175,6 +175,31 @@ HAIRS = {
         "...DhhD.......",
         "....DD........",
     ],
+    ("f", 3): [  # dos trenzas (v0.8)
+        "..............",
+        "......DDDD....",
+        "....DHHLLHDD..",
+        "...DHHLLLHHHD.",
+        "..DHHHHHLHHHHD",
+        "..DHhHHHhHhHHD",
+        "..DHhD.h.....D",
+        "..DhD.......DH",
+        "..DHD.......DH",
+        "..DhD.......Dh",
+        "..DHD........T",
+        "..DTD.........",
+        "...H..........",
+    ],
+    ("m", 3): [  # rapado (v0.8)
+        "..............",
+        "..............",
+        ".....DDDDD....",
+        "...DDhHhHhDD..",
+        "...DhHLLHhHD..",
+        "...DhHHhHHhD..",
+        "...Dh.........",
+        "....D.........",
+    ],
 }
 
 def wing(c, root, side, flap, dark, feather_base):
@@ -389,6 +414,10 @@ def back(body, hair):
             d.point((x, 3), fill=P(2, 1.1))
     elif hair == 2:
         d.line([(cx, 12), (cx, 19)], fill=P(2, 0.85), width=2)
+    if body == "f" and hair == 3:
+        for sx in (-4, 4):
+            d.line([(cx + sx, 10), (cx + sx, 20)], fill=P(2, 0.85), width=2)
+            d.point((cx + sx, 21), fill=P(6, 1.0))
     d.ellipse([cx - 5, 0, cx + 5, 3], outline=P(9))
     d.line([(cx + 9, 18), (cx + 13, 38)], fill=(224, 228, 240, 255), width=2)
     return img
@@ -418,6 +447,10 @@ def bust(body, hair, expr):
     if not fem and hair == 2:
         d.polygon([(11, 16), (8, 22), (7, 33), (10, 36), (13, 28), (14, 19)], fill=P(2, 0.66))
         d.rectangle([9, 21, 12, 22], fill=P(6, 1.0))
+    if fem and hair == 3:
+        for k in range(5):                                                               # trenza trasera
+            d.ellipse([7 + (k % 2), 14 + k * 4, 12 + (k % 2), 19 + k * 4], fill=P(2, 0.62 + 0.06 * (k % 2)))
+        d.rectangle([8, 33, 11, 34], fill=P(6, 1.0))
     # ---- hombros y armadura
     d.polygon([(7, 39), (9, 33), (14, 30), (28, 30), (33, 33), (35, 39)], fill=P(4, 0.95))
     d.polygon([(7, 39), (9, 33), (14, 30), (17, 30), (15, 39)], fill=P(4, 0.72))
@@ -495,7 +528,9 @@ def bust(body, hair, expr):
               ("m", 2): [(15, 8), (19, 12), (21, 9), (25, 12), (27, 9), (30, 11), (31, 7)],
               ("f", 0): [(14, 8), (17, 14), (20, 9), (22, 13), (24, 9), (27, 12), (30, 10), (31, 13), (31, 7)],
               ("f", 1): [(15, 8), (18, 12), (21, 9), (24, 12), (27, 9), (30, 12), (31, 7)],
-              ("f", 2): [(14, 8), (16, 13), (19, 9), (22, 13), (25, 9), (28, 13), (31, 11), (32, 15), (31, 7)]}[(body, hair)]
+              ("f", 2): [(14, 8), (16, 13), (19, 9), (22, 13), (25, 9), (28, 13), (31, 11), (32, 15), (31, 7)],
+              ("f", 3): [(14, 8), (17, 12), (20, 9), (23, 12), (26, 9), (29, 12), (31, 10), (31, 7)],
+              ("m", 3): [(15, 6), (18, 8), (21, 6), (24, 8), (27, 6), (30, 7), (31, 5)]}[(body, hair)]
     d.polygon([(12, 8)] + fringe + [(30, 4), (21, 2), (13, 4)], fill=P(2, 1.0))
     d.arc([12, 2, 30, 18], 200, 290, fill=P(2, 1.32))                                # brillo
     d.line([(22, 3), (27, 5)], fill=P(2, 1.25))
@@ -510,6 +545,10 @@ def bust(body, hair, expr):
         d.polygon([(30, 11), (32, 24), (30, 28), (29, 16)], fill=P(2, 0.95))
     if fem and hair == 1:
         d.ellipse([8, 4, 13, 9], fill=P(6, 1.0))                                      # lazo de la coleta
+    if fem and hair == 3:
+        for k in range(5):                                                           # trenza delantera
+            d.ellipse([28 - (k % 2), 12 + k * 4, 33 - (k % 2), 17 + k * 4], fill=P(2, 0.92 + 0.08 * (k % 2)))
+        d.rectangle([29, 31, 32, 32], fill=P(6, 1.1))
     # ---- aureola (anillo flotante, sin contorno en el juego)
     d.ellipse([13, 0, 29, 3], outline=P(9, 1.0))
     d.point((15, 0), fill=P(9, 1.4)); d.point((16, 0), fill=P(9, 1.4))
@@ -524,10 +563,10 @@ def bust_sheet(body, hair):
 
 if __name__ == "__main__":
     for body in ("f", "m"):
-        for hair in range(3):
+        for hair in range(4):
             bust_sheet(body, hair).save(f"{OUT}/bu_{body}{hair}.png")
     for body in ("f", "m"):
-        for hair in range(3):
+        for hair in range(4):
             anim(body, hair).save(f"{OUT}/pl_{body}{hair}.png")
             back(body, hair).save(f"{OUT}/pb_{body}{hair}.png")
     print("Hojas de aspecto generadas en", OUT)

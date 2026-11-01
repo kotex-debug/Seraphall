@@ -1178,6 +1178,20 @@ func _run_autotest() -> void:
 			await _shot(out + "/map2_completo.png")
 			print("AUTOTEST_MAP_OK")
 			get_tree().quit()
+		"hair3":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			G.look = Look.sane({"body": "f", "hair": 3, "hair_col": 3, "skin": 2, "eye": 3, "cloak": 2, "armor": 2, "wing": 2, "halo": 0, "name": "Trenza"})
+			w.send_look()
+			var mate = w._spawn_player(424242, 2)
+			mate.set_look({"body": "m", "hair": 3, "hair_col": 4, "skin": 4, "eye": 4, "cloak": 5, "armor": 4, "wing": 4, "halo": 3, "name": "Rapado"}, 10)
+			w.camera.zoom = Vector2(2.5, 2.5)
+			await get_tree().create_timer(2.5).timeout
+			mate.global_position = lp.global_position + Vector2(24, 0)
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/h3.png")
+			print("AUTOTEST_HAIR3_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

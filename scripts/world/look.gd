@@ -4,8 +4,8 @@ extends RefCounted
 ## arranca las plumas perdidas del ala y dibuja el contorno en tiempo real.
 
 const OUTLINE := Color8(18, 14, 24)
-const HAIR_STYLES := {"f": [["Melena larga", "Long hair"], ["Coleta alta", "High ponytail"], ["Media melena", "Bob cut"]],
-	"m": [["Corto", "Short"], ["Despeinado", "Tousled"], ["Largo atado", "Tied back"]]}
+const HAIR_STYLES := {"f": [["Melena larga", "Long hair"], ["Coleta alta", "High ponytail"], ["Media melena", "Bob cut"], ["Trenzas", "Braids"]],
+	"m": [["Corto", "Short"], ["Despeinado", "Tousled"], ["Largo atado", "Tied back"], ["Muy corto", "Cropped"]]}
 const OPTIONS := {
 	"hair_col": [["Platino", "Platinum", "e8e0d0"], ["Azabache", "Jet", "2a2238"], ["Castaño", "Chestnut", "6a4028"], ["Cobre", "Copper", "c0522a"],
 		["Trigo", "Wheat", "e8c060"], ["Plata", "Silver", "a8b0c8"], ["Rosa alba", "Dawn pink", "e890b8"], ["Añil", "Indigo", "5a7ad8"]],
@@ -36,7 +36,7 @@ static func sane(look: Dictionary) -> Dictionary:
 		if l.has(k):
 			l[k] = look[k]
 	l.body = "m" if str(l.body) == "m" else "f"
-	l.hair = clampi(int(l.hair), 0, 2)
+	l.hair = clampi(int(l.hair), 0, 3)
 	for k in OPTIONS:
 		l[k] = clampi(int(l[k]), 0, OPTIONS[k].size() - 1)
 	l.name = str(l.name).substr(0, 14)

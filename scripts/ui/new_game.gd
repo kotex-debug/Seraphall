@@ -106,7 +106,7 @@ func _refresh_preview() -> void:
 
 func _randomize() -> void:
 	look.body = ["f", "m"][randi() % 2]
-	look.hair = randi() % 3
+	look.hair = randi() % 4
 	for k in Look.OPTIONS:
 		look[k] = randi() % Look.OPTIONS[k].size()
 	Audio.sfx("ui_ok")
@@ -119,7 +119,7 @@ func _change(key: String, delta: int) -> void:
 			if _name_edit:
 				_name_edit.placeholder_text = Look.display_name({"body": look.body})
 		"hair":
-			look.hair = wrapi(int(look.hair) + delta, 0, 3)
+			look.hair = wrapi(int(look.hair) + delta, 0, 4)
 		"name":
 			return
 		_:
