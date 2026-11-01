@@ -97,6 +97,79 @@ def sheet():
     return s
 
 
+# ================================================================== el Penitente (v0.8)
+ROBE = C("5a2a26"); ROBE_L = C("8a443a"); ROBE_D = C("2e1416")
+IRON = C("8a8694"); IRON_D = C("4a4652"); FLESH = C("c8a08a"); EMBER = C("ff8a3a")
+
+
+def pen_frame(bob=0, step=0, pose="stand"):
+    """Penitente: encapuchado encorvado, cubierto de cadenas, con un incensario de hierro a rastras."""
+    img = Image.new("RGBA", (W, H)); d = ImageDraw.Draw(img)
+    b = bob
+    crouch = 3 if pose == "crouch" else 0
+    air = pose == "air"
+    y0 = 7 + b + crouch
+    # piernas (pies descalzos)
+    if not air:
+        d.line([(13 - step, 25 + b), (12 - step, 29)], fill=ROBE_D, width=2)
+        d.line([(19 + step, 25 + b), (20 + step, 29)], fill=ROBE_D, width=2)
+        d.point((11 - step, 29), fill=FLESH); d.point((21 + step, 29), fill=FLESH)
+    else:
+        d.line([(12, 24), (10, 27)], fill=ROBE_D, width=2)
+        d.line([(20, 24), (22, 27)], fill=ROBE_D, width=2)
+    # túnica encorvada
+    d.polygon([(11, y0 + 4), (15, y0), (21, y0 + 1), (24, y0 + 8), (23, 26 + b), (9, 26 + b), (9, y0 + 10)], fill=ROBE)
+    d.line([(10, y0 + 10), (10, 25 + b)], fill=ROBE_D)
+    d.line([(22, y0 + 6), (22, 25 + b)], fill=ROBE_L)
+    # capucha puntiaguda
+    d.polygon([(12, y0 + 5), (15, y0 - 5), (21, y0 + 2), (19, y0 + 7)], fill=ROBE_D)
+    d.ellipse([15, y0 + 1, 20, y0 + 6], fill=C("120808"))
+    d.point((18, y0 + 3), fill=EMBER)
+    # cadenas cruzadas sobre el cuerpo
+    for k in range(5):
+        d.point((11 + k * 3, y0 + 9 + k), fill=IRON)
+        d.point((12 + k * 3, y0 + 13 - k), fill=IRON_D)
+    # brazos e incensario
+    if air:
+        d.line([(12, y0 + 6), (9, y0 - 2)], fill=ROBE_L, width=2)
+        d.line([(21, y0 + 6), (24, y0 - 2)], fill=ROBE_L, width=2)
+        d.ellipse([20, y0 - 8, 27, y0 - 2], fill=IRON_D)
+        d.point((23, y0 - 5), fill=EMBER)
+    elif pose == "slam":
+        d.line([(20, y0 + 7), (26, y0 + 15)], fill=ROBE_L, width=2)
+        d.ellipse([23, 23, 30, 30], fill=IRON_D)
+        d.point((26, 26), fill=EMBER); d.point((27, 25), fill=C("ffd080"))
+    else:
+        d.line([(20, y0 + 7), (24, y0 + 13)], fill=ROBE_L, width=2)
+        d.line([(24, y0 + 13), (25, 22 + b)], fill=IRON)
+        d.ellipse([23, 21 + b, 28, 26 + b], fill=IRON_D)
+        d.point((25, 23 + b), fill=EMBER)
+    return outline(img)
+
+
+def pen_dead(k):
+    img = Image.new("RGBA", (W, H)); d = ImageDraw.Draw(img)
+    d.polygon([(6, 29), (10, 24 + k), (20, 23 + k), (26, 28), (24, 30), (8, 30)], fill=ROBE)
+    d.line([(8, 27), (22, 26)], fill=IRON)
+    d.ellipse([22, 25, 27, 30], fill=IRON_D)
+    return outline(img)
+
+
+def pen_sheet():
+    rows = [
+        [pen_frame(b) for b in (0, 0, 1, 1)],
+        [pen_frame(b, st) for b, st in ((0, -1), (1, 0), (0, 1), (1, 0))],
+        [pen_frame(0, 0, "crouch"), pen_frame(0, 0, "air"), pen_frame(0, 0, "slam")],
+        [pen_dead(0), pen_dead(1)],
+    ]
+    s = Image.new("RGBA", (W * 4, H * 4))
+    for j, r in enumerate(rows):
+        for i, f in enumerate(r):
+            s.paste(f, (i * W, j * H), f)
+    return s
+
+
 if __name__ == "__main__":
     sheet().save(os.path.join(OUT, "enemy_planidera.png"))
-    print("Plañidera generada")
+    pen_sheet().save(os.path.join(OUT, "enemy_penitente.png"))
+    print("Plañidera y Penitente generados")

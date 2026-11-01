@@ -13,6 +13,9 @@ const TYPES := {
 	"planidera": {"sheet": "enemy_planidera", "fw": 32, "fh": 32, "hp": 44.0, "speed": 42.0, "radius": 7.0, "dmg": 14.0, "poise": 18.0,
 		"ecos": 46, "aggro": 200.0, "range": 175.0, "cd": 2.8, "off": -16.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"penitente": {"sheet": "enemy_penitente", "fw": 32, "fh": 32, "hp": 70.0, "speed": 46.0, "radius": 8.0, "dmg": 20.0, "poise": 34.0,
+		"ecos": 58, "aggro": 190.0, "range": 120.0, "cd": 2.4, "off": -14.0,
+		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 7.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	"bestia": {"sheet": "enemy_bestia", "fw": 38, "fh": 28, "hp": 78.0, "speed": 78.0, "radius": 10.0, "dmg": 20.0, "poise": 36.0,
 		"ecos": 48, "aggro": 170.0, "range": 140.0, "cd": 2.2, "off": -12.0,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
@@ -253,6 +256,8 @@ func _choose_attack(d: float) -> String:
 			return "sweep" if d < 50.0 else "slam"
 		"guardia":
 			return "charge" if d > 45.0 else "slash"
+		"penitente":
+			return "leap" if d > 38.0 else "slash"
 		"custodio":
 			if d < 55.0:
 				return "sweep" if randf() < 0.6 else "slam"
@@ -333,6 +338,41 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 				var a := dir.angle() + (i - (n - 1) / 2.0) * 0.26
 				world.spawn_projectile_local(global_position + Vector2(0, -12), Vector2.from_angle(a) * 125.0, cfg.dmg, "orb", "enemy", 1, 5.0, 3.0, 0)
 			if not await _wait(0.6, my_id): return
+		"leap":
+			# se agacha y salta hacia ti: sube hacia la cámara (crece y se separa de su sombra) y cae con fuerza
+			_play("attack", 0)
+			_tell(0.5, Color(1, 0.55, 0.3))
+			if not await _wait(0.5, my_id): return
+			_play("attack", 1)
+			Audio.sfx("dash", -6.0, 0.15)
+			var dest: Vector2 = global_position + (tpos - global_position).limit_length(115.0)
+			var dur := 0.55
+			var lt := 0.0
+			while lt < dur:
+				var k := lt / dur
+				sprite.position.y = -sin(k * PI) * 40.0
+				sprite.scale = Vector2.ONE * (1.0 + sin(k * PI) * 0.28)
+				shadow.modulate.a = 0.55 - sin(k * PI) * 0.3
+				if multiplayer.is_server():
+					lunge = ((dest - global_position) / maxf(dur - lt, 0.06)).limit_length(320.0)
+					velocity = lunge
+				if not await _wait(0.016, my_id):
+					sprite.position.y = 0.0
+					return
+				lt += 0.016
+			sprite.position.y = 0.0
+			sprite.scale = Vector2(1.3, 0.75)
+			shadow.modulate.a = 0.55
+			if multiplayer.is_server():
+				lunge = Vector2.ZERO
+			_play("attack", 2)
+			Audio.sfx("slam", -5.0, 0.1)
+			G.shake(3.0, 0.2)
+			Fx.ring(global_position, 6.0, 30.0, Color(1, 0.6, 0.3), 0.35, 4.0)
+			Fx.burst(global_position, Color(0.55, 0.45, 0.45, 0.8), 10, 60.0, 0.7, "fx_soft", 180.0, Vector2.UP, 0.5, false)
+			world.get_node("FX").add_child(Depth3D.Debris.new().setup(global_position, 5, Color(0.42, 0.34, 0.38), 0.6))
+			_hit_circle(global_position, 22.0, cfg.dmg, Vector2.ZERO)
+			if not await _wait(0.75, my_id): return
 		"tears":
 			# alza el vial y tres lágrimas enormes caen desde lo alto sobre ti (sombra de aviso en el suelo)
 			_play("attack", 0)

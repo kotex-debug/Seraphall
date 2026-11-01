@@ -840,7 +840,7 @@ func _spawn_enemies() -> void:
 		["hueco", 49, 49],
 		["acolito", 78, 52], ["acolito", 87, 60], ["acolito", 82, 67], ["planidera", 79, 63], ["planidera", 88, 69], ["planidera", 55, 60],
 		["bestia", 76, 61], ["bestia", 88, 66], ["hueco", 84, 70], ["hueco", 74, 59],
-		["acolito", 70, 28], ["guardia", 63, 28], ["hueco", 35, 54], ["guardia", 49, 57],
+		["acolito", 70, 28], ["guardia", 63, 28], ["hueco", 35, 54], ["guardia", 49, 57], ["penitente", 44, 61], ["penitente", 70, 61],
 		["carcelero", 49, 38],
 		["choir", 82, 35],
 		["seravel", 49, 10],

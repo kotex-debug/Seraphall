@@ -1134,6 +1134,30 @@ func _run_autotest() -> void:
 			await _shot(out + "/m3.png")
 			print("AUTOTEST_MOURNER_OK")
 			get_tree().quit()
+		"penitent":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			for ar in ["area_chains", "area_gallery"]:
+				Prog.flags["thought_" + ar] = true
+			var pe: Enemy = null
+			for e in w.enemies_alive():
+				if e.type == "penitente":
+					print("PENITENTE at ", e.global_position / 16.0, " wall=", w.is_wall_at(e.global_position))
+					if pe == null:
+						pe = e
+			for e2 in w.enemies_alive():
+				if e2 != pe and e2.global_position.distance_to(pe.global_position) < 260.0 and not e2.is_boss:
+					w._server_damage(e2.idx, 99999.0, Vector2.RIGHT, 0.0, false)
+			lp.respawn_at(pe.global_position + Vector2(-70, 10))
+			await get_tree().create_timer(2.5).timeout
+			pe.cooldown = 99.0
+			pe.perform("leap", lp.global_position, 1)
+			await get_tree().create_timer(0.75).timeout
+			await _shot(out + "/p1.png")
+			await get_tree().create_timer(0.35).timeout
+			await _shot(out + "/p2.png")
+			print("AUTOTEST_PENITENT_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
