@@ -577,6 +577,7 @@ func _build_props() -> void:
 	_build_antechambers()
 	_place_urns()
 	_place_webs()
+	_place_fallen()
 	_place_ghost_echoes()
 	_collect_shadow_lights()
 
@@ -3220,6 +3221,29 @@ func _place_ghost_echoes() -> void:
 		g.position = tile_pos(sp[1].x, sp[1].y)
 		entities.add_child(g)
 
+func _place_fallen() -> void:
+	## Ángeles caídos hace siglos: esqueletos con las alas abiertas, algunos con su espada clavada
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31337
+	for rid in ["chains", "gallery", "east", "hall1", "celdas", "escala", "mirador", "alcove", "hall2"]:
+		for r in ROOMS:
+			if r.id != rid:
+				continue
+			var rc := _rect_of(r)
+			var placed := 0
+			for tries in 20:
+				if placed >= (2 if rc.size.x * rc.size.y > 120 else 1):
+					break
+				var x := rng.randi_range(rc.position.x + 1, rc.end.x - 2)
+				var y := rng.randi_range(rc.position.y + 1, rc.end.y - 2)
+				if _floor_at(x, y) and _floor_at(x - 1, y) and _floor_at(x + 1, y) and _floor_at(x, y + 1):
+					var fa := FallenAngel.new()
+					fa.position = tile_pos(x + 0.5, y + 0.5)
+					fa.seed_v = rng.randi()
+					fa.z_index = -2
+					entities.add_child(fa)
+					placed += 1
+
 func _place_webs() -> void:
 	## Telarañas en las esquinas de las salas: detalle que da edad a la Espiral
 	var rng := RandomNumberGenerator.new()
@@ -4056,3 +4080,66 @@ class CornerWeb extends Node2D:
 				draw_line(p0, mid, col, 1.0)
 				draw_line(mid, p1, col, 1.0)
 		draw_circle(ends[2] * 0.55 + Vector2(0, sway * 0.6 + 2.0), 1.2, Color(0.1, 0.06, 0.1, 0.8))
+
+
+class FallenAngel extends Node2D:
+	## Esqueleto de ángel tendido en el suelo con las alas abiertas y plumas sueltas
+	var seed_v := 0
+	func _draw() -> void:
+		var r := RandomNumberGenerator.new()
+		r.seed = seed_v
+		var flip := 1.0 if r.randf() < 0.5 else -1.0
+		var bone := Color(0.66, 0.62, 0.58)
+		var bone_d := Color(0.44, 0.4, 0.4)
+		var ink := Color(0.08, 0.04, 0.08, 0.9)
+		var feather := Color(0.72, 0.7, 0.76) if r.randf() < 0.7 else Color(0.3, 0.26, 0.34)
+		# mancha y sombra bajo el cuerpo
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.45))
+		draw_circle(Vector2.ZERO, 15.0, Color(0, 0, 0, 0.22))
+		# tendido en el suelo: girado 90º y aplastado por la perspectiva
+		var m := Transform2D(Vector2(0, 0.62 * flip), Vector2(-flip, 0), Vector2.ZERO)
+		draw_set_transform_matrix(m)
+		# alas abiertas: huesos y plumas
+		for side in [-1.0, 1.0]:
+			var root := Vector2(side * 2.0, -1.0)
+			var tip := root + Vector2(side * r.randf_range(13, 17), r.randf_range(-7, -3))
+			var mid := root.lerp(tip, 0.5) + Vector2(0, -3)
+			for k in 6:
+				var q := root.lerp(tip, 0.25 + k * 0.13) + Vector2(0, -1)
+				var fl := Vector2(side * 2.0, r.randf_range(4.0, 7.0))
+				draw_colored_polygon(PackedVector2Array([q, q + fl + Vector2(side * 1.5, 0), q + fl * 0.6 + Vector2(-side * 1.5, 1)]), feather.darkened(0.15 * (k % 2)))
+			draw_line(root, mid, ink, 2.6)
+			draw_line(mid, tip, ink, 2.2)
+			draw_line(root, mid, bone_d, 1.4)
+			draw_line(mid, tip, bone_d, 1.2)
+		# cuerpo: columna, costillas, brazos y piernas
+		draw_line(Vector2(0, -3), Vector2(0, 6), bone, 1.5)
+		for k in 3:
+			var y := -1.0 + k * 1.8
+			draw_line(Vector2(-3, y), Vector2(3, y), bone_d, 1.0)
+		draw_line(Vector2(-1, 6), Vector2(-3 * flip, 11), bone, 1.2)
+		draw_line(Vector2(1, 6), Vector2(4 * flip, 10), bone, 1.2)
+		draw_line(Vector2(-3, -2), Vector2(-7, 2 + r.randf_range(-1, 2)), bone, 1.0)
+		draw_line(Vector2(3, -2), Vector2(8, r.randf_range(-1, 3)), bone, 1.0)
+		# cráneo con aureola apagada
+		var sk := Vector2(flip * 0.5, -6)
+		draw_circle(sk, 3.2, ink)
+		draw_circle(sk, 2.5, bone)
+		draw_rect(Rect2(sk + Vector2(-1.5, -0.5), Vector2(1, 1)), ink)
+		draw_rect(Rect2(sk + Vector2(0.5, -0.5), Vector2(1, 1)), ink)
+		if r.randf() < 0.6:
+			draw_arc(sk + Vector2(0, -4), 4.0, 0.0, TAU, 14, Color(0.7, 0.6, 0.3, 0.6), 1.0)
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		# plumas sueltas alrededor
+		for k in 5:
+			var fp := Vector2(r.randf_range(-20, 20), r.randf_range(-8, 12))
+			var fa := r.randf() * TAU
+			var dv := Vector2(cos(fa), sin(fa))
+			draw_line(fp - dv * 2.0, fp + dv * 2.0, feather.darkened(0.2), 1.0)
+		# espada clavada (a veces)
+		if r.randf() < 0.45:
+			var sp := Vector2(flip * r.randf_range(9, 13), r.randf_range(4, 9))
+			draw_line(sp + Vector2(1, 1), sp + Vector2(1, -13), Color(0, 0, 0, 0.3), 1.0)
+			draw_line(sp, sp + Vector2(0, -12), Color(0.7, 0.72, 0.8), 1.5)
+			draw_line(sp + Vector2(-3, -9), sp + Vector2(3, -9), Color(0.6, 0.48, 0.3), 1.5)
+			draw_line(sp + Vector2(0, -9), sp + Vector2(0, -13), Color(0.45, 0.3, 0.25), 1.5)

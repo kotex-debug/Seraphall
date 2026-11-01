@@ -928,6 +928,23 @@ func _run_autotest() -> void:
 			await _shot(out + "/w1.png")
 			print("AUTOTEST_WHISPER_OK")
 			get_tree().quit()
+		"fallen":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			var fs: Array = []
+			for c in w.entities.get_children():
+				if c.get_class() == "Node2D" and c.get("seed_v") != null:
+					fs.append(c)
+			print("FALLEN=", fs.size())
+			var n := 1
+			for k in [0, 3, 6]:
+				if k < fs.size():
+					lp.respawn_at(fs[k].global_position + Vector2(30, 20))
+					await get_tree().create_timer(1.6).timeout
+					await _shot(out + "/f%d.png" % n)
+					n += 1
+			print("AUTOTEST_FALLEN_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0
