@@ -124,6 +124,11 @@ func _ready() -> void:
 	_flash_mat = Fx.flash_material()
 	sprite.material = _flash_mat
 	add_child(sprite)
+	var cast := Depth3D.CastShadow.new()
+	cast.src = sprite
+	cast.world = world
+	add_child(cast)
+	move_child(cast, 0)
 	weapon_pivot = Node2D.new()
 	weapon_pivot.position = Vector2(0, -10)
 	add_child(weapon_pivot)

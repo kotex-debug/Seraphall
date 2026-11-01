@@ -103,6 +103,11 @@ func _ready() -> void:
 	_flash_mat = Fx.flash_material()
 	sprite.material = _flash_mat
 	add_child(sprite)
+	var cast := Depth3D.CastShadow.new()
+	cast.src = sprite
+	cast.world = world
+	add_child(cast)
+	move_child(cast, 0)
 	if not is_boss:
 		var el := PointLight2D.new()
 		el.texture = Fx.tex("light")

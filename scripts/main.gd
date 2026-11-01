@@ -865,6 +865,18 @@ func _run_autotest() -> void:
 			print("GHOST flags ", Prog.flags.get("echo_nimbo"), Prog.flags.get("echo_galeria"), Prog.flags.get("echo_patio"), " ach=", Prog.flags.get("ach_echoes", false))
 			print("AUTOTEST_GHOST_OK")
 			get_tree().quit()
+		"shadow":
+			var lp: Player = w.local_player()
+			lp.iframes = 9999.0
+			print("LIGHTS=", w.shadow_lights.size())
+			var n := 1
+			for sp in [Vector2(44.2, 81.2), Vector2(47.0, 82.5), Vector2(41.5, 41.0), Vector2(22.5, 47.5)]:
+				lp.respawn_at(w.tile_pos(sp.x, sp.y))
+				await get_tree().create_timer(1.5).timeout
+				await _shot(out + "/s%d.png" % n)
+				n += 1
+			print("AUTOTEST_SHADOW_OK")
+			get_tree().quit()
 		"urn":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

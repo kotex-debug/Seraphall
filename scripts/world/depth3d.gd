@@ -506,3 +506,46 @@ class Soul extends Node2D:
 			draw_circle(q, (3.0 - i * 0.5) * s, Color(col, a * (0.35 - i * 0.07)))
 		draw_circle(p, 3.5 * s, Color(col, a * 0.5))
 		draw_circle(p, 1.8 * s, Color(1, 1, 1, a))
+
+
+class CastShadow extends Sprite2D:
+	## Sombra proyectada por la antorcha o el brasero más cercano: una silueta aplastada que gira y se
+	## alarga al moverte alrededor de la luz, como en Bloody Hell.
+	const RANGE := 150.0
+	var src: Sprite2D
+	var world: Node
+	func _ready() -> void:
+		z_index = -1
+		show_behind_parent = true
+		modulate = Color(0, 0, 0, 0)
+	func _process(_delta: float) -> void:
+		if world == null:
+			world = get_tree().get_first_node_in_group("world")
+		if src == null or not is_instance_valid(src) or not src.visible or world == null:
+			visible = false
+			return
+		var p: Vector2 = get_parent().global_position
+		var best := Vector2.ZERO
+		var bd := RANGE
+		var room: String = world.room_at(p)
+		for l in world.shadow_lights:
+			var lp: Vector2 = l[0]
+			var dd := p.distance_to(lp)
+			if dd < bd and (room == "" or l[1] == "" or l[1] == room):
+				bd = dd
+				best = lp
+		if bd >= RANGE or bd < 3.0:
+			visible = false
+			return
+		visible = true
+		var dir := (p - best) / bd
+		var k := bd / RANGE
+		var len := lerpf(0.55, 1.3, k)
+		var a := clampf((1.0 - k) * 1.8, 0.0, 1.0) * 0.5
+		texture = src.texture
+		region_enabled = src.region_enabled
+		region_rect = src.region_rect
+		flip_h = src.flip_h
+		offset = Vector2(0, -region_rect.size.y * 0.5 + 2.0)
+		transform = Transform2D(Vector2(dir.y, -dir.x) * 0.9, -dir * len, Vector2(0, 1))
+		modulate = Color(0, 0, 0, a)

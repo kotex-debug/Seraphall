@@ -576,6 +576,7 @@ func _build_props() -> void:
 	_build_antechambers()
 	_place_urns()
 	_place_ghost_echoes()
+	_collect_shadow_lights()
 
 var arena_lights: Array[PointLight2D] = []
 
@@ -3176,6 +3177,25 @@ func _area_thoughts(a: String) -> void:
 		else:
 			hud.subtitle("", "( " + txt + " )", dur, Color(0.84, 0.82, 0.96))
 		await get_tree().create_timer(dur + 0.9).timeout
+
+var shadow_lights: Array = []
+
+func _collect_shadow_lights() -> void:
+	## Antorchas, braseros y Brasas: las luces que proyectan sombras de los personajes
+	shadow_lights.clear()
+	var brazier := Fx.tex("brazier")
+	for c in entities.get_children():
+		var lp := Vector2.INF
+		if c is WallTorch:
+			lp = (c as Node2D).global_position + Vector2(0, 10)
+		elif c is Sprite2D and (c as Sprite2D).texture == brazier:
+			lp = (c as Node2D).global_position
+		if lp != Vector2.INF:
+			shadow_lights.append([lp, room_at(lp)])
+	for k in interactables:
+		var it: Node2D = interactables[k]
+		if it.get("kind") == "brasa":
+			shadow_lights.append([it.global_position, room_at(it.global_position)])
 
 func _place_ghost_echoes() -> void:
 	## Fantasmas que reviven un recuerdo del Estrato al acercarte
