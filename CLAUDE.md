@@ -30,4 +30,4 @@ También: `slots` (huecos de partida), `economy` (reparto de Ecos por estrato, f
 ## Estado
 - Juego base completo: Estratos I–IV, Arcontes Seravel, Orrun, Vulkaris y Azrahel (3 fases), final «La Espiral se rompe» y créditos. v0.9: ver README.
 - Claves de v0.9: `world.gd` (salas cerradas `_room_lock_tick`, títulos `_title_tick`, reintentos `_cine_once`), `strata.gd` (`ROOM_TIER`, `GATES`), `prologue.gd` (guion con pausas), `prog.gd` (`WEAPON_ARTS`, `WEAPON_AWAKE`, Resonancia, árbol), `player.gd` (`_cast_art`, parry en dos ventanas).
-- Pendiente: pruebas con jugadores para medir las horas y equilibrar los Estratos II–IV, paginar bien el Códice → Personajes, relay online sin abrir puertos (requiere un servidor), rotación real de la cámara en el modo Cámara, DLC I y II.
+- Pendiente: pruebas con jugadores para medir las horas y equilibrar los Estratos II–IV, paginar bien el Códice → Personajes, relay online sin abrir puertos (requiere un servidor), DLC I y II.

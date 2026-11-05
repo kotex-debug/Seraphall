@@ -28,9 +28,8 @@ const REBINDABLE := ["up", "down", "left", "right", "attack", "heavy", "dash", "
 ## Acción -> habilidad que la desbloquea: su tecla no se puede cambiar ni usar hasta conseguirla
 const ACTION_LOCKS := {"spell1": ["lance", ["Enciende la Brasa del Santuario", "Kindle the Sanctuary Ember"]], "spell2": ["nova", ["Aprende la Nova en el árbol", "Learn Nova in the skill tree"]],
 	"wrath": ["wrath", ["Vence al Carcelero", "Defeat the Jailer"]], "art": ["art", ["Habla con Brenna, la herrera", "Talk to Brenna, the smith"]]}
-var combat_mode := 0      # 0 puntero · 1 movimiento (WASD apunta) · 2 cámara con ratón
-var mouse_sens := 1.0
-const COMBAT_MODES := [["Puntero: apuntas con el ratón", "Pointer: aim with the mouse"], ["Movimiento: atacas hacia donde caminas", "Movement: attack where you walk"], ["Cámara: el ratón gira tu dirección y la vista", "Camera: the mouse turns your heading and view"]]
+var combat_mode := 0      # 0 puntero · 1 movimiento (WASD apunta)
+const COMBAT_MODES := [["Puntero: apuntas con el ratón", "Pointer: aim with the mouse"], ["Movimiento: atacas hacia donde caminas", "Movement: attack where you walk"]]
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -370,7 +369,8 @@ func load_settings() -> void:
 		bindings = cf.get_value("controls", "bindings", {})
 		fullscreen = cf.get_value("video", "fullscreen", false)
 		combat_mode = int(cf.get_value("controls", "combat_mode", 0))
-		mouse_sens = float(cf.get_value("controls", "mouse_sens", 1.0))
+		if combat_mode >= COMBAT_MODES.size():
+			combat_mode = 0  # ajustes de cuando existía el modo Cámara
 	else:
 		lang = "es"
 
@@ -387,7 +387,6 @@ func save_settings() -> void:
 	cf.set_value("controls", "bindings", bindings)
 	cf.set_value("video", "fullscreen", fullscreen)
 	cf.set_value("controls", "combat_mode", combat_mode)
-	cf.set_value("controls", "mouse_sens", mouse_sens)
 	cf.save(SETTINGS_PATH)
 
 func _setup_input() -> void:

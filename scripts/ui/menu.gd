@@ -1543,14 +1543,7 @@ func _build_options() -> void:
 	_lbl(G.T("tele_opt"), Vector2(480, 106), 10, UIKit.WHITE, 110, "title")
 	_btn(G.T("on") if G.tele_boost else G.T("off"), Vector2(480, 124), _on_tele, true, 60)
 	_lbl(G.L(["COMBATE", "COMBAT"]), Vector2(480, 150), 8, UIKit.GOLD, 0.0, "head")
-	_btn([G.L(["PUNTERO", "POINTER"]), G.L(["MOVIMIENTO", "MOVEMENT"]), G.L(["CÁMARA", "CAMERA"])][G.combat_mode], Vector2(480, 162), _on_combat_mode, true, 110)
-	var sn := HSlider.new()
-	_style_slider(sn)
-	sn.position = Vector2(480, 190); sn.size = Vector2(110, 14)
-	sn.min_value = 0.3; sn.max_value = 2.5; sn.step = 0.1; sn.value = G.mouse_sens
-	sn.value_changed.connect(_on_mouse_sens)
-	sn.visible = G.combat_mode == 2
-	content.add_child(sn)
+	_btn([G.L(["PUNTERO", "POINTER"]), G.L(["MOVIMIENTO", "MOVEMENT"])][G.combat_mode], Vector2(480, 162), _on_combat_mode, true, 110)
 	var dd: Dictionary = world.diff() if world else Prog.diff()
 	_lbl(G.T("difficulty").to_upper(), Vector2(480, 214), 8, UIKit.WHITE, 0.0, "head")
 	_lbl(G.L(dd.name).to_upper() + (("  NG+%d" % Prog.ng) if Prog.ng > 0 else ""), Vector2(480, 228), 10, dd.color, 110, "title")
@@ -1562,14 +1555,7 @@ func _on_combat_mode() -> void:
 	G.save_settings()
 	Audio.sfx("ui_ok", -8.0)
 	G.toast(G.L(G.COMBAT_MODES[G.combat_mode]), UIKit.GOLD)
-	var lp: Player = world.local_player()
-	if lp:
-		lp.heading = lp.aim.angle()
 	_rebuild(false)
-
-func _on_mouse_sens(v: float) -> void:
-	G.mouse_sens = v
-	G.save_settings()
 
 func _on_access(v: float, which: String) -> void:
 	if which == "shake":

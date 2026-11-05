@@ -1233,12 +1233,7 @@ func _process(delta: float) -> void:
 	_v04_tick(delta, lp)
 	_trial_tick(delta)
 	if lp:
-		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * (70.0 if G.combat_mode == 2 else 22.0)
-		var want_mouse := Input.MOUSE_MODE_VISIBLE
-		if G.combat_mode == 2 and G.autotest == "" and not is_menu_open() and not G.photo_mode and lp.is_alive():
-			want_mouse = Input.MOUSE_MODE_CAPTURED
-		if Input.mouse_mode != want_mouse:
-			Input.mouse_mode = want_mouse
+		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
 		if active_boss and active_boss.is_alive() and active_boss.active:
 			if active_boss.has_method("cam_point"):
 				target = target.lerp(active_boss.cam_point(), 0.42)
@@ -1285,9 +1280,6 @@ func _near_any_player(pos: Vector2, r: float) -> bool:
 		if p.global_position.distance_to(pos) < r:
 			return true
 	return false
-
-func _exit_tree() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("photo") and not menu.visible and not dialog.is_open():

@@ -187,7 +187,7 @@ func _update_weapon_sprite() -> void:
 
 var _remote_weapon := "sword"
 var _weapon_glow := 0
-var heading := 0.0        # modo Cámara: dirección que marca el ratón
+
 var _aim_mark: AimMark
 var art_cd := 0.0
 var parry_total := 0.0
@@ -271,7 +271,7 @@ func _local_update(delta: float) -> void:
 	if combo_window <= 0.0 and state == "move":
 		combo = 0
 
-	var input := _move_input()
+	var input := Input.get_vector("left", "right", "up", "down")
 	match state:
 		"move":
 			var spd := Prog.move_speed()
@@ -375,21 +375,8 @@ func _local_update(delta: float) -> void:
 			velocity = Vector2.ZERO
 	move_and_slide()
 
-func _move_input() -> Vector2:
-	var input := Input.get_vector("left", "right", "up", "down")
-	if G.combat_mode == 2:
-		# W avanza hacia donde miras
-		return input.rotated(heading + PI / 2.0)
-	return input
-
-func _input(event: InputEvent) -> void:
-	if not is_local() or G.combat_mode != 2 or cutscene or world.is_menu_open():
-		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		heading = wrapf(heading + event.relative.x * 0.0045 * G.mouse_sens, -PI, PI)
-
 func _read_actions() -> void:
-	var input := _move_input()
+	var input := Input.get_vector("left", "right", "up", "down")
 	if Input.is_action_just_pressed("attack"):
 		_start_attack()
 	elif Input.is_action_just_pressed("heavy"):
@@ -424,11 +411,6 @@ func start_heal() -> void:
 		_squash(Vector2(0.9, 1.1))
 
 func _update_aim() -> void:
-	if G.combat_mode == 2:
-		aim = Vector2.from_angle(heading)
-		if state == "move" or state == "charge":
-			facing = 1 if aim.x >= 0.0 else -1
-		return
 	if G.combat_mode == 1:
 		var mv := Input.get_vector("left", "right", "up", "down")
 		if mv.length() > 0.2:

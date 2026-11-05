@@ -1,5 +1,8 @@
 .godot/
 build/
+/Seraphall.exe
+/LEEME.txt
+/Seraphall-Windows/
 *.tmp
 tools/__pycache__/
 *.pyc

@@ -2422,11 +2422,9 @@ func _run_autotest() -> void:
 			print("V9 parry1=", r1, " perfecto=", p1, " parry2=", r2, " perfecto=", p2)
 			await get_tree().create_timer(0.5).timeout
 			# modos de combate
-			for md in [1, 2, 0]:
+			for md in [1, 0]:
 				G.combat_mode = md
 				await get_tree().create_timer(0.3).timeout
-				if md == 2:
-					await _shot(out + "/v04_modo_camara.png")
 			w._reset_enemies(true)
 			await get_tree().create_timer(0.3).timeout
 			lp9.respawn_at(w.tile_pos(49, 88))

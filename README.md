@@ -14,7 +14,7 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 | Acción | Teclado y ratón | Mando |
 |---|---|---|
 | Moverse | WASD | Stick izquierdo |
-| Apuntar | Ratón (o por movimiento/cámara: ver *Opciones → Combate*) | Stick derecho |
+| Apuntar | Ratón (o por movimiento: ver *Opciones → Combate*) | Stick derecho |
 | Ataque básico (combo de 4 golpes distintos) | Clic izquierdo | X |
 | Ataque cargado (mantén) | Espacio | Y |
 | Dash (invulnerable) | Shift | A |
@@ -32,7 +32,7 @@ Action RPG 2D con vista cenital, cooperativo para 2 jugadores, inspirado en *Blo
 
 Todos los controles se pueden **reasignar** en *Menú → Controles*; las teclas de cada ataque aparecen allí cuando lo desbloqueas. Al empezar solo tienes el ataque básico: la **Pluma Dorada** se consigue al encender la Brasa del Santuario, el **Arte de arma** al hablar con Brenna, la **Nova** en el árbol de habilidades y la **Ira Seráfica** al vencer al Carcelero.
 
-**Tres formas de pelear** (*Opciones → Combate*): **Puntero** (apuntas con el ratón), **Movimiento** (atacas hacia donde caminas y te encaras solo al enemigo cercano) y **Cámara** (el ratón gira tu dirección y la vista; W avanza hacia donde miras).
+**Dos formas de pelear** (*Opciones → Combate*): **Puntero** (apuntas con el ratón) y **Movimiento** (atacas hacia donde caminas y te encaras solo al enemigo cercano).
 
 **El gancho:** cada muerte te **arranca una pluma** (se ve en tus alas). Con pocas plumas entras en modo **Desplumado**: más daño y velocidad, menos vida. Si mueres dos veces sin recuperar tus Ecos, **tu Sombra** se alza con tu aspecto y tus armas.
 
