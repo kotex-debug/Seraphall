@@ -46,6 +46,35 @@ const ROOMS := [
 	{"id": "t_escalera", "rect": Rect2i(322, 30, 30, 10)},
 	{"id": "t_link5", "rect": Rect2i(334, 21, 4, 9)},
 	{"id": "t_arena", "c": Vector2i(336, 11), "r": 10},
+	# --- v0.9: más mundo alrededor de cada Arconte
+	{"id": "v_osario", "rect": Rect2i(4, 30, 22, 12)},
+	{"id": "v_osa_link", "rect": Rect2i(17, 42, 3, 4)},
+	{"id": "v_archivo", "rect": Rect2i(78, 8, 16, 16)},
+	{"id": "v_arc_link", "rect": Rect2i(74, 14, 4, 3)},
+	{"id": "b_raices", "rect": Rect2i(108, 74, 22, 14)},
+	{"id": "b_rai_link", "rect": Rect2i(130, 82, 6, 4)},
+	{"id": "b_charca", "rect": Rect2i(160, 76, 22, 12)},
+	{"id": "b_cha_link", "rect": Rect2i(152, 81, 8, 4)},
+	{"id": "b_copas", "rect": Rect2i(164, 30, 22, 16)},
+	{"id": "b_cop_link", "rect": Rect2i(158, 36, 6, 4)},
+	{"id": "b_colmena", "rect": Rect2i(108, 10, 20, 14)},
+	{"id": "b_col_link", "rect": Rect2i(112, 24, 4, 6)},
+	{"id": "f_escoria", "rect": Rect2i(204, 72, 24, 14)},
+	{"id": "f_esc_link", "rect": Rect2i(228, 82, 4, 4)},
+	{"id": "f_hornos", "rect": Rect2i(256, 74, 26, 14)},
+	{"id": "f_hor_link", "rect": Rect2i(248, 80, 8, 4)},
+	{"id": "f_cadena", "rect": Rect2i(264, 26, 20, 14)},
+	{"id": "f_cad_link", "rect": Rect2i(258, 31, 6, 4)},
+	{"id": "f_tesoro", "rect": Rect2i(204, 8, 20, 12)},
+	{"id": "f_tes_link", "rect": Rect2i(212, 20, 4, 4)},
+	{"id": "t_mazmorra", "rect": Rect2i(300, 74, 24, 14)},
+	{"id": "t_maz_link", "rect": Rect2i(324, 84, 4, 4)},
+	{"id": "t_cripta", "rect": Rect2i(350, 74, 26, 14)},
+	{"id": "t_cri_link", "rect": Rect2i(344, 84, 6, 4)},
+	{"id": "t_oratorio", "rect": Rect2i(296, 26, 22, 14)},
+	{"id": "t_ora_link", "rect": Rect2i(318, 33, 4, 4)},
+	{"id": "t_tesoreria", "rect": Rect2i(358, 26, 20, 14)},
+	{"id": "t_tes_link", "rect": Rect2i(352, 33, 6, 4)},
 ]
 
 const AREAS := {
@@ -58,6 +87,13 @@ const AREAS := {
 	"t_llegada": "area_trono", "t_link1": "area_trono", "t_link4": "area_trono", "t_escalera": "area_trono", "t_link5": "area_trono",
 	"t_jardin": "area_jardin", "t_link2": "area_corte", "t_corte": "area_corte", "t_link3": "area_galeria_reyes", "t_galeria": "area_galeria_reyes",
 	"t_arena": "area_trono_vacio",
+	"v_osario": "area_osario", "v_osa_link": "area_osario", "v_archivo": "area_archivo_juicio", "v_arc_link": "area_archivo_juicio",
+	"b_raices": "area_raices", "b_rai_link": "area_raices", "b_charca": "area_charca", "b_cha_link": "area_charca",
+	"b_copas": "area_copas", "b_cop_link": "area_copas", "b_colmena": "area_colmena", "b_col_link": "area_colmena",
+	"f_escoria": "area_escoria", "f_esc_link": "area_escoria", "f_hornos": "area_hornos", "f_hor_link": "area_hornos",
+	"f_cadena": "area_cadena", "f_cad_link": "area_cadena", "f_tesoro": "area_tesoro", "f_tes_link": "area_tesoro",
+	"t_mazmorra": "area_mazmorra", "t_maz_link": "area_mazmorra", "t_cripta": "area_cripta", "t_cri_link": "area_cripta",
+	"t_oratorio": "area_oratorio", "t_ora_link": "area_oratorio", "t_tesoreria": "area_tesoreria", "t_tes_link": "area_tesoreria",
 }
 
 const AREA_COLORS := {
@@ -67,6 +103,10 @@ const AREA_COLORS := {
 	"area_archivo": Color(0.7, 0.75, 0.9), "area_yunque": Color(1.0, 0.4, 0.2),
 	"area_trono": Color(0.75, 0.55, 1.0), "area_jardin": Color(1.0, 0.85, 0.4), "area_corte": Color(0.8, 0.5, 0.9),
 	"area_galeria_reyes": Color(0.95, 0.75, 0.95), "area_trono_vacio": Color(0.65, 0.35, 1.0),
+	"area_osario": Color(0.8, 0.78, 0.7), "area_archivo_juicio": Color(1, 0.9, 0.65),
+	"area_raices": Color(0.6, 0.5, 0.35), "area_charca": Color(0.5, 0.85, 0.85), "area_copas": Color(0.7, 0.8, 0.5), "area_colmena": Color(1, 0.8, 0.35),
+	"area_escoria": Color(0.85, 0.35, 0.2), "area_hornos": Color(1, 0.6, 0.2), "area_cadena": Color(0.65, 0.65, 0.75), "area_tesoro": Color(1, 0.85, 0.35),
+	"area_mazmorra": Color(0.55, 0.45, 0.7), "area_cripta": Color(0.7, 0.75, 0.95), "area_oratorio": Color(0.9, 0.8, 1.0), "area_tesoreria": Color(1, 0.8, 0.4),
 }
 const PEACE := ["area_nidos", "area_biblio", "area_jardin"]
 ## luz ambiente de cada zona
@@ -77,6 +117,9 @@ const AMBIENT := {
 	"area_archivo": Color(0.48, 0.5, 0.6), "area_yunque": Color(0.62, 0.4, 0.34),
 	"area_trono": Color(0.45, 0.4, 0.58), "area_jardin": Color(0.62, 0.56, 0.46), "area_corte": Color(0.48, 0.4, 0.56),
 	"area_galeria_reyes": Color(0.52, 0.46, 0.6), "area_trono_vacio": Color(0.42, 0.34, 0.56),
+	"area_raices": Color(0.42, 0.42, 0.4), "area_charca": Color(0.38, 0.52, 0.56), "area_copas": Color(0.5, 0.56, 0.46), "area_colmena": Color(0.6, 0.52, 0.36),
+	"area_escoria": Color(0.56, 0.34, 0.32), "area_hornos": Color(0.64, 0.42, 0.34), "area_cadena": Color(0.46, 0.44, 0.5), "area_tesoro": Color(0.6, 0.52, 0.4),
+	"area_mazmorra": Color(0.36, 0.32, 0.46), "area_cripta": Color(0.4, 0.44, 0.58), "area_oratorio": Color(0.52, 0.46, 0.62), "area_tesoreria": Color(0.56, 0.48, 0.4),
 }
 ## Dificultad progresiva. Tramo de cada sala: 0 = primeras salas ... 3 = dificultad plena (las no listadas).
 const ROOM_TIER := {
@@ -86,6 +129,7 @@ const ROOM_TIER := {
 	"b_llegada": 1, "b_link1": 1, "b_sendero": 1, "b_link2": 1, "b_link3": 2, "b_cienaga": 2, "b_link4": 2, "b_arboleda": 2, "b_link5": 2, "b_madriguera": 2,
 	"f_llegada": 1, "f_link1": 1, "f_crisoles": 1, "f_link2": 1, "f_link3": 2, "f_moldes": 2, "f_link4": 2, "f_fragua": 2, "f_link5": 2, "f_archivo": 2,
 	"t_llegada": 2, "t_link1": 2, "t_jardin": 2, "t_link2": 2, "t_corte": 2, "t_link3": 2,
+	"v_osario": 2, "v_archivo": 2, "b_raices": 2, "b_charca": 2, "f_escoria": 2, "f_hornos": 2, "t_mazmorra": 2, "t_cripta": 2,
 }
 ## [vida, daño, tiempo entre ataques, enemigos activos a la vez dentro de una sala cerrada]
 const TIER_MULT := [[0.6, 0.55, 1.5, 2], [0.78, 0.72, 1.28, 3], [0.9, 0.86, 1.12, 4], [1.0, 1.0, 1.0, 5]]
@@ -110,13 +154,24 @@ static func stratum_of_room(rid: String) -> int:
 const ARRIVAL := {2: Vector2(143.5, 87.0), 3: Vector2(239.5, 87.0), 4: Vector2(335.5, 87.5)}
 const ARRIVAL_BRASA := {2: "raices", 3: "yunque", 4: "espinas"}
 const BRASAS := [["raices", Vector2(143.5, 82.6)], ["nidos", Vector2(110.5, 60.6)], ["yunque", Vector2(239.5, 82.6)],
-	["nombres", Vector2(204.5, 54.6)], ["espinas", Vector2(335.5, 83.6)], ["jardin", Vector2(345.5, 60.6)]]
+	["nombres", Vector2(204.5, 54.6)], ["espinas", Vector2(335.5, 83.6)], ["jardin", Vector2(345.5, 60.6)],
+	["copas", Vector2(171.5, 41.6)], ["hornos", Vector2(262.5, 84.6)], ["oratorio", Vector2(301.5, 36.6)], ["archivo_j", Vector2(86.5, 21.6)]]
 const BRASA_NAMES := {"sanct": ["Brasa del Santuario", "Sanctuary Ember"], "gate": ["Brasa del Patio", "Courtyard Ember"],
 	"nimbo": ["Brasa del Nimbo", "Nimbus Ember"], "umbral": ["Brasa del Umbral", "Threshold Ember"],
+	"copas": ["Brasa de las Copas", "Ember of the Canopy"], "hornos": ["Brasa de los Hornos", "Ember of the Furnaces"],
+	"oratorio": ["Brasa del Oratorio", "Ember of the Oratory"], "archivo_j": ["Brasa del Archivo", "Ember of the Archive"],
 	"raices": ["Brasa de las Raíces", "Ember of the Roots"], "nidos": ["Brasa de los Nidos", "Ember of the Nests"],
 	"yunque": ["Brasa del Yunque", "Anvil Ember"], "nombres": ["Brasa de los Nombres", "Ember of Names"],
 	"espinas": ["Brasa de las Espinas", "Ember of Thorns"], "jardin": ["Brasa del Jardín", "Garden Ember"]}
-const BRASA_STRATUM := {"sanct": 1, "gate": 1, "nimbo": 1, "umbral": 1, "raices": 2, "nidos": 2, "yunque": 3, "nombres": 3, "espinas": 4, "jardin": 4}
+const BRASA_STRATUM := {"sanct": 1, "gate": 1, "nimbo": 1, "umbral": 1, "raices": 2, "nidos": 2, "yunque": 3, "nombres": 3, "espinas": 4, "jardin": 4,
+	"copas": 2, "hornos": 3, "oratorio": 4, "archivo_j": 1}
+## Puertas del Arconte de cada estrato: se abren al superar sus dos pruebas (o si el Arconte ya cayó)
+const GATES := {"b_puerta": {"trials": ["raices", "copas"], "boss": "orrun", "step": ["main2", "gate_b"]},
+	"f_puerta": {"trials": ["escoria", "cadena"], "boss": "vulkaris", "step": ["main3", "gate_f"]},
+	"t_puerta": {"trials": ["mazmorra", "oratorio"], "boss": "azrahel", "step": ["main4", "gate_t"]}}
+## Al ver por primera vez estas salas empiezan sus cacerías
+const QUEST_ON_ROOM := {"chains": "hunt_guardias", "gallery": "hunt_penitentes", "b_sendero": "hunt_musgosos", "b_arboleda": "hunt_garzas",
+	"f_crisoles": "hunt_ascuas", "f_fragua": "hunt_forjadores", "t_jardin": "hunt_cortesanos", "t_escalera": "hunt_caballeros"}
 ## grieta que aparece donde cae el Arconte de cada estrato y lleva al siguiente
 const RIFTS := {"seravel": [Vector2(49, 6.5), 2], "orrun": [Vector2(141, 4.5), 3], "vulkaris": [Vector2(240, 4.5), 4]}
 const STRATUM_NAMES := {1: ["ESTRATO I · VESTÍBULO DE CENIZA", "STRATUM I · ASH VESTIBULE"],
@@ -160,6 +215,14 @@ const ENEMIES := [
 	["cortesano", 324, 58], ["sabueso", 340, 64], ["doncella", 348, 57], ["caballero", 330, 63],
 	["caballero", 299, 50], ["cortesano", 305, 58], ["sabueso", 297, 62], ["doncella", 304, 47],
 	["caballero", 328, 33], ["cortesano", 345, 36], ["sabueso", 337, 32], ["doncella", 326, 37], ["caballero", 347, 33],
+	# v0.9: salas nuevas
+	["planidera", 82, 12], ["planidera", 90, 12], ["guardia", 86, 18], ["penitente", 81, 20], ["acolito", 90, 20], ["bestia", 86, 11],
+	["musgoso", 165, 79], ["musgoso", 172, 84], ["musgoso", 178, 79], ["nidal", 169, 85], ["espino", 176, 85], ["garza", 163, 83],
+	["nidal", 112, 13], ["nidal", 122, 13], ["nidal", 117, 20], ["garza", 111, 19], ["garza", 124, 20], ["espino", 118, 14],
+	["ascua", 260, 77], ["ascua", 270, 84], ["ascua", 278, 77], ["fundidor", 266, 79], ["fundidor", 276, 84], ["chispero", 260, 85], ["chispero", 272, 76],
+	["forjador", 208, 11], ["forjador", 220, 11], ["fundidor", 214, 16], ["chispero", 208, 17], ["ascua", 220, 17],
+	["caballero", 356, 78], ["caballero", 370, 84], ["doncella", 362, 84], ["doncella", 372, 77], ["sabueso", 354, 84], ["sabueso", 366, 77], ["cortesano", 360, 80],
+	["cortesano", 362, 29], ["cortesano", 374, 29], ["cortesano", 368, 37], ["caballero", 362, 36], ["caballero", 374, 36], ["sabueso", 368, 31],
 ]
 
 ## pruebas con mini-jefe (oleadas en salas que se sellan)
@@ -176,6 +239,35 @@ const TRIALS := {
 		"waves": [[["caballero", 366, 50], ["doncella", 376, 52], ["cortesano", 371, 61]], [["sabueso", 365, 60], ["caballero", 377, 61], ["doncella", 370, 49]],
 			[["ysolde", 371, 54]]],
 		"reward": {"feathers": 3, "ecos": 2000, "items": {"tear": 2, "iron": 2}}, "chest": Vector2(378, 48)},
+	# v0.9: cada Arconte tiene dos pruebas más, con su Heraldo al final
+	"osario": {"room": "v_osario", "seal": "celda", "title": "trial_osario",
+		"waves": [[["hueco", 8, 33], ["hueco", 20, 33], ["penitente", 14, 38]], [["guardia", 7, 38], ["acolito", 22, 34], ["planidera", 14, 33]],
+			[["heraldo_osario", 14, 36]]],
+		"reward": {"feathers": 2, "ecos": 800, "weapon": "mangual", "items": {"iron": 1}}, "chest": Vector2(23, 32)},
+	"raices": {"room": "b_raices", "seal": "luz", "title": "trial_raices",
+		"waves": [[["musgoso", 112, 77], ["musgoso", 124, 77], ["espino", 118, 84]], [["nidal", 112, 84], ["garza", 124, 84], ["musgoso", 118, 77]],
+			[["heraldo_raices", 118, 81]]],
+		"reward": {"feathers": 2, "ecos": 1100, "items": {"tear": 1}}, "chest": Vector2(127, 76)},
+	"copas": {"room": "b_copas", "seal": "luz", "title": "trial_copas",
+		"waves": [[["garza", 168, 34], ["garza", 180, 34], ["nidal", 174, 41]], [["espino", 168, 41], ["espino", 180, 41], ["garza", 174, 34]],
+			[["musgoso", 168, 36], ["musgoso", 180, 36], ["nidal", 174, 42], ["garza", 174, 33]], [["heraldo_copas", 174, 37]]],
+		"reward": {"feathers": 2, "ecos": 1300, "items": {"iron": 2}}, "chest": Vector2(183, 32)},
+	"escoria": {"room": "f_escoria", "seal": "celda", "title": "trial_escoria",
+		"waves": [[["ascua", 208, 75], ["ascua", 222, 75], ["chispero", 215, 82]], [["fundidor", 208, 82], ["forjador", 222, 82], ["ascua", 215, 75]],
+			[["heraldo_escoria", 215, 79]]],
+		"reward": {"feathers": 2, "ecos": 1700, "items": {"tear": 1, "iron": 1}}, "chest": Vector2(225, 74)},
+	"cadena": {"room": "f_cadena", "seal": "celda", "title": "trial_cadena",
+		"waves": [[["fundidor", 268, 30], ["fundidor", 280, 30], ["chispero", 274, 37]], [["forjador", 268, 37], ["forjador", 280, 37], ["ascua", 274, 30]],
+			[["chispero", 268, 32], ["chispero", 280, 32], ["fundidor", 274, 36], ["forjador", 274, 29]], [["heraldo_cadena", 274, 33]]],
+		"reward": {"feathers": 2, "ecos": 1900, "items": {"iron": 2}}, "chest": Vector2(281, 28)},
+	"mazmorra": {"room": "t_mazmorra", "seal": "luz", "title": "trial_mazmorra",
+		"waves": [[["caballero", 304, 77], ["sabueso", 318, 77], ["doncella", 311, 84]], [["cortesano", 304, 84], ["caballero", 318, 84], ["sabueso", 311, 77]],
+			[["heraldo_mazmorra", 311, 81]]],
+		"reward": {"feathers": 3, "ecos": 2600, "items": {"tear": 2}}, "chest": Vector2(321, 76)},
+	"oratorio": {"room": "t_oratorio", "seal": "luz", "title": "trial_oratorio",
+		"waves": [[["doncella", 300, 30], ["doncella", 314, 30], ["cortesano", 307, 37]], [["caballero", 300, 37], ["caballero", 314, 37], ["sabueso", 307, 30]],
+			[["sabueso", 300, 32], ["sabueso", 314, 32], ["cortesano", 307, 36], ["doncella", 307, 29]], [["heraldo_oratorio", 307, 33]]],
+		"reward": {"feathers": 3, "ecos": 3000, "items": {"tear": 1, "iron": 3}}, "chest": Vector2(315, 28)},
 }
 
 # ------------------------------------------------------------------ cofres, inscripciones, PNJ y recados
@@ -189,6 +281,13 @@ const CHESTS := [
 	["chest_t1", Vector2(295.5, 45.4), {"ecos": 1300, "items": {"phoenix": 1, "tear": 1}}],
 	["chest_t2", Vector2(350.5, 31.4), {"ecos": 1000, "feathers": 3}],
 	["chest_t3", Vector2(352, 55.4), {"ecos": 900, "items": {"iron": 2, "vial_aliento": 2}}],
+	["chest_v1", Vector2(92, 9.4), {"ecos": 500, "feathers": 2, "items": {"tear": 1, "vial_luz": 1}}],
+	["chest_b4", Vector2(179, 77.4), {"ecos": 700, "feathers": 2, "items": {"ointment": 2}}],
+	["chest_b5", Vector2(125, 11.4), {"ecos": 900, "items": {"phoenix": 1, "tear": 1}}],
+	["chest_f4", Vector2(279, 75.4), {"ecos": 1100, "feathers": 2, "items": {"bomb": 3}}],
+	["chest_f5", Vector2(221, 9.4), {"ecos": 1400, "items": {"iron": 2, "tear": 1}}],
+	["chest_t4", Vector2(373, 75.4), {"ecos": 1700, "feathers": 3, "items": {"phoenix": 1}}],
+	["chest_t5", Vector2(375, 27.4), {"ecos": 2200, "items": {"iron": 3, "tear": 2}}],
 ]
 const LORE := [
 	["lore_bosque", Vector2(146, 57.4), [["Aquí anidaban los serafines recién caídos. Cada pluma blanca del suelo fue una cría que nunca voló.", "Here the newly fallen seraphs nested. Every white feather on the ground was a chick that never flew."]]],
@@ -200,17 +299,36 @@ const LORE := [
 	["lore_jardin", Vector2(327, 55.4), [["Las rosas de oro no tienen olor. El Arquitecto las plantó para que el Rey nunca echara de menos el cielo.", "The golden roses have no scent. The Architect planted them so the King would never miss the sky."]]],
 	["lore_corte", Vector2(301, 45.4), [["Una corte entera de cortesanos de rodillas ante un trono vacío. Llevan mil años esperando una orden.", "An entire court kneeling before an empty throne. They have waited a thousand years for an order."]]],
 	["lore_escalera", Vector2(326, 31.4), [["«El primero que se negó fue sentado en el trono más alto, para que todos lo vieran... y nadie lo escuchara.»", "\"The first who refused was seated on the highest throne, so that all would see him... and no one would hear him.\""]]],
+	["lore_osario", Vector2(6, 31.4), [["Montañas de alas sin dueño. Alguien las ordenó por tamaño, y luego por el último nombre que pronunciaron.", "Mountains of ownerless wings. Someone sorted them by size, then by the last name they spoke."]]],
+	["lore_archivo_j", Vector2(80, 9.4), [["«Sentencia n.º 1: culpable de preguntar.» Las otras nueve mil novecientas noventa y nueve dicen lo mismo.", "\"Sentence no. 1: guilty of asking.\" The other nine thousand nine hundred and ninety-nine say the same."]]],
+	["lore_raices", Vector2(110, 75.4), [["Las raíces no crecen hacia abajo: suben, buscando la luz de una Brasa que se apagó hace siglos.", "These roots don't grow down: they climb, seeking the light of an Ember that died centuries ago."]]],
+	["lore_charca", Vector2(162, 77.4), [["El agua es negra, pero refleja un cielo. No es el de aquí arriba. Quizá ya no exista.", "The water is black, yet it reflects a sky. Not the one above. Perhaps it no longer exists."]]],
+	["lore_colmena", Vector2(110, 11.4), [["Cera de velas de altar, mil años de ofrendas. Las abejas murieron; los cirios siguen encendiéndose solos.", "Altar candle wax, a thousand years of offerings. The bees died; the candles still light themselves."]]],
+	["lore_escoria", Vector2(206, 73.4), [["Lo que sobra de fundir un nombre. Si escuchas de cerca, la escoria aún intenta pronunciarlo.", "What's left after melting a name. Listen closely and the slag is still trying to say it."]]],
+	["lore_hornos", Vector2(258, 75.4), [["Dos hornos, una regla: lo que entra por el de la izquierda sale por el de la derecha con una aureola puesta.", "Two furnaces, one rule: what goes into the left comes out of the right wearing a halo."]]],
+	["lore_tesoro", Vector2(206, 9.4), [["Aureolas perfectas, jamás usadas. Vulkaris las forjó para ángeles que aún no han caído.", "Perfect halos, never worn. Vulkaris forged them for angels who have yet to fall."]]],
+	["lore_mazmorra", Vector2(302, 75.4), [["En el trono mandaba un Rey. En esta celda hay marcas de otro. Y de otro. Y de otro.", "A King ruled from the throne. This cell bears the marks of another. And another. And another."]]],
+	["lore_cripta", Vector2(352, 75.4), [["Tumbas de reyes, todas abiertas desde dentro. Ninguna tiene cuerpo.", "Tombs of kings, all opened from the inside. None holds a body."]]],
+	["lore_oratorio", Vector2(298, 27.4), [["Aquí se rezaba a la Voz. En la pared alguien arañó una sola pregunta: ¿quién te reza a ti?", "Here they prayed to the Voice. On the wall someone clawed a single question: who prays to you?"]]],
 ]
 const NPCS := [
 	["oso", Vector2(113.5, 57.6), {"sheet": "npc_oso", "name": ["Hermano Oso", "Brother Bear"], "light": Color(1, 0.75, 0.4)}],
 	["archivero", Vector2(201.5, 50.8), {"sheet": "npc_archivero", "name": ["El Archivero", "The Archivist"], "light": Color(0.7, 0.85, 1.0)}],
 	["lirio", Vector2(323, 57.4), {"sheet": "npc_lirio", "name": ["Lirio, la Jardinera", "Lirio, the Gardener"], "light": Color(1, 0.9, 0.5), "flip": true}],
+	["nerea", Vector2(81, 15.6), {"sheet": "npc_velaria", "tint": Color(0.75, 0.85, 1.0), "name": ["Sor Nerea, la Copista", "Sister Nerea, the Copyist"], "light": Color(0.7, 0.8, 1.0)}],
+	["tejedor", Vector2(171, 79.6), {"sheet": "npc_carto", "tint": Color(0.8, 1.0, 0.8), "name": ["El Tejedor de Nidos", "The Nest Weaver"], "light": Color(0.7, 1.0, 0.7), "flip": true}],
+	["ona", Vector2(268, 81.6), {"sheet": "npc_brenna", "tint": Color(1.0, 0.8, 0.7), "name": ["Ona, la Fundidora", "Ona, the Founder"], "light": Color(1, 0.55, 0.25)}],
+	["heraldo", Vector2(368, 33.6), {"sheet": "npc_ozias", "tint": Color(0.9, 0.75, 1.0), "name": ["El Último Heraldo", "The Last Herald"], "light": Color(0.8, 0.55, 1.0), "flip": true}],
 ]
 ## recados: tres objetos repartidos por el estrato que entregar al PNJ
 const ERRAND_ITEMS := [
 	["egg_1", Vector2(152, 66.5), "eggs", "luz"], ["egg_2", Vector2(180, 65), "eggs", "luz"], ["egg_3", Vector2(156, 43.5), "eggs", "luz"],
 	["name_1", Vector2(258, 64), "names", "scroll"], ["name_2", Vector2(212, 35), "names", "scroll"], ["name_3", Vector2(224, 38), "names", "scroll"],
 	["rose_1", Vector2(296, 63), "roses", "heart"], ["rose_2", Vector2(377, 64), "roses", "heart"], ["rose_3", Vector2(348, 38), "roses", "heart"],
+	["cir_1", Vector2(8, 40), "cirios", "luz"], ["cir_2", Vector2(92, 22), "cirios", "luz"], ["cir_3", Vector2(76, 70), "cirios", "luz"],
+	["hil_1", Vector2(112, 86), "hilos", "scroll"], ["hil_2", Vector2(126, 22), "hilos", "scroll"], ["hil_3", Vector2(184, 44), "hilos", "scroll"],
+	["mol_1", Vector2(208, 84), "moldes_r", "scroll"], ["mol_2", Vector2(222, 18), "moldes_r", "scroll"], ["mol_3", Vector2(282, 38), "moldes_r", "scroll"],
+	["sel_1", Vector2(302, 86), "sellos", "heart"], ["sel_2", Vector2(374, 86), "sellos", "heart"], ["sel_3", Vector2(316, 38), "sellos", "heart"],
 ]
 
 const DIALOGUE := {
@@ -234,6 +352,31 @@ const DIALOGUE := {
 		["Lirio", ["Se me escaparon tres rosas vivas. De las de verdad, de las que huelen. Si las encuentras... ¿me las traes?", "Three living roses got away from me. Real ones, ones that smell. If you find them... would you bring them to me?"]]],
 	"lirio_again": [["Lirio", ["El Rey está arriba, al final de la escalinata. Si hablas con él... dile que el jardín sigue aquí.", "The King is up there, at the top of the stairs. If you speak to him... tell him the garden is still here."]]],
 	"lirio_done": [["Lirio", ["¡Huelen! Huelen a cielo. Toma, para el camino: la última flor del primer jardín.", "They smell! They smell of sky. Here, for the road: the last flower of the first garden."]]],
+	"nerea": [
+		["Sor Nerea", ["Silencio, por favor. Copio las sentencias del Juicio antes de que la tinta recuerde lo que dicen.", "Silence, please. I'm copying the Judgement's sentences before the ink remembers what they say."]],
+		["Sor Nerea", ["Todas condenan por lo mismo: preguntar. Tú, en cambio, aún no has preguntado nada. Eso me asusta más.", "They all condemn the same thing: asking. You, however, haven't asked anything yet. That scares me more."]],
+		["Sor Nerea", ["Se me acabaron los cirios y a oscuras copio mal. Quedan tres encendidos por el Estrato. ¿Me los traes?", "I've run out of candles and I copy badly in the dark. Three are still burning around the Stratum. Would you bring them?"]]],
+	"nerea_again": [["Sor Nerea", ["Si encuentras una sentencia con tu nombre, no la leas. Tráemela.", "If you find a sentence with your name on it, don't read it. Bring it to me."]]],
+	"nerea_done": [["Sor Nerea", ["Luz. Gracias. He buscado tu nombre: no lo hay. No estás condenado... o nadie se atrevió a escribirlo.", "Light. Thank you. I looked for your name: it isn't there. You're not condemned... or no one dared write it."]]],
+	"tejedor": [
+		["El Tejedor", ["Con cuidado. Este nido lleva cuatrocientos años sin terminar y ya casi le encuentro el truco.", "Careful. This nest has gone unfinished for four hundred years and I've nearly got the knack of it."]],
+		["El Tejedor", ["Lo hago para las crías de Orrun. Sé que no van a volver. Pero alguien tiene que seguir haciendo nidos, ¿no?", "I make them for Orrun's chicks. I know they won't return. But someone must keep making nests, no?"]],
+		["El Tejedor", ["Me falta hilo de plata. Queda algo en las Raíces, en la Colmena y en las Copas. Tráemelo y te tejeré algo a ti.", "I'm short of silver thread. There's some left in the Roots, the Hive and the Canopy. Bring it and I'll weave you something."]]],
+	"tejedor_again": [["El Tejedor", ["El Ciervo no es malo. Solo está muy, muy cansado de contar nidos vacíos.", "The Stag isn't evil. He's just very, very tired of counting empty nests."]]],
+	"tejedor_done": [["El Tejedor", ["Hilo de plata. Mira: un nido pequeño, para llevar. No pesa nada. Como casi todo lo que importa.", "Silver thread. Look: a small nest, to carry. It weighs nothing. Like most things that matter."]]],
+	"ona": [
+		["Ona", ["¡Aparta de la colada! Soy Ona. Fundo lo que Vulkaris rechaza: aureolas con grietas, moldes rotos, errores.", "Out of the pour! I'm Ona. I melt what Vulkaris rejects: cracked halos, broken moulds, mistakes."]],
+		["Ona", ["¿Sabes qué pasa si fundes un molde roto? Que sale una aureola que no aprieta. Una que puedes quitarte.", "You know what happens if you cast with a broken mould? You get a halo that doesn't bind. One you can take off."]],
+		["Ona", ["Hay tres moldes rotos por la Fundición. Tráelos y Vulkaris no tiene por qué enterarse.", "There are three broken moulds around the Foundry. Bring them and Vulkaris needn't find out."]]],
+	"ona_again": [["Ona", ["Si vas a por él, ataca cuando enfríe el yunque. Lleva mil años sin apagarlo y aun así tiene que respirar.", "If you go for him, strike when the anvil cools. He hasn't put it out in a thousand years, and still he must breathe."]]],
+	"ona_done": [["Ona", ["Mira esto: sin bordes, sin juramento, sin peso. Si algún día te cansas de la tuya, ya sabes.", "Look at this: no edge, no oath, no weight. If you ever tire of yours, you know where to come."]]],
+	"heraldo": [
+		["El Heraldo", ["Anuncio la llegada del Rey. Lo anuncio cada mañana desde hace mil años. Todavía no ha llegado.", "I announce the King's arrival. I've announced it every morning for a thousand years. He has yet to arrive."]],
+		["El Heraldo", ["Azrahel está arriba, sí. Pero él nunca fue el Rey. Solo lo sentaron en la silla.", "Azrahel is up there, yes. But he was never the King. They merely sat him in the chair."]],
+		["El Heraldo", ["Quedan tres sellos reales sin romper. Tráemelos: quiero leer de una vez qué ordenaban.", "Three royal seals remain unbroken. Bring them: I want to finally read what they ordered."]]],
+	"heraldo_again": [["El Heraldo", ["Sube, sube. Yo me quedo: alguien tendrá que anunciar lo que venga después.", "Go up, go up. I'll stay: someone will have to announce whatever comes next."]]],
+	"heraldo_done": [["El Heraldo", ["Los tres dicen lo mismo: «Que siga arrodillada la corte hasta que yo vuelva.» Firmado: El Arquitecto. Nunca hubo Rey.", "All three say the same: \"Let the court stay kneeling until I return.\" Signed: The Architect. There never was a King."]]],
 }
 const ERRANDS := {"oso": ["eggs", {"ecos": 1500, "sp": 2, "items": {"tear": 2}}], "archivero": ["names", {"ecos": 2200, "sp": 2, "items": {"iron": 3}}],
-	"lirio": ["roses", {"ecos": 3000, "sp": 2, "items": {"phoenix": 2, "tear": 2}}]}
+	"lirio": ["roses", {"ecos": 3000, "sp": 2, "items": {"phoenix": 2, "tear": 2}}],
+	"nerea": ["cirios", {}], "tejedor": ["hilos", {}], "ona": ["moldes_r", {}], "heraldo": ["sellos", {}]}

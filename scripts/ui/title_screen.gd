@@ -40,7 +40,7 @@ func _ready() -> void:
 	_build_particles()
 	_build_title()
 	_build_menu()
-	footer = UIKit.label("ALFA 0.8  -  ESTRATO I    ·    " + G.T("fullscreen_hint"), 10, Color(0.65, 0.55, 0.7), "title")
+	footer = UIKit.label("ALFA FINAL  -  v0.9    ·    " + G.T("fullscreen_hint"), 10, Color(0.65, 0.55, 0.7), "title")
 	footer.position = Vector2(8, 344)
 	add_child(footer)
 	press = UIKit.label(G.T("press_any").to_upper(), 8, UIKit.WHITE, "head")
@@ -812,7 +812,7 @@ class SaveCard extends Control:
 		var pt := float(data.get("playtime", 0.0))
 		var rows := [[G.L(["Tiempo", "Time"]), "%d:%02d" % [int(pt / 3600.0), int(pt / 60.0) % 60]],
 			[G.L(["Plumas", "Feathers"]), "%d/10" % int(data.get("wing_feathers", 10))],
-			[G.L(["Recuerdos", "Memories"]), "%d/4" % (data.get("memories", {}) as Dictionary).size()]]
+			[G.L(["Recuerdos", "Memories"]), "%d/7" % (data.get("memories", {}) as Dictionary).size()]]
 		var y := 93.0
 		for r in rows:
 			tf.draw_string(get_canvas_item(), Vector2(8, y), r[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)

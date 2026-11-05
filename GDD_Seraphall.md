@@ -18,7 +18,7 @@ Dependen de la **balanza del destino** (`Prog.route_score()`), visible en la pes
 | Ejecutar a un Arconte | −1 |
 | Cada recuerdo recuperado | +1 |
 | Jurar lealtad a un Arconte | −1 |
-| Conservar 7 o más plumas | +1 |
+| Conservar 7 o más plumas (encender una Brasa cuesta una) | +1 |
 | Quedarse con 3 plumas o menos | −1 |
 
 - **ALAS ABIERTAS** (balanza ≥ 0): romper la Espiral y liberar a los caídos.

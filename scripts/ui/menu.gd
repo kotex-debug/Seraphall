@@ -1279,6 +1279,24 @@ func _on_oath(b: String) -> void:
 # ------------------------------------------------------------------ misiones
 var _quest_sel := ""
 const QUEST_LORE := {
+	"main2": ["Bajo la grieta hay un bosque que nunca vio el sol. Sus nidos están vacíos y su guardián no quiere admitirlo.", "Below the rift lies a forest that never saw the sun. Its nests are empty and its keeper refuses to admit it."],
+	"main3": ["La Fundición convierte nombres en aureolas. Alguien forjó la tuya, y quizá recuerde por qué.", "The Foundry turns names into halos. Someone forged yours, and may remember why."],
+	"main4": ["Al final de todo hay un trono. Te ordenaron matar a quien se sienta en él. Nadie te dijo quién dio la orden.", "At the end of everything there is a throne. You were ordered to kill whoever sits on it. No one told you who gave the order."],
+	"eggs": ["Hermano Oso guarda lo que queda del bosque. Quiere los huevos de luz. No dice si cree que aún están vivos.", "Brother Bear tends what's left of the forest. He wants the eggs of light. He won't say whether he thinks they're alive."],
+	"names": ["El Archivero copia los nombres que la Fundición arranca. Cada placa es alguien que aún puede ser recordado.", "The Archivist copies the names the Foundry tears away. Each plate is someone who can still be remembered."],
+	"roses": ["Lirio cuida rosas de oro que no huelen. Tres de verdad se le escaparon, y las echa de menos más de lo que admite.", "Lirio tends golden roses with no scent. Three real ones got away, and she misses them more than she admits."],
+	"cirios": ["Sor Nerea copia las sentencias del Juicio a la luz de unos cirios que ya se acaban. Dice que a oscuras la tinta miente.", "Sister Nerea copies the Judgement's sentences by the light of dwindling candles. She says that in the dark, ink lies."],
+	"hilos": ["El Tejedor lleva cuatrocientos años con el mismo nido. Le falta hilo de plata, o eso dice.", "The Weaver has spent four hundred years on the same nest. He's short of silver thread, or so he says."],
+	"moldes_r": ["Con un molde roto sale una aureola que se puede quitar. Vulkaris no debe enterarse de que Ona lo sabe.", "A broken mould makes a halo you can take off. Vulkaris mustn't learn that Ona knows."],
+	"sellos": ["El Último Heraldo lleva mil años anunciando a un Rey que no llega. Quiere leer por fin las órdenes selladas.", "The Last Herald has spent a thousand years announcing a King who never comes. He finally wants to read the sealed orders."],
+	"hunt_guardias": ["Los Guardias del Pasillo aún hacen la ronda de un carcelero que ya no los manda.", "The Hall's Guards still walk the rounds of a jailer who no longer commands them."],
+	"hunt_penitentes": ["Saltan sobre ti pidiendo perdón. Es lo más inquietante que has oído nunca.", "They leap at you begging forgiveness. It's the most unsettling thing you've ever heard."],
+	"hunt_musgosos": ["El bosque intenta enterrar a sus muertos con musgo. No todos se dejan.", "The forest tries to bury its dead in moss. Not all of them let it."],
+	"hunt_garzas": ["Vigilan los nidos vacíos por si alguien intenta llevarse la nada que contienen.", "They watch the empty nests in case someone tries to steal the nothing inside."],
+	"hunt_ascuas": ["Lo que queda de los aprendices de Vulkaris. Siguen trabajando, aunque ya no les queda de qué.", "What's left of Vulkaris's apprentices. They keep working, though nothing is left to work with."],
+	"hunt_forjadores": ["Disparan chispas de aureola. Cada una lleva un trozo de nombre dentro.", "They fire halo sparks. Each one holds a scrap of a name."],
+	"hunt_cortesanos": ["Llevan mil años de rodillas. Al levantarse, lo primero que hacen es atacarte.", "A thousand years on their knees. When they rise, attacking you is the first thing they do."],
+	"hunt_caballeros": ["Juraron defender un trono vacío. Lo cumplen al pie de la letra.", "They swore to defend an empty throne. They keep that oath to the letter."],
 	"main1": ["Despertaste con una orden grabada a fuego: descender y matar al Rey del Abismo. La Voz insiste en que es tu penitencia. Nunca dice por qué.", "You woke with an order burned into you: descend and slay the King of the Abyss. The Voice insists it is your penance. It never says why."],
 	"feathers": ["Brenna necesita plumas para templar el acero. Dice que las armas recuerdan a quien se las dio.", "Brenna needs feathers to temper steel. She says weapons remember who gave them."],
 	"husks": ["El Cartógrafo no puede medir el Pasillo mientras los Huecos sigan arrastrando cadenas por él.", "The Cartographer can't measure the Hall while the Husks keep dragging chains through it."],
@@ -3040,6 +3058,10 @@ class LockedWeaponCard extends Control:
 		"scythe": ["Encargo del Cartógrafo.", "The Cartographer's errand."], "reaper": ["Un cofre en lo alto de la Escalinata.", "A chest atop the Stairway."],
 		"staff": ["Habla con Madre Ilse en el Nimbo.", "Talk to Mother Ilse in the Nimbus."], "fists": ["Tobías, tras abrir las Celdas.", "Tobias, after the Cells open."],
 		"bow": ["El cofre del Mirador del Ala Rota.", "The chest at the Broken Wing Overlook."],
+		"mangual": ["Supera la prueba del Osario de Alas.", "Clear the trial of the Wing Ossuary."],
+		"astas": ["Vence a Orrun, el Ciervo Hueco.", "Defeat Orrun, the Hollow Stag."],
+		"yunque": ["Vence a Vulkaris en el Gran Yunque.", "Defeat Vulkaris at the Great Anvil."],
+		"corona": ["Vence a quien se sienta en el Trono.", "Defeat whoever sits upon the Throne."],
 		"verdugo": ["Lo que fuiste te espera bajo la Capilla, tras los cuatro ecos.", "What you were awaits beneath the Chapel, after the four echoes."]}
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE

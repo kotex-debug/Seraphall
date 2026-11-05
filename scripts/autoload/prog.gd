@@ -156,6 +156,21 @@ const MEMORIES := {
 		["Dijo que mientras ardiera, nadie se perdería del todo.", "She said that while it burned, no one would be lost entirely."],
 		["Todavía arde.", "It still burns."],
 	]},
+	"m5": {"title": ["Los Nidos Vacíos", "The Empty Nests"], "lines": [
+		["Recuerdas un bosque blanco y a un ciervo enorme que se apartaba para dejarte pasar.", "You remember a white forest and a huge stag stepping aside to let you pass."],
+		["Llevabas un saco. Dentro, algo que pesaba muy poco y no dejaba de moverse.", "You carried a sack. Inside, something that weighed very little and would not stop moving."],
+		["Orrun te preguntó adónde lo llevabas. No le contestaste. Nunca le contestaste.", "Orrun asked where you were taking it. You didn't answer. You never answered."],
+	]},
+	"m6": {"title": ["La Aureola Fría", "The Cold Halo"], "lines": [
+		["Un yunque, un martillo y tu cabeza gacha. «Esta es la tuya», dijo el herrero, sin mirarte.", "An anvil, a hammer and your bowed head. \"This one's yours,\" said the smith, without looking at you."],
+		["No quemaba. Eso fue lo peor. Se posó sobre ti fría, como una mano que ya te conocía.", "It didn't burn. That was the worst of it. It settled on you cold, like a hand that already knew you."],
+		["Desde ese día no volviste a preguntar nada.", "From that day on, you never asked anything again."],
+	]},
+	"m7": {"title": ["La Primera Negativa", "The First Refusal"], "lines": [
+		["Dos figuras en una sala sin paredes. Una de ellas dice que no. Solo eso: que no.", "Two figures in a hall without walls. One of them says no. Only that: no."],
+		["La otra sonríe. Ya había construido la silla.", "The other smiles. It had already built the chair."],
+		["Y detrás de ambas, un tercero sostiene una capucha. Tiene tus manos.", "And behind them both, a third holds a hood. It has your hands."],
+	]},
 }
 
 # ------------------------------------------------------------------ dificultad
@@ -297,6 +312,9 @@ const BESTIARY := ["hueco", "acolito", "planidera", "penitente", "bestia", "guar
 func record_kill(etype: String) -> void:
 	Ach.add("kills")
 	resonance_add()
+	for q in QUESTS:
+		if QUESTS[q].get("kill", "") == etype and quest_active(q):
+			quest_progress(q)
 	if etype in BESTIARY:
 		flags["slain_" + etype] = true
 		var n := 0
@@ -515,6 +533,7 @@ const QUESTS := {
 	"main2": {"type": "main", "title": ["El Bosque de Plumas Muertas", "The Forest of Dead Feathers"], "giver": "",
 		"steps": [
 			{"id": "talk_oso", "text": ["Busca a alguien en el Claro de los Nidos, al oeste del sendero", "Find someone in the Clearing of Nests, west of the path"]},
+			{"id": "gate_b", "text": ["Abre el paso al Ciervo: supera las pruebas de las Raíces Hondas (junto a la llegada) y de las Copas Muertas (al este de la Arboleda)", "Open the way to the Stag: clear the trials of the Deep Roots (by the arrival) and the Dead Canopy (east of the Grove)"]},
 			{"id": "enter_ciervo", "text": ["Cruza la Arboleda Hueca hasta el Santuario del Ciervo", "Cross the Hollow Grove to the Stag's Sanctuary"]},
 			{"id": "kill_orrun", "text": ["Derrota a Orrun, el Ciervo Hueco", "Defeat Orrun, the Hollow Stag"]},
 		],
@@ -522,6 +541,7 @@ const QUESTS := {
 	"main3": {"type": "main", "title": ["La Fundición de Halos", "The Halo Foundry"], "giver": "",
 		"steps": [
 			{"id": "talk_archivero", "text": ["Busca la Biblioteca de los Nombres, al oeste de los crisoles", "Find the Library of Names, west of the crucibles"]},
+			{"id": "gate_f", "text": ["Abre el paso al Yunque: supera las pruebas del Mar de Escoria (junto a la llegada) y de la Línea de Cadenas (al este de la Gran Fragua)", "Open the way to the Anvil: clear the trials of the Slag Sea (by the arrival) and the Chain Line (east of the Great Forge)"]},
 			{"id": "enter_yunque", "text": ["Sube por la Gran Fragua hasta el Gran Yunque", "Climb through the Great Forge to the Great Anvil"]},
 			{"id": "kill_vulkaris", "text": ["Derrota a Vulkaris, el Herrero de Aureolas", "Defeat Vulkaris, the Halo Smith"]},
 		],
@@ -529,6 +549,7 @@ const QUESTS := {
 	"main4": {"type": "main", "title": ["El Trono Vacío", "The Empty Throne"], "giver": "",
 		"steps": [
 			{"id": "talk_lirio", "text": ["Habla con quien cuida el Jardín de Espinas Doradas", "Speak with whoever tends the Garden of Golden Thorns"]},
+			{"id": "gate_t", "text": ["Abre el paso al Trono: supera las pruebas de la Mazmorra del Rey (junto a la llegada) y del Oratorio Vacío (al oeste de la Escalinata)", "Open the way to the Throne: clear the trials of the King's Dungeon (by the arrival) and the Empty Oratory (west of the Stairway)"]},
 			{"id": "enter_trono", "text": ["Sube la Escalinata del Rey hasta el Trono Vacío", "Climb the King's Stairway to the Empty Throne"]},
 			{"id": "kill_azrahel", "text": ["Derrota a Azrahel, Rey del Abismo", "Defeat Azrahel, King of the Abyss"]},
 		],
@@ -560,6 +581,36 @@ const QUESTS := {
 	"jailer_hunt": {"type": "bounty", "title": ["Caza: El Carcelero", "Hunt: The Jailer"], "giver": "brenna",
 		"count": 1, "text": ["Derrota al Carcelero (%d/%d)", "Defeat the Jailer (%d/%d)"],
 		"reward": {"ecos": 400, "feathers": 3}},
+	# --- v0.9: encargos de los PNJ nuevos
+	"cirios": {"type": "side", "title": ["Luz para copiar", "Light to Copy By"], "giver": "",
+		"count": 3, "text": ["Lleva a Sor Nerea los cirios encendidos del Estrato (%d/%d)", "Bring Sister Nerea the Stratum's lit candles (%d/%d)"],
+		"reward": {"ecos": 900, "sp": 2, "flask": 1}},
+	"hilos": {"type": "side", "title": ["Hilo de plata", "Silver Thread"], "giver": "",
+		"count": 3, "text": ["Reúne hilo de plata para el Tejedor (%d/%d)", "Gather silver thread for the Weaver (%d/%d)"],
+		"reward": {"ecos": 1400, "sp": 2, "item": "tear"}},
+	"moldes_r": {"type": "side", "title": ["Moldes rotos", "Broken Moulds"], "giver": "",
+		"count": 3, "text": ["Lleva a Ona los moldes rotos de la Fundición (%d/%d)", "Bring Ona the Foundry's broken moulds (%d/%d)"],
+		"reward": {"ecos": 2000, "sp": 2, "item": "iron", "free_upgrade": 1}},
+	"sellos": {"type": "side", "title": ["Los sellos del Rey", "The King's Seals"], "giver": "",
+		"count": 3, "text": ["Encuentra los sellos reales para el Heraldo (%d/%d)", "Find the royal seals for the Herald (%d/%d)"],
+		"reward": {"ecos": 2800, "sp": 3, "item": "phoenix"}},
+	# --- v0.9: cacerías
+	"hunt_guardias": {"type": "bounty", "title": ["Caza: Guardias", "Hunt: Guards"], "giver": "", "kill": "guardia",
+		"count": 6, "text": ["Abate Guardias (%d/%d)", "Slay Guards (%d/%d)"], "reward": {"ecos": 500, "feathers": 2}},
+	"hunt_penitentes": {"type": "bounty", "title": ["Caza: Penitentes", "Hunt: Penitents"], "giver": "", "kill": "penitente",
+		"count": 6, "text": ["Abate Penitentes (%d/%d)", "Slay Penitents (%d/%d)"], "reward": {"ecos": 600, "sp": 1}},
+	"hunt_musgosos": {"type": "bounty", "title": ["Caza: Musgosos", "Hunt: Mossbacks"], "giver": "", "kill": "musgoso",
+		"count": 15, "text": ["Abate Musgosos (%d/%d)", "Slay Mossbacks (%d/%d)"], "reward": {"ecos": 1000, "feathers": 3}},
+	"hunt_garzas": {"type": "bounty", "title": ["Caza: Garzas", "Hunt: Herons"], "giver": "", "kill": "garza",
+		"count": 10, "text": ["Abate Garzas (%d/%d)", "Slay Herons (%d/%d)"], "reward": {"ecos": 1200, "sp": 1}},
+	"hunt_ascuas": {"type": "bounty", "title": ["Caza: Ascuas", "Hunt: Cinders"], "giver": "", "kill": "ascua",
+		"count": 15, "text": ["Abate Ascuas (%d/%d)", "Slay Cinders (%d/%d)"], "reward": {"ecos": 1500, "feathers": 3}},
+	"hunt_forjadores": {"type": "bounty", "title": ["Caza: Forjadores", "Hunt: Forgers"], "giver": "", "kill": "forjador",
+		"count": 10, "text": ["Abate Forjadores (%d/%d)", "Slay Forgers (%d/%d)"], "reward": {"ecos": 1800, "sp": 1}},
+	"hunt_cortesanos": {"type": "bounty", "title": ["Caza: Cortesanos", "Hunt: Courtiers"], "giver": "", "kill": "cortesano",
+		"count": 15, "text": ["Abate Cortesanos (%d/%d)", "Slay Courtiers (%d/%d)"], "reward": {"ecos": 2200, "feathers": 3}},
+	"hunt_caballeros": {"type": "bounty", "title": ["Caza: Caballeros", "Hunt: Knights"], "giver": "", "kill": "caballero",
+		"count": 10, "text": ["Abate Caballeros (%d/%d)", "Slay Knights (%d/%d)"], "reward": {"ecos": 2600, "sp": 2}},
 }
 
 # ------------------------------------------------------------------ estado

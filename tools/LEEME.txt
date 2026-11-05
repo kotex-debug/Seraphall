@@ -1,0 +1,18 @@
+SERAPHALL - La Caída del Serafín
+
+CÓMO JUGAR
+1. Descomprime esta carpeta donde quieras.
+2. Abre Seraphall.exe. No necesita instalación.
+3. Si Windows muestra "Windows protegió su PC": pulsa "Más información" y luego
+   "Ejecutar de todas formas" (el juego no está firmado digitalmente).
+
+COOPERATIVO (2 JUGADORES)
+- Si Windows pregunta, permite Seraphall en el Firewall, sobre todo quien crea la partida.
+- Misma red: uno pulsa "Crear partida cooperativa" y el otro "Unirse con código";
+  la partida aparece sola en la lista.
+- Por Internet: comparte el código online. Si tu router no abre el puerto solo, abre el
+  puerto UDP 24680 o usad una red virtual gratuita (Tailscale, Radmin VPN, ZeroTier)
+  y conectad escribiendo la IP.
+- Los dos debéis tener la misma versión del juego.
+
+Tu partida se guarda en %APPDATA%\Godot\app_userdata\Seraphall\

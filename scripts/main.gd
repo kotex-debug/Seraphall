@@ -1331,7 +1331,7 @@ func _run_autotest() -> void:
 				w._spawn_trial_enemy(last[0], w.tile_pos(last[1], last[2]))
 				await get_tree().create_timer(2.2).timeout
 				await _shot(out + "/s%d_minijefe.png" % stn)
-				w._reset_enemies()
+				w._reset_enemies(true)
 				w._trial_reset()
 				# Arconte
 				var bo: Array = boss_of[stn]
@@ -1976,6 +1976,195 @@ func _run_autotest() -> void:
 			var ok_p: bool = r_end == "sanct" and w._prologue == null and Prog.quest_active("main1") and not get_tree().paused
 			print("AUTOTEST_PROLOGUE_OK" if ok_p else "AUTOTEST_PROLOGUE_FAIL")
 			get_tree().quit()
+		"retry":
+			# jefe: la primera vez con presentación; al morir y volver, directo a la pelea y con su barra
+			var lpr: Player = w.local_player()
+			var bad_r := []
+			var car: Enemy = w._enemy_of("carcelero")
+			w.set_gate(false, true)
+			lpr.respawn_at(w.tile_pos(49, 40))
+			lpr.iframes = 9999.0
+			var wr := 0.0
+			while w.active_boss != car and wr < 30.0:
+				await get_tree().create_timer(0.25).timeout
+				wr += 0.25
+			print("RETRY primera vez t=", wr, " barra=", w.hud.boss_panel.visible, " sellos=", w._seals.size())
+			if not (w.active_boss == car and w.hud.boss_panel.visible and w._seals.size() > 0):
+				bad_r.append("el primer combate no arranca bien")
+			lpr.iframes = 0.0
+			lpr.take_hit(99999.0, Vector2.RIGHT, -1)
+			await get_tree().create_timer(5.0).timeout
+			print("RETRY tras morir jefe=", w.active_boss, " activo=", car.active, " sellos=", w._seals.size(), " sala=", w.room_at(lpr.global_position), " plumas=", Prog.wing_feathers)
+			if w.active_boss != null or car.active or not w._seals.is_empty():
+				bad_r.append("al morir el jefe no vuelve a dormir")
+			lpr.respawn_at(w.tile_pos(49, 40))
+			lpr.iframes = 9999.0
+			wr = 0.0
+			while w.active_boss != car and wr < 4.0:
+				await get_tree().create_timer(0.1).timeout
+				wr += 0.1
+			await get_tree().create_timer(0.6).timeout
+			print("RETRY segunda vez t=", wr, " barra=", w.hud.boss_panel.visible, " activo=", car.active, " sellos=", w._seals.size(), " cinematica_en_curso=", w.get_children().filter(func(c): return c.has_signal("finished")).size())
+			if wr >= 4.0 or not w.hud.boss_panel.visible or not car.active or w._seals.is_empty():
+				bad_r.append("el reintento no va directo a la pelea con barra")
+			w._reset_enemies(true)
+			# Arconte: el reintento tampoco repite diálogo
+			Prog.flags["cine_orrun"] = true
+			Prog.flags["trial_b_puerta"] = true
+			w.wflags["trial_b_puerta"] = true
+			w._refresh_locks(true)
+			lpr.respawn_at(w.tile_pos(141, 14))
+			await get_tree().create_timer(1.0).timeout
+			var oru: Enemy = w._enemy_of("orrun")
+			print("RETRY orrun jefe=", w.active_boss == oru, " barra=", w.hud.boss_panel.visible, " dialogo=", w.dialog.is_open(), " sellos=", w._seals.size())
+			if w.active_boss != oru or not w.hud.boss_panel.visible or w.dialog.is_open() or w._seals.is_empty():
+				bad_r.append("el Arconte repite presentación o no tiene barra")
+			for b_r in bad_r:
+				print("FALLO ", b_r)
+			print("AUTOTEST_RETRY_OK" if bad_r.is_empty() else "AUTOTEST_RETRY_FAIL")
+			get_tree().quit()
+		"content":
+			# comprueba el mapa y los datos: nada en un muro, todo alcanzable, todas las pruebas se pueden completar
+			var bad := []
+			# 1) inundación desde cada llegada: todas las salas del estrato alcanzables a pie
+			var starts := {1: Vector2i(49, 86), 2: Vector2i(143, 87), 3: Vector2i(239, 87), 4: Vector2i(335, 87)}
+			var seen := {}
+			for st0 in starts:
+				var stack: Array[Vector2i] = [starts[st0]]
+				while not stack.is_empty():
+					var c9: Vector2i = stack.pop_back()
+					if seen.has(c9) or not w._floor_at(c9.x, c9.y):
+						continue
+					seen[c9] = true
+					for dd in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+						stack.append(c9 + dd)
+			for rm in w.ROOMS:
+				if rm.id == "prologo":
+					continue
+				var rc9: Rect2i = w._rect_of(rm)
+				var any9 := false
+				for y9 in range(rc9.position.y, rc9.end.y):
+					for x9 in range(rc9.position.x, rc9.end.x):
+						if seen.has(Vector2i(x9, y9)):
+							any9 = true
+				if not any9:
+					bad.append("sala inalcanzable: " + str(rm.id))
+				if not w.AREAS.has(rm.id):
+					bad.append("sala sin área: " + str(rm.id))
+				elif not G.TXT.has(w.AREAS[rm.id]):
+					bad.append("área sin nombre: " + str(w.AREAS[rm.id]))
+			# 2) enemigos en su sala y sin mezclarse
+			for e9 in w.enemies:
+				if not e9.is_boss and e9.home_room == "":
+					bad.append("enemigo fuera de sala: %s %s" % [e9.type, e9.spawn_pos / 16.0])
+			# 3) interactuables sobre suelo
+			for k9 in w.interactables:
+				var it9: Interactable = w.interactables[k9]
+				if w.is_wall_at(it9.position) and it9.kind != "bench":
+					bad.append("objeto en muro: %s %s" % [k9, it9.position / 16.0])
+			# 4) pruebas: oleadas dentro de su sala y títulos con texto
+			for tr9 in w.TRIALS:
+				var T9: Dictionary = w.TRIALS[tr9]
+				if not G.TXT.has(T9.title):
+					bad.append("prueba sin título: " + tr9)
+				for wv in T9.waves:
+					for sp9 in wv:
+						if w.room_at(w.tile_pos(sp9[1], sp9[2])) != T9.room:
+							bad.append("oleada fuera de sala: %s %s" % [tr9, sp9])
+						if not Enemy.TYPES.has(sp9[0]):
+							bad.append("tipo desconocido: " + str(sp9[0]))
+				if w.room_at(w.tile_pos(T9.chest.x, T9.chest.y)) != T9.room:
+					bad.append("cofre de prueba fuera: " + tr9)
+			# 5) textos de los élites, misiones y árbol
+			for ty9 in Enemy.TYPES:
+				var cf9: Dictionary = Enemy.TYPES[ty9]
+				if cf9.has("title") and not G.TXT.has(cf9.title):
+					bad.append("élite sin nombre: " + ty9)
+				if not ResourceLoader.exists("res://assets/sprites/%s.png" % cf9.sheet):
+					bad.append("hoja inexistente: " + str(cf9.sheet))
+			for q9 in Prog.QUESTS:
+				if Prog.QUESTS[q9].has("kill") and not Enemy.TYPES.has(Prog.QUESTS[q9].kill):
+					bad.append("caza sin enemigo: " + q9)
+			for sk9 in Prog.SKILLS:
+				var s9: Dictionary = Prog.SKILLS[sk9]
+				for rq in s9.req + s9.get("any", []):
+					if not Prog.SKILLS.has(rq):
+						bad.append("nodo sin requisito: " + sk9)
+			for wp in Prog.WEAPONS:
+				if not (Prog.WEAPON_ARTS.has(wp) and Prog.WEAPON_AWAKE.has(wp)):
+					bad.append("arma sin Arte o Despertar: " + wp)
+				if not ResourceLoader.exists("res://assets/sprites/weapon_%s.png" % Prog.WEAPONS[wp].sprite):
+					bad.append("arma sin sprite: " + wp)
+			print("CONTENT salas=", w.ROOMS.size(), " enemigos=", w.enemies.size(), " objetos=", w.interactables.size(), " misiones=", Prog.QUESTS.size(), " pruebas=", w.TRIALS.size(), " armas=", Prog.WEAPONS.size(), " nodos=", Prog.SKILLS.size())
+			# 6) cada prueba nueva se completa de verdad y abre la puerta
+			var lp8: Player = w.local_player()
+			for tr8 in ["osario", "raices", "copas", "escoria", "cadena", "mazmorra", "oratorio"]:
+				var T8: Dictionary = w.TRIALS[tr8]
+				lp8.respawn_at(w.tile_pos(T8.chest.x - 1.0, T8.chest.y + 2.0))
+				lp8.iframes = 999.0
+				var guard := 0
+				await get_tree().create_timer(0.8).timeout
+				while w._trial != "" and guard < 200:
+					guard += 1
+					await get_tree().create_timer(0.3).timeout
+					lp8.hp = Prog.max_hp()
+					for e8 in w.enemies.duplicate():
+						if e8.is_alive() and e8.get_meta("trial", false):
+							w._server_damage(e8.idx, 99999.0, Vector2.RIGHT, 0.0, false)
+				if not w.trial_done(tr8):
+					bad.append("prueba sin completar: " + tr8)
+				print("CONTENT prueba ", tr8, " hecha=", w.trial_done(tr8), " sala=", w.room_at(lp8.global_position))
+				await get_tree().create_timer(0.3).timeout
+			print("CONTENT puertas b=", w.trial_done("b_puerta"), " f=", w.trial_done("f_puerta"), " t=", w.trial_done("t_puerta"), " armas=", Prog.weapons.keys())
+			if not (w.trial_done("b_puerta") and w.trial_done("f_puerta") and w.trial_done("t_puerta")):
+				bad.append("puertas sin abrir")
+			# 7) sala cerrada: se cierra, despierta por tandas y se abre al limpiarla; al morir sigue limpia
+			lp8.iframes = 999.0
+			lp8.respawn_at(w.tile_pos(166, 82))
+			await get_tree().create_timer(0.5).timeout
+			var locked_ok: bool = w.room_lock == "b_charca"
+			var awake_n := 0
+			for e7 in w._room_enemies("b_charca"):
+				if e7.active:
+					awake_n += 1
+			print("CONTENT cerrada=", w.room_lock, " activos=", awake_n, " sellos=", w._seals.size())
+			var g7 := 0
+			while w.room_lock != "" and g7 < 60:
+				g7 += 1
+				for e7b in w._room_enemies("b_charca"):
+					if e7b.active:
+						w._server_damage(e7b.idx, 99999.0, Vector2.RIGHT, 0.0, false)
+				await get_tree().create_timer(0.3).timeout
+			print("CONTENT abierta=", w.room_lock == "", " limpia=", w.wflags.get("clear_b_charca", false), " sellos=", w._seals.size())
+			if not locked_ok or w.room_lock != "" or not w.wflags.get("clear_b_charca", false):
+				bad.append("sala cerrada no funciona")
+			w._reset_enemies(false)
+			if not w._room_enemies("b_charca").is_empty():
+				bad.append("sala limpia reaparece al morir")
+			w._reset_enemies(true)
+			if w._room_enemies("b_charca").is_empty():
+				bad.append("sala no reaparece al descansar")
+			# 8) los enemigos no salen de su sala ni te siguen
+			var e6: Enemy = w._room_enemies("b_charca")[0]
+			lp8.respawn_at(w.tile_pos(156, 83))
+			await get_tree().create_timer(2.0).timeout
+			if w.room_at(e6.global_position) != "b_charca":
+				bad.append("enemigo salió de su sala")
+			print("CONTENT enemigo sala=", w.room_at(e6.global_position), " estado=", e6.state, " jugador sala=", w.room_at(lp8.global_position))
+			# 9) pluma por Brasa
+			var fb9 := Prog.wing_feathers
+			w.interactables["copas"].used = false
+			lp8.respawn_at(w.interactables["copas"].position + Vector2(0, 8))
+			await get_tree().create_timer(0.2).timeout
+			w.exec_target = null
+			w.try_interact(lp8)
+			print("CONTENT plumas ", fb9, " -> ", Prog.wing_feathers)
+			if Prog.wing_feathers != fb9 - 1:
+				bad.append("la Brasa no cobra pluma")
+			for b9 in bad:
+				print("FALLO ", b9)
+			print("AUTOTEST_CONTENT_OK" if bad.is_empty() else "AUTOTEST_CONTENT_FAIL %d" % bad.size())
+			get_tree().quit()
 		"v9":
 			# recorre lo nuevo: Artes de todas las armas, Pluma Dorada, parry, anuncios, menús y modos de combate
 			var lp9: Player = w.local_player()
@@ -2092,14 +2281,22 @@ func _run_autotest() -> void:
 		"lobby_host":
 			# el cliente sale al acabar su prueba: basta con ver una vez los dos jugadores y el daño compartido
 			var e0: Enemy = w.enemies[0]
-			var ok_h := false
-			for _i in 80:
+			var seen_two := false
+			var seen_lock := false
+			var seen_unlock := false
+			for _i in 100:
 				await get_tree().create_timer(0.2).timeout
 				if w.joined_peers.size() == 1 and w.players.size() == 2 and e0.hp < e0.max_hp:
-					ok_h = true
-					print("LOBBY_HOST players=", w.players.keys(), " joined=", w.joined_peers, " enemy0_hp=", e0.hp, "/", e0.max_hp)
+					seen_two = true
+				if w.room_lock == "chains":
+					seen_lock = true
+				elif seen_lock:
+					seen_unlock = true
+				if seen_two and seen_unlock:
 					break
-			print("AUTOTEST_LOBBY_HOST_OK" if ok_h else "AUTOTEST_LOBBY_HOST_FAIL")
+			print("LOBBY_HOST dos_jugadores=", seen_two, " sala_cerrada_por_el_cliente=", seen_lock, " reabierta=", seen_unlock, " enemy0_hp=", e0.hp, "/", e0.max_hp)
+			print("AUTOTEST_LOBBY_HOST_OK" if seen_two and seen_lock and seen_unlock else "AUTOTEST_LOBBY_HOST_FAIL")
+			await get_tree().create_timer(5.0).timeout  # deja acabar al cliente
 			get_tree().quit()
 		"lobby_join":
 			await get_tree().create_timer(4.0).timeout
@@ -2110,6 +2307,22 @@ func _run_autotest() -> void:
 			var e1: Enemy = w.enemies[0]
 			print("LOBBY_JOIN enemy0_hp=", e1.hp, "/", e1.max_hp)
 			var ok_j: bool = me != null and w.players.size() == 2 and w.joined_peers == [1] and e1.hp < e1.max_hp
+			# el cliente entra en una sala con enemigos: se cierra en los dos, y las RPC nuevas funcionan
+			me.position = w.tile_pos(46, 62)
+			await get_tree().create_timer(1.2).timeout
+			var lock_j: String = w.room_lock
+			var seals_j: int = w._seals.size()
+			w.request_parry_enemy(w._room_enemies("chains")[0].idx, false)
+			# limpia la sala desde el cliente: se reabre en los dos
+			var g_j := 0
+			while w.room_lock != "" and g_j < 60:
+				g_j += 1
+				for ej in w._room_enemies("chains"):
+					w.request_damage_enemy(ej, 99999.0, Vector2.RIGHT, 0.0, false)
+				await get_tree().create_timer(0.3).timeout
+			await get_tree().create_timer(1.0).timeout
+			print("LOBBY_JOIN sala=", lock_j, " sellos=", seals_j, " tras_limpiar=", w.room_lock, " sellos=", w._seals.size())
+			ok_j = ok_j and lock_j == "chains" and seals_j > 0 and w.room_lock == "" and w._seals.is_empty()
 			print("AUTOTEST_LOBBY_JOIN_OK" if ok_j else "AUTOTEST_LOBBY_JOIN_FAIL")
 			get_tree().quit()
 		"host":
@@ -2129,6 +2342,9 @@ func _run_autotest() -> void:
 			get_tree().quit()
 
 func _shot(path: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		await get_tree().process_frame  # sin pantalla no hay fotograma que capturar
+		return
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(path)

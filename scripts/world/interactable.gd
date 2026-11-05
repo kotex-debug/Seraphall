@@ -74,6 +74,7 @@ func _ready() -> void:
 			spr.region_rect = Rect2(0, 0, 32, 32)
 			spr.offset = Vector2(0, -14)
 			spr.flip_h = data.get("flip", false)
+			spr.self_modulate = data.get("tint", Color.WHITE)
 			var cast := Depth3D.CastShadow.new()
 			cast.src = spr
 			add_child(cast)

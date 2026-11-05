@@ -486,7 +486,7 @@ func areas_of_stratum(st: int) -> Array:
 		if Strata.stratum_of_room(r.id) != st:
 			continue
 		var a: String = AREAS.get(r.id, "")
-		if a != "" and not a in out:
+		if a != "" and not a in out and r.id != "prologo":
 			out.append(a)
 	return out
 
@@ -593,6 +593,13 @@ func objective_pos() -> Vector2:
 	if st >= steps.size():
 		return Vector2.INF
 	var where = OBJECTIVE_ROOMS.get(steps[st].id, null)
+	# puertas de Arconte: el objetivo es la primera prueba que falte
+	for gid in Strata.GATES:
+		if Strata.GATES[gid].step[1] == steps[st].id:
+			for tid: String in Strata.GATES[gid].trials:
+				if not trial_done(tid):
+					where = TRIALS[tid].room
+					break
 	if where == null:
 		return Vector2.INF
 	if where is Vector2:
@@ -627,7 +634,7 @@ func map_markers() -> Array:
 			"rift":
 				out.append(["objective", tp, Color(0.7, 0.45, 1.0), ""])
 	# pruebas de las antesalas, cierres e inscripciones
-	for tid in ["celdas", "atrio", "umbral", "cienaga", "moldes", "galeria"]:
+	for tid in TRIALS.keys() + ["atrio"]:
 		var room: String = TRIALS[tid].room if TRIALS.has(tid) else "atrio"
 		if map_seen(room):
 			out.append(["trial_done" if trial_done(tid) else "trial", _room_corner(room), UIKit.GOLD if trial_done(tid) else UIKit.RED, ""])
@@ -1319,6 +1326,8 @@ func _check_area(lp: Player) -> void:
 		return
 	if not Prog.flags.get("seen_" + r, false):
 		Prog.flags["seen_" + r] = true
+		if Strata.QUEST_ON_ROOM.has(r):
+			Prog.start_quest(Strata.QUEST_ON_ROOM[r])
 		var seen := 0
 		for rr in ROOMS:
 			if Prog.flags.get("seen_" + rr.id, false):
@@ -3302,7 +3311,20 @@ func cur_stratum() -> int:
 		return 1
 	return Strata.stratum_of_room(room_at(lp.global_position))
 
+func _build_cradle() -> void:
+	## La Cuna de Ceniza: sala de entrenamiento del prólogo
+	for bp in [Vector2(8, 11), Vector2(25, 11), Vector2(8, 21), Vector2(25, 21)]:
+		_prop("brazier", tile_pos(bp.x, bp.y), 4, 0, 6.0, Color(1, 0.65, 0.3), 1.6).set_meta("anim", true)
+	for sp in [Vector2(12, 9.2), Vector2(22, 9.2)]:
+		_prop("statue", tile_pos(sp.x, sp.y), 1, 0, 5.0)
+	for tp in [Vector2(9, 7.7), Vector2(16, 7.7), Vector2(18, 7.7), Vector2(25, 7.7)]:
+		var wt := WallTorch.new()
+		wt.position = tile_pos(tp.x, tp.y)
+		wt.col = Color(1, 0.75, 0.4)
+		entities.add_child(wt)
+
 func _build_strata() -> void:
+	_build_cradle()
 	for b in Strata.BRASAS:
 		_add_inter("brasa", b[0], tile_pos(b[1].x, b[1].y))
 	for c in Strata.CHESTS:
@@ -3360,7 +3382,9 @@ func _build_strata_decor() -> void:
 						_prop("statue", p, 1, 0, 5.0).flip_h = rng.randf() < 0.5
 					else:
 						_prop("banner", p, 2, rng.randi_range(0, 1))
-	for spec in [["b_sendero", "spores"], ["b_arboleda", "mist"], ["b_cienaga", "mist"], ["b_nidos", "gold"], ["b_arena", "spores"],
+	for spec in [["b_raices", "spores"], ["b_charca", "mist"], ["b_copas", "spores"], ["b_colmena", "gold"], ["f_escoria", "embers"], ["f_hornos", "embers"], ["f_cadena", "embers"], ["f_tesoro", "gold"],
+			["t_mazmorra", "mist"], ["t_cripta", "mist"], ["t_oratorio", "gold"], ["t_tesoreria", "gold"], ["v_osario", "mist"], ["v_archivo", "gold"],
+			["b_sendero", "spores"], ["b_arboleda", "mist"], ["b_cienaga", "mist"], ["b_nidos", "gold"], ["b_arena", "spores"],
 			["f_crisoles", "embers"], ["f_fragua", "embers"], ["f_moldes", "embers"], ["f_arena", "embers"], ["f_biblio", "gold"],
 			["t_jardin", "gold"], ["t_corte", "gold"], ["t_galeria", "notes"], ["t_escalera", "gold"], ["t_arena", "spores"]]:
 		for r2 in ROOMS:
@@ -3573,6 +3597,8 @@ func _on_archon_dead(e: Enemy) -> void:
 	G.toast(G.T("flask_up"), Color(1, 0.6, 0.5))
 	G.toast(G.L(["+1 Punto de Habilidad", "+1 Skill Point"]), UIKit.GOLD)
 	Prog.quest_step(A.quest, "kill_" + aid)
+	Prog.add_weapon({"orrun": "astas", "vulkaris": "yunque"}[aid])
+	_check_gates(false)
 	var lp := local_player()
 	if lp:
 		lp.refresh_stats(true)
@@ -3585,7 +3611,10 @@ func _on_archon_dead(e: Enemy) -> void:
 	for l in A.death:
 		lines.append([l[0], l[1]])
 	var st: int = int(A.stratum)
+	var mem: String = {"orrun": "m5", "vulkaris": "m6"}[aid]
 	var done := func() -> void:
+		if Prog.unlock_memory(mem):
+			await hud.memory_sequence(G.L(Prog.MEMORIES[mem].title), Prog.MEMORIES[mem].lines.map(func(l): return G.L(l)))
 		_refresh_rifts()
 		hud.end_card(G.L(["ESTRATO %s SUPERADO", "STRATUM %s CLEARED"]) % ["II", "III"][st - 2],
 			G.L(["Una grieta se ha abierto donde cayó el Arconte.\nEl descenso continúa: %s.\nTu destino se inclina hacia: %s", "A rift has opened where the Archon fell.\nThe descent continues: %s.\nYour fate leans towards: %s"]) % [G.T(["", "", "area_bosque", "area_fundicion", "area_trono_vacio"][st + 1]), Prog.route_name()], false)
@@ -3614,9 +3643,12 @@ func _on_azrahel_dead(e: Enemy) -> void:
 	Prog.achieve("azrahel")
 	Prog.quest_step("main4", "kill_azrahel")
 	Prog.flags["base_complete"] = true
+	Prog.add_weapon("corona")
 	if multiplayer.is_server():
 		Prog.save_game()
 	await get_tree().create_timer(2.5).timeout
+	if Prog.unlock_memory("m7"):
+		await hud.memory_sequence(G.L(Prog.MEMORIES.m7.title), Prog.MEMORIES.m7.lines.map(func(l): return G.L(l)))
 	hud.letterbox(true)
 	var wings := Prog.route_score() >= 0
 	var lines := [
@@ -3678,7 +3710,7 @@ func _ending_sequence(wings: bool) -> void:
 func _talk_strata(id: String) -> void:
 	var errand: Array = Strata.ERRANDS[id]
 	var q: String = errand[0]
-	var main_q = {"oso": ["main2", "talk_oso"], "archivero": ["main3", "talk_archivero"], "lirio": ["main4", "talk_lirio"]}[id]
+	var main_q: Array = {"oso": ["main2", "talk_oso"], "archivero": ["main3", "talk_archivero"], "lirio": ["main4", "talk_lirio"]}.get(id, ["", ""])
 	var lines: Array
 	if not Prog.flags.get("met_" + id, false):
 		Prog.flags["met_" + id] = true
@@ -3939,7 +3971,7 @@ func _feather_recovered(n: int, at: Vector2) -> void:
 	G.toast(G.L(["Recuperas tu pluma arrancada", "You recover your torn feather"]) + ("" if n == 1 else " x%d" % n) + "  %d/%d" % [Prog.wing_feathers, Prog.WING_MAX], Look.color_of(G.look, "wing"))
 	Audio.sfx("heal", -3.0)
 	send_look()
-	Prog.stat_add("feathers_recovered", n)
+	Ach.add("feathers_recovered", float(n))
 
 func _feathers_back(n: int) -> void:
 	G.toast(G.L(["El Arconte te devuelve %d plumas.", "The Archon returns %d feathers."]) % n, Color(1, 0.95, 0.8))
@@ -4316,7 +4348,7 @@ func seal_arena(room_id: String, style: String, pull_far := true) -> void:
 	G.shake(4.0, 0.3)
 	# quien se haya quedado fuera entra en la sala (cooperativo); sin curarse gratis por el camino
 	var lp := local_player()
-	if lp and lp.is_alive() and room_at(lp.global_position) != room_id and inner != Vector2.ZERO and (pull_far or lp.global_position.distance_to(inner) < 420.0):
+	if lp and lp.is_alive() and room_at(lp.global_position) != room_id and inner != Vector2.ZERO and (pull_far or (lp.global_position.distance_to(inner) < 420.0 and not is_menu_open())):
 		lp.position = inner
 		lp._net_pos = inner
 
@@ -4563,7 +4595,8 @@ const TRIALS_I := {
 }
 ## Cierres que siguen puestos hasta superar la prueba: [prueba, casillas, estilo]
 const LOCKS := [["celdas", Rect2i(47, 46, 4, 1), "celda"], ["atrio", Rect2i(81, 47, 3, 1), "coro"], ["umbral", Rect2i(64, 12, 1, 3), "luz"],
-	["cadalso", Rect2i(83, 84, 3, 1), "luz"]]
+	["cadalso", Rect2i(83, 84, 3, 1), "luz"],
+	["b_puerta", Rect2i(139, 29, 4, 1), "luz"], ["f_puerta", Rect2i(238, 25, 4, 1), "celda"], ["t_puerta", Rect2i(334, 29, 4, 1), "luz"]]
 const BELL_ORDER := [0, 1, 2]       # orden correcto (aguda, media, grave): el himno escrito era grave-media-aguda
 const CELL_DOORS := [18.5, 22.5, 26.5, 30.5]
 var _trial := ""
@@ -4793,7 +4826,21 @@ func _hit_breakable(id: String) -> void:
 func trial_done(id: String) -> bool:
 	return wflags.get("trial_" + id, false)
 
+func _check_gates(announce: bool) -> void:
+	## La puerta de cada Arconte se abre al superar sus dos pruebas
+	for gid in Strata.GATES:
+		if trial_done(gid):
+			continue
+		var g: Dictionary = Strata.GATES[gid]
+		if wflags.get(g.boss + "_dead", false) or (trial_done(g.trials[0]) and trial_done(g.trials[1])):
+			wflags["trial_" + gid] = true
+			Prog.flags["trial_" + gid] = true
+			Prog.quest_step(g.step[0], g.step[1])
+			if announce:
+				get_tree().create_timer(3.2).timeout.connect(G.toast.bind(G.T("gates_open"), UIKit.GOLD))
+
 func _refresh_locks(instant: bool) -> void:
+	_check_gates(false)
 	for L in LOCKS:
 		var id: String = L[0]
 		if trial_done(id):
@@ -5101,6 +5148,8 @@ func _trial_complete(id: String) -> void:
 	var stm := Strata.stratum_of_room(TRIALS[id].room)
 	Audio.play_music(Strata.MUSIC.get(stm, "explore") if ResourceLoader.exists("res://assets/audio/music_%s.ogg" % Strata.MUSIC.get(stm, "explore")) else "explore", 2.0)
 	Prog.quest_step("main1", "trial_" + id)
+	_check_gates(true)
+	_refresh_locks(false)
 	if id == "celdas":
 		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("shortcut_open"), Color(0.9, 0.8, 0.7)))
 		get_tree().create_timer(1.2).timeout.connect(hud.subtitle.bind("Tobías", G.L(["¡No...! ¿Qué has hecho? Ahora ya no hay nada entre él y nosotros...", "No...! What have you done? Now there's nothing between him and us..."]), 3.2))

@@ -93,6 +93,28 @@ const TYPES := {
 	"ysolde": {"sheet": "enemy_ysolde", "ai": "custodio", "fw": 48, "fh": 48, "hp": 2000.0, "speed": 70.0, "radius": 12.0, "dmg": 40.0, "poise": 170.0,
 		"ecos": 2700, "aggro": 300.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "ysolde_title", "light": Color(0.85, 0.6, 1.0),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	# ---- v0.9: los Heraldos, élites que guardan el paso a cada Arconte
+	"heraldo_osario": {"sheet": "enemy_custodio", "ai": "custodio", "fw": 48, "fh": 48, "hp": 950.0, "speed": 58.0, "radius": 12.0, "dmg": 25.0, "poise": 110.0,
+		"ecos": 900, "aggro": 300.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "heraldo_osario", "tint": Color(0.7, 0.75, 0.85),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	"heraldo_raices": {"sheet": "enemy_lacrima", "ai": "planidera", "fw": 32, "fh": 32, "hp": 1250.0, "speed": 50.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
+		"ecos": 1400, "aggro": 320.0, "range": 230.0, "cd": 1.15, "off": -16.0, "elite": true, "title": "heraldo_raices", "scale": 1.8, "tears": 7, "tint": Color(0.7, 0.9, 0.55), "tear": Color(0.7, 1.0, 0.5), "light": Color(0.7, 1.0, 0.5),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"heraldo_copas": {"sheet": "enemy_garza", "ai": "bestia", "fw": 38, "fh": 28, "hp": 1500.0, "speed": 100.0, "radius": 14.0, "dmg": 30.0, "poise": 130.0,
+		"ecos": 1600, "aggro": 320.0, "range": 170.0, "cd": 1.3, "off": -12.0, "elite": true, "title": "heraldo_copas", "scale": 1.9, "tint": Color(0.95, 0.95, 0.75), "light": Color(1, 1, 0.7),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
+	"heraldo_escoria": {"sheet": "enemy_kronagh", "ai": "custodio", "fw": 48, "fh": 48, "hp": 1900.0, "speed": 66.0, "radius": 12.0, "dmg": 34.0, "poise": 150.0,
+		"ecos": 2100, "aggro": 300.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "heraldo_escoria", "tint": Color(1.0, 0.55, 0.4), "light": Color(1, 0.5, 0.2),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	"heraldo_cadena": {"sheet": "enemy_fundidor", "ai": "guardia", "fw": 32, "fh": 32, "hp": 2200.0, "speed": 62.0, "radius": 13.0, "dmg": 36.0, "poise": 170.0,
+		"ecos": 2400, "aggro": 300.0, "range": 130.0, "cd": 1.15, "off": -14.0, "elite": true, "title": "heraldo_cadena", "scale": 1.9, "shield": true, "tint": Color(0.75, 0.78, 0.9), "light": Color(0.8, 0.8, 1.0),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"heraldo_mazmorra": {"sheet": "enemy_caballero", "ai": "guardia", "fw": 32, "fh": 32, "hp": 2800.0, "speed": 64.0, "radius": 13.0, "dmg": 42.0, "poise": 190.0,
+		"ecos": 3200, "aggro": 320.0, "range": 135.0, "cd": 1.05, "off": -14.0, "elite": true, "title": "heraldo_mazmorra", "scale": 2.0, "shield": true, "tint": Color(0.6, 0.5, 0.75), "light": Color(0.7, 0.5, 1.0),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"heraldo_oratorio": {"sheet": "enemy_ysolde", "ai": "custodio", "fw": 48, "fh": 48, "hp": 3100.0, "speed": 72.0, "radius": 12.0, "dmg": 44.0, "poise": 190.0,
+		"ecos": 3600, "aggro": 320.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "heraldo_oratorio", "tint": Color(1.0, 0.85, 0.6), "light": Color(1, 0.85, 0.5),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	# ---- Arcontes de los Estratos II-IV
 	"orrun": {"sheet": "enemy_orrun", "fw": 64, "fh": 64, "hp": 2500.0, "speed": 82.0, "radius": 18.0, "dmg": 30.0, "poise": 280.0,
 		"ecos": 6000, "aggro": 400.0, "range": 220.0, "cd": 1.15, "off": -28.0, "boss": true, "title": "boss_orrun",
@@ -186,6 +208,8 @@ func _ready() -> void:
 	_flash_mat = Fx.flash_material()
 	sprite.material = _flash_mat
 	sprite.scale = Vector2.ONE * base_sc
+	if cfg.has("tint"):
+		sprite.self_modulate = cfg.tint
 	add_child(sprite)
 	shadow.scale *= base_sc
 	var cast := Depth3D.CastShadow.new()

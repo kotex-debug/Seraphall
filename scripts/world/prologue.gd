@@ -444,6 +444,7 @@ func finish() -> void:
 		world.interactables["prologue_rift"].queue_free()
 		world.interactables.erase("prologue_rift")
 	Prog.flags["prologue_done"] = true
+	Prog.flags.erase("seen_prologo")
 	if p:
 		p.respawn_at(world._brasa_spawn("sanct"))
 		world.camera.position = p.global_position

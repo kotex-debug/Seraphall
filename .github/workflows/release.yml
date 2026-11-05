@@ -1,0 +1,62 @@
+# Al subir una etiqueta v* compila el juego para Windows y lo publica en Releases.
+name: Publicar versión
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Etiqueta de la versión (por ejemplo v0.9.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Godot y sus plantillas de exportación
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          curl -fsSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$dest"
+          unzip -q -j templates.tpz "templates/windows_release_x86_64.exe" "templates/windows_debug_x86_64.exe" "templates/version.txt" -d "$dest"
+          rm godot.zip templates.tpz
+
+      - name: Importar y exportar
+        run: |
+          mkdir -p build
+          ./godot --headless --path . --import || true
+          ./godot --headless --path . --export-release "Windows Desktop" build/Seraphall.exe
+          test -s build/Seraphall.exe
+          ls -la build
+
+      - name: Comprimir
+        run: |
+          mkdir -p dist/Seraphall
+          cp build/Seraphall.exe dist/Seraphall/
+          cp tools/LEEME.txt dist/Seraphall/
+          cd dist && zip -r ../Seraphall-Windows.zip Seraphall
+
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          notes="Descarga **Seraphall-Windows.zip**, descomprímelo y abre Seraphall.exe. Novedades en el README."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" Seraphall-Windows.zip --clobber
+          else
+            gh release create "$tag" Seraphall-Windows.zip --title "Seraphall - Alfa final ($tag)" --notes "$notes" --latest
+          fi
