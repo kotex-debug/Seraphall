@@ -1086,10 +1086,10 @@ func _svc_ozias() -> void:
 		if inf2 == cur:
 			_lbl(G.L(["GRABADO", "ENGRAVED"]), Vector2(530, yy + 38), 8, UIKit.GOLD, 0.0, "head")
 		else:
-			var can := Prog.ecos >= 400 and Prog.item_count("iron") >= 1
-			_btn(G.T("engrave") + " (400)", Vector2(470, yy + 34), _on_engrave.bind(inf2), can, 118)
+			var can := Prog.ecos >= Prog.ENGRAVE_COST and Prog.item_count("iron") >= 1
+			_btn(G.T("engrave") + " (%d)" % Prog.ENGRAVE_COST, Vector2(470, yy + 34), _on_engrave.bind(inf2), can, 118)
 		yy += 60.0
-	_lbl(G.L(["Coste: 400 Ecos y 1 Esquirla de Nimbo. Un arma solo guarda un grabado.", "Cost: 400 Echoes and 1 Nimbus Shard. A weapon holds a single engraving."]), Vector2(172, 254), 10, UIKit.TEXT_DIM, 200, "title")
+	_lbl(G.L(["Coste: %d Ecos y 1 Esquirla de Nimbo. Un arma solo guarda un grabado.", "Cost: %d Echoes and 1 Nimbus Shard. A weapon holds a single engraving."]) % Prog.ENGRAVE_COST, Vector2(172, 254), 10, UIKit.TEXT_DIM, 200, "title")
 
 func _on_svc_weapon(id: String) -> void:
 	_svc_weapon = id

@@ -1551,10 +1551,14 @@ func _room_unlock(rid: String, cleared: bool) -> void:
 	if cleared:
 		wflags["clear_" + rid] = true
 		Audio.sfx("gate", -2.0, 0.0)
-		G.pickup("icon_eco", G.L(["Sala liberada", "Room cleared"]), Color(0.7, 1.0, 0.75))
-		var lp := local_player()
-		if lp and lp.is_alive():
-			Prog.add_ecos(12 * _lock_total)
+		# la primera vez paga; repetir la sala tras descansar ya no da bonus y sus bajas valen mucho menos
+		if not Prog.flags.get("once_" + rid, false):
+			Prog.flags["once_" + rid] = true
+			var bonus := 10 * _lock_total * Strata.stratum_of_room(rid)
+			Prog.add_ecos_flat(bonus)
+			G.pickup("icon_eco", G.L(["Sala liberada  +%d", "Room cleared  +%d"]) % bonus, Color(0.7, 1.0, 0.75))
+		else:
+			G.pickup("icon_eco", G.L(["Sala liberada", "Room cleared"]), Color(0.7, 1.0, 0.75))
 
 func _check_interact_hold(lp: Player, delta: float) -> void:
 	## Revivir al compañero manteniendo F.
@@ -1604,7 +1608,7 @@ func try_interact(p: Player) -> void:
 			if not it.used:
 				_pay_brasa(p, it)
 				if Prog.has_skill("p7"):
-					Prog.add_ecos(400)
+					Prog.add_ecos_flat(400)
 				bcast("_light_brasa", [it.id])
 			else:
 				_rest_at(it.id)
@@ -1875,9 +1879,12 @@ func _enemy_die(idx: int) -> void:
 				back += 1
 		if back > 0:
 			get_tree().create_timer(2.5).timeout.connect(_feathers_back.bind(back))
-	Prog.add_ecos(e.cfg.ecos)
-	var res_txt: String = "  x%.1f" % Prog.resonance_mult() if Prog.resonance > 0 else ""
-	Fx.text(e.global_position + Vector2(0, 26), "+%d%s" % [int(e.cfg.ecos * Prog.ecos_mult()), res_txt], Color(0.6, 0.9, 1.0) if Prog.resonance == 0 else UIKit.GOLD, 9)
+	# volver a cazar una sala ya limpiada rinde poco: evita subir de nivel solo a base de repetirla
+	var farmed: bool = Prog.flags.get("once_" + e.home_room, false)
+	var reward: int = int(e.cfg.ecos * (0.3 if farmed else 1.0))
+	Prog.add_ecos(reward)
+	var res_txt: String = "  x%.2f" % Prog.resonance_mult() if Prog.resonance > 0 else ""
+	Fx.text(e.global_position + Vector2(0, 26), "+%d%s" % [int(reward * Prog.ecos_mult()), res_txt], Color(0.6, 0.9, 1.0) if Prog.resonance == 0 else UIKit.GOLD, 9)
 	Fx.souls(e.global_position + Vector2(0, -8), local_player(), clampi(int(e.cfg.ecos) / 12, 4, 10) if not e.is_boss else 30)
 	if e.is_boss:
 		_boss_feats(e)
@@ -1890,7 +1897,8 @@ func _enemy_die(idx: int) -> void:
 		else:
 			_end_ascension(true)
 		return
-	_drop_loot(e)
+	if not farmed:
+		_drop_loot(e)
 	match e.type:
 		"hueco":
 			Prog.quest_progress("husks")
@@ -2196,7 +2204,7 @@ func _grant(d: Dictionary) -> void:
 		Prog.add_feathers(d.feathers)
 		G.pickup("icon_feather", "+%d %s" % [d.feathers, G.T("feathers")], Color(0.9, 0.9, 1))
 	if d.has("ecos"):
-		Prog.add_ecos(d.ecos)
+		Prog.add_ecos_flat(int(d.ecos))
 		G.pickup("icon_eco", "+%d %s" % [d.ecos, G.T("ecos")], Color(0.6, 0.85, 1))
 	if d.has("weapon"):
 		Prog.add_weapon(d.weapon)
@@ -2570,6 +2578,38 @@ func _server_start_carcelero() -> void:
 
 const BOSS_SPEAKERS := {"carcelero": ["El Carcelero", "The Jailer"], "choir": ["El Coro", "The Choir"], "seravel": ["Seravel", "Seravel"],
 	"custodio": ["El Custodio", "The Warden"]}
+
+## Furia final: al borde de la muerte los jefes principales se desatan, en cualquier dificultad
+const FURY_LINES := {
+	"carcelero": ["¡Ninguna celda te retendrá! ¡Esta será tu tumba!", "No cell will hold you! This will be your grave!"],
+	"choir": ["¡CANTAD! ¡Cantad hasta que se rompa el mundo!", "SING! Sing until the world breaks!"],
+	"seravel": ["¡Las Puertas no se abrirán! ¡Antes las arranco con mis manos!", "The Gates will not open! I'll tear them out with my own hands first!"],
+	"orrun": ["¡Por cada cría! ¡POR CADA NIDO VACÍO!", "For every chick! FOR EVERY EMPTY NEST!"],
+	"vulkaris": ["¡Que arda el yunque! ¡Que se funda todo!", "Let the anvil burn! Let everything melt!"],
+	"azrahel": ["¡Nadie se sentará aquí después de mí! ¡NADIE!", "No one will sit here after me! NO ONE!"],
+}
+
+@rpc("any_peer", "call_remote", "reliable")
+func _boss_fury(idx: int) -> void:
+	if idx >= enemies.size():
+		return
+	var e: Enemy = enemies[idx]
+	e.start_fury()
+	show_boss_line(FURY_LINES.get(e.type, ["", ""]), e.type)
+	hud.big_message(G.L(["FURIA FINAL", "FINAL FURY"]), e.fury_color(), 1.8, true)
+	Audio.sfx("roar", 2.0, 0.0)
+	Audio.sfx("thunder", -2.0, 0.0)
+	G.shake(9.0, 1.0)
+	G.flash(Color(e.fury_color(), 0.5), 0.4)
+	G.chroma(2.0, 0.8)
+	G.shockwave(e.global_position + Vector2(0, -20), 2.0, 0.8)
+	Fx.ring(e.global_position + Vector2(0, -20), 10.0, 200.0, e.fury_color(), 1.0, 8.0)
+	Fx.burst(e.global_position + Vector2(0, -24), e.fury_color(), 70, 220.0, 1.3, "fx_feather", 180.0, Vector2.UP, 1.5, false, Vector2(0, 40))
+
+@rpc("any_peer", "call_remote", "reliable")
+func _boss_cataclysm(idx: int, tpos: Vector2, seed: int) -> void:
+	if idx < enemies.size():
+		enemies[idx].play_cataclysm(tpos, seed)
 
 func show_boss_line(line: Array, who := "") -> void:
 	if who == "" and active_boss != null and is_instance_valid(active_boss):

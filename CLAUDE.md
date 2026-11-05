@@ -21,7 +21,8 @@ Action RPG 2D cenital, cooperativo (2 jugadores), Godot 4.7, GDScript. Responder
 `godot --path . -- --autotest=NOMBRE` (con `SERAPHALL_SHOTS=carpeta` guarda capturas). Útiles:
 `flow` (sin pantalla, rápida), `content` (mapa, datos, pruebas nuevas, salas cerradas, pluma por Brasa), `prologue` (tutorial completo), `v9` (Artes, parry, menús), `ach`, `verdugo`, `coloso`, `coopui`, `strata` (recorre los Estratos II–IV, larga), `finale` (Azrahel, final y créditos), `weapons`, `hud`, `title`.
 Multijugador: dos procesos a la vez, `--autotest=lobby_host` y, 2 s después, `--autotest=lobby_join`.
-Las pruebas guardan en `user://seraphall_save_test.json`: nunca tocan la partida real.
+Las pruebas usan `user://seraphall_test_slotN.json`: nunca tocan las partidas reales (`seraphall_slot1..3.json`, `Prog.slot`).
+También: `slots` (huecos de partida), `economy` (reparto de Ecos por estrato, furia y Cataclismo), `retry` (reintento de jefes).
 
 ## Exportar
 `godot --headless --path . --export-release "Windows Desktop" build/Seraphall.exe` y comprimir con `tools/LEEME.txt`. En GitHub: subir una etiqueta `v*` lanza `.github/workflows/release.yml`, que compila y publica el zip en Releases. Si cambian las RPC, sube `Net.PROTOCOL`.

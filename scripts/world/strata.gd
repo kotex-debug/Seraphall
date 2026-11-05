@@ -283,11 +283,11 @@ const CHESTS := [
 	["chest_t3", Vector2(352, 55.4), {"ecos": 900, "items": {"iron": 2, "vial_aliento": 2}}],
 	["chest_v1", Vector2(92, 9.4), {"ecos": 500, "feathers": 2, "items": {"tear": 1, "vial_luz": 1}}],
 	["chest_b4", Vector2(179, 77.4), {"ecos": 700, "feathers": 2, "items": {"ointment": 2}}],
-	["chest_b5", Vector2(125, 11.4), {"ecos": 900, "items": {"phoenix": 1, "tear": 1}}],
+	["chest_b5", Vector2(125, 11.4), {"ecos": 700, "items": {"tear": 1}}],
 	["chest_f4", Vector2(279, 75.4), {"ecos": 1100, "feathers": 2, "items": {"bomb": 3}}],
 	["chest_f5", Vector2(221, 9.4), {"ecos": 1400, "items": {"iron": 2, "tear": 1}}],
-	["chest_t4", Vector2(373, 75.4), {"ecos": 1700, "feathers": 3, "items": {"phoenix": 1}}],
-	["chest_t5", Vector2(375, 27.4), {"ecos": 2200, "items": {"iron": 3, "tear": 2}}],
+	["chest_t4", Vector2(373, 75.4), {"ecos": 1300, "feathers": 3}],
+	["chest_t5", Vector2(375, 27.4), {"ecos": 1500, "items": {"iron": 2, "tear": 1}}],
 ]
 const LORE := [
 	["lore_bosque", Vector2(146, 57.4), [["Aquí anidaban los serafines recién caídos. Cada pluma blanca del suelo fue una cría que nunca voló.", "Here the newly fallen seraphs nested. Every white feather on the ground was a chick that never flew."]]],

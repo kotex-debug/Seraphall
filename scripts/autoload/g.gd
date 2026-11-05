@@ -15,6 +15,7 @@ var music_volume := 0.8
 var sfx_volume := 0.9
 var autotest := ""  # modo de prueba automática (línea de comandos)
 var look := {}          # aspecto del personaje (creador)
+var last_slot := 1      # última partida jugada
 # accesibilidad
 var shake_mult := 1.0
 var fullscreen := false
@@ -359,6 +360,7 @@ func load_settings() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(SETTINGS_PATH) == OK:
 		lang = cf.get_value("general", "lang", "es")
+		last_slot = int(cf.get_value("general", "last_slot", 1))
 		music_volume = cf.get_value("audio", "music", 0.8)
 		sfx_volume = cf.get_value("audio", "sfx", 0.9)
 		look = cf.get_value("player", "look", {})
@@ -375,6 +377,7 @@ func load_settings() -> void:
 func save_settings() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("general", "lang", lang)
+	cf.set_value("general", "last_slot", last_slot)
 	cf.set_value("audio", "music", music_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	cf.set_value("player", "look", look)

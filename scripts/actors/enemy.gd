@@ -23,26 +23,26 @@ const TYPES := {
 		"ecos": 62, "aggro": 160.0, "range": 120.0, "cd": 1.5, "off": -14.0, "shield": true,
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
 	"custodio": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 560.0, "speed": 60.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
-		"ecos": 650, "aggro": 260.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "custodio_title",
+		"ecos": 400, "aggro": 260.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "custodio_title",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"eco_tutor": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 420.0, "speed": 60.0, "radius": 12.0, "dmg": 18.0, "poise": 99999.0,
 		"ecos": 120, "aggro": 400.0, "range": 60.0, "cd": 1.5, "off": -20.0, "boss": true, "title": "boss_eco_tutor",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"carcelero": {"sheet": "enemy_carcelero", "fw": 40, "fh": 40, "hp": 680.0, "speed": 46.0, "radius": 14.0, "dmg": 28.0, "poise": 130.0,
-		"ecos": 650, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",
+		"ecos": 450, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",
 		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	"choir": {"sheet": "boss_singer", "fw": 26, "fh": 36, "hp": 1150.0, "speed": 42.0, "radius": 42.0, "dmg": 20.0, "poise": 170.0,
-		"ecos": 1800, "aggro": 320.0, "range": 260.0, "cd": 1.3, "off": -20.0, "boss": true, "title": "boss_choir",
+		"ecos": 900, "aggro": 320.0, "range": 260.0, "cd": 1.3, "off": -20.0, "boss": true, "title": "boss_choir",
 		"anims": {"idle": [0, 4, 6.0], "walk": [0, 4, 6.0], "attack": [0, 4, 8.0], "dead": [0, 0]}},
 	"sombra": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 240.0, "speed": 96.0, "radius": 7.0, "dmg": 22.0, "poise": 70.0,
 		"ecos": 0, "aggro": 230.0, "range": 150.0, "cd": 0.95, "off": -14.0,
 		"anims": {"idle": [0, 4, 6.0], "walk": [1, 6, 11.0], "attack": [2, 3, 10.0], "dead": [3, 1]}},
 	# v0.8: batallas secretas
 	"verdugo": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 1500.0, "speed": 95.0, "radius": 8.0, "dmg": 24.0, "poise": 190.0,
-		"ecos": 3500, "aggro": 400.0, "range": 160.0, "cd": 0.85, "off": -14.0, "boss": true, "title": "boss_verdugo",
+		"ecos": 2000, "aggro": 400.0, "range": 160.0, "cd": 0.85, "off": -14.0, "boss": true, "title": "boss_verdugo",
 		"anims": {"idle": [0, 4, 6.0], "walk": [1, 6, 11.0], "attack": [2, 3, 10.0], "dead": [3, 1]}},
 	"coloso": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 2600.0, "speed": 0.0, "radius": 22.0, "dmg": 30.0, "poise": 99999.0,
-		"ecos": 5000, "aggro": 900.0, "range": 900.0, "cd": 1.35, "off": -10.0, "boss": true, "title": "boss_coloso",
+		"ecos": 3000, "aggro": 900.0, "range": 900.0, "cd": 1.35, "off": -10.0, "boss": true, "title": "boss_coloso",
 		"anims": {"idle": [0, 1, 1.0], "walk": [0, 1, 1.0], "attack": [0, 1, 1.0], "dead": [0, 1]}},
 	# ---- Estrato II: Bosque de Plumas Muertas
 	"musgoso": {"sheet": "enemy_musgoso", "ai": "hueco", "fw": 32, "fh": 32, "hp": 72.0, "speed": 66.0, "radius": 7.0, "dmg": 18.0, "poise": 40.0,
@@ -58,7 +58,7 @@ const TYPES := {
 		"ecos": 86, "aggro": 180.0, "range": 150.0, "cd": 2.0, "off": -12.0, "light": Color(0.6, 1.0, 0.95),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
 	"lacrima": {"sheet": "enemy_lacrima", "ai": "planidera", "fw": 32, "fh": 32, "hp": 950.0, "speed": 48.0, "radius": 12.0, "dmg": 22.0, "poise": 120.0,
-		"ecos": 1300, "aggro": 300.0, "range": 230.0, "cd": 1.2, "off": -16.0, "elite": true, "title": "lacrima_title", "scale": 1.7, "tears": 6,
+		"ecos": 800, "aggro": 300.0, "range": 230.0, "cd": 1.2, "off": -16.0, "elite": true, "title": "lacrima_title", "scale": 1.7, "tears": 6,
 		"light": Color(0.7, 1.0, 1.0), "tear": Color(0.8, 1.0, 1.0),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	# ---- Estrato III: Fundición de Halos
@@ -75,7 +75,7 @@ const TYPES := {
 		"ecos": 106, "aggro": 210.0, "range": 170.0, "cd": 1.7, "off": -14.0, "light": Color(1, 0.5, 0.2),
 		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
 	"kronagh": {"sheet": "enemy_kronagh", "ai": "custodio", "fw": 48, "fh": 48, "hp": 1400.0, "speed": 64.0, "radius": 12.0, "dmg": 32.0, "poise": 150.0,
-		"ecos": 1900, "aggro": 280.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "kronagh_title", "light": Color(1, 0.85, 0.45),
+		"ecos": 1200, "aggro": 280.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "kronagh_title", "light": Color(1, 0.85, 0.45),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	# ---- Estrato IV: El Trono Vacío
 	"cortesano": {"sheet": "enemy_cortesano", "ai": "acolito", "proj": "red", "fw": 32, "fh": 32, "hp": 112.0, "speed": 56.0, "radius": 7.0, "dmg": 30.0, "poise": 26.0,
@@ -91,42 +91,42 @@ const TYPES := {
 		"ecos": 162, "aggro": 190.0, "range": 150.0, "cd": 1.8, "off": -12.0, "light": Color(1, 0.8, 0.3),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
 	"ysolde": {"sheet": "enemy_ysolde", "ai": "custodio", "fw": 48, "fh": 48, "hp": 2000.0, "speed": 70.0, "radius": 12.0, "dmg": 40.0, "poise": 170.0,
-		"ecos": 2700, "aggro": 300.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "ysolde_title", "light": Color(0.85, 0.6, 1.0),
+		"ecos": 1700, "aggro": 300.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "ysolde_title", "light": Color(0.85, 0.6, 1.0),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	# ---- v0.9: los Heraldos, élites que guardan el paso a cada Arconte
 	"heraldo_osario": {"sheet": "enemy_custodio", "ai": "custodio", "fw": 48, "fh": 48, "hp": 950.0, "speed": 58.0, "radius": 12.0, "dmg": 25.0, "poise": 110.0,
-		"ecos": 900, "aggro": 300.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "heraldo_osario", "tint": Color(0.7, 0.75, 0.85),
+		"ecos": 500, "aggro": 300.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "heraldo_osario", "tint": Color(0.7, 0.75, 0.85),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"heraldo_raices": {"sheet": "enemy_lacrima", "ai": "planidera", "fw": 32, "fh": 32, "hp": 1250.0, "speed": 50.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
-		"ecos": 1400, "aggro": 320.0, "range": 230.0, "cd": 1.15, "off": -16.0, "elite": true, "title": "heraldo_raices", "scale": 1.8, "tears": 7, "tint": Color(0.7, 0.9, 0.55), "tear": Color(0.7, 1.0, 0.5), "light": Color(0.7, 1.0, 0.5),
+		"ecos": 800, "aggro": 320.0, "range": 230.0, "cd": 1.15, "off": -16.0, "elite": true, "title": "heraldo_raices", "scale": 1.8, "tears": 7, "tint": Color(0.7, 0.9, 0.55), "tear": Color(0.7, 1.0, 0.5), "light": Color(0.7, 1.0, 0.5),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	"heraldo_copas": {"sheet": "enemy_garza", "ai": "bestia", "fw": 38, "fh": 28, "hp": 1500.0, "speed": 100.0, "radius": 14.0, "dmg": 30.0, "poise": 130.0,
-		"ecos": 1600, "aggro": 320.0, "range": 170.0, "cd": 1.3, "off": -12.0, "elite": true, "title": "heraldo_copas", "scale": 1.9, "tint": Color(0.95, 0.95, 0.75), "light": Color(1, 1, 0.7),
+		"ecos": 900, "aggro": 320.0, "range": 170.0, "cd": 1.3, "off": -12.0, "elite": true, "title": "heraldo_copas", "scale": 1.9, "tint": Color(0.95, 0.95, 0.75), "light": Color(1, 1, 0.7),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
 	"heraldo_escoria": {"sheet": "enemy_kronagh", "ai": "custodio", "fw": 48, "fh": 48, "hp": 1900.0, "speed": 66.0, "radius": 12.0, "dmg": 34.0, "poise": 150.0,
-		"ecos": 2100, "aggro": 300.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "heraldo_escoria", "tint": Color(1.0, 0.55, 0.4), "light": Color(1, 0.5, 0.2),
+		"ecos": 1200, "aggro": 300.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "heraldo_escoria", "tint": Color(1.0, 0.55, 0.4), "light": Color(1, 0.5, 0.2),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"heraldo_cadena": {"sheet": "enemy_fundidor", "ai": "guardia", "fw": 32, "fh": 32, "hp": 2200.0, "speed": 62.0, "radius": 13.0, "dmg": 36.0, "poise": 170.0,
-		"ecos": 2400, "aggro": 300.0, "range": 130.0, "cd": 1.15, "off": -14.0, "elite": true, "title": "heraldo_cadena", "scale": 1.9, "shield": true, "tint": Color(0.75, 0.78, 0.9), "light": Color(0.8, 0.8, 1.0),
+		"ecos": 1400, "aggro": 300.0, "range": 130.0, "cd": 1.15, "off": -14.0, "elite": true, "title": "heraldo_cadena", "scale": 1.9, "shield": true, "tint": Color(0.75, 0.78, 0.9), "light": Color(0.8, 0.8, 1.0),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
 	"heraldo_mazmorra": {"sheet": "enemy_caballero", "ai": "guardia", "fw": 32, "fh": 32, "hp": 2800.0, "speed": 64.0, "radius": 13.0, "dmg": 42.0, "poise": 190.0,
-		"ecos": 3200, "aggro": 320.0, "range": 135.0, "cd": 1.05, "off": -14.0, "elite": true, "title": "heraldo_mazmorra", "scale": 2.0, "shield": true, "tint": Color(0.6, 0.5, 0.75), "light": Color(0.7, 0.5, 1.0),
+		"ecos": 1800, "aggro": 320.0, "range": 135.0, "cd": 1.05, "off": -14.0, "elite": true, "title": "heraldo_mazmorra", "scale": 2.0, "shield": true, "tint": Color(0.6, 0.5, 0.75), "light": Color(0.7, 0.5, 1.0),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
 	"heraldo_oratorio": {"sheet": "enemy_ysolde", "ai": "custodio", "fw": 48, "fh": 48, "hp": 3100.0, "speed": 72.0, "radius": 12.0, "dmg": 44.0, "poise": 190.0,
-		"ecos": 3600, "aggro": 320.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "heraldo_oratorio", "tint": Color(1.0, 0.85, 0.6), "light": Color(1, 0.85, 0.5),
+		"ecos": 2100, "aggro": 320.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "heraldo_oratorio", "tint": Color(1.0, 0.85, 0.6), "light": Color(1, 0.85, 0.5),
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	# ---- Arcontes de los Estratos II-IV
 	"orrun": {"sheet": "enemy_orrun", "fw": 64, "fh": 64, "hp": 2500.0, "speed": 82.0, "radius": 18.0, "dmg": 30.0, "poise": 280.0,
-		"ecos": 6000, "aggro": 400.0, "range": 220.0, "cd": 1.15, "off": -28.0, "boss": true, "title": "boss_orrun",
+		"ecos": 2800, "aggro": 400.0, "range": 220.0, "cd": 1.15, "off": -28.0, "boss": true, "title": "boss_orrun",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"vulkaris": {"sheet": "enemy_vulkaris", "fw": 64, "fh": 64, "hp": 3500.0, "speed": 54.0, "radius": 18.0, "dmg": 38.0, "poise": 340.0,
-		"ecos": 9000, "aggro": 400.0, "range": 240.0, "cd": 1.2, "off": -28.0, "boss": true, "title": "boss_vulkaris",
+		"ecos": 4000, "aggro": 400.0, "range": 240.0, "cd": 1.2, "off": -28.0, "boss": true, "title": "boss_vulkaris",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
 	"azrahel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 5400.0, "speed": 80.0, "radius": 13.0, "dmg": 44.0, "poise": 320.0,
-		"ecos": 15000, "aggro": 500.0, "range": 220.0, "cd": 1.05, "off": -26.0, "boss": true, "title": "boss_azrahel",
+		"ecos": 6000, "aggro": 500.0, "range": 220.0, "cd": 1.05, "off": -26.0, "boss": true, "title": "boss_azrahel",
 		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},
 	"seravel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 1500.0, "speed": 70.0, "radius": 13.0, "dmg": 24.0, "poise": 200.0,
-		"ecos": 3000, "aggro": 400.0, "range": 200.0, "cd": 1.2, "off": -26.0, "boss": true, "title": "boss_seravel",
+		"ecos": 1600, "aggro": 400.0, "range": 200.0, "cd": 1.2, "off": -26.0, "boss": true, "title": "boss_seravel",
 		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},
 }
 
@@ -164,6 +164,10 @@ var home_room := ""       # sala de la que nunca sale (los jefes viven en su are
 var _last_ok := Vector2.ZERO
 var scripted := false     # lo mueve un guion (jefe del prólogo): sin IA
 var hp_floor := 0.0       # guion: no baja de esta vida hasta que el tutorial lo permita
+var fury := false         # furia final de los jefes principales
+var _cat_t := 0.0
+const FURY_BOSSES := {"carcelero": Color(1, 0.45, 0.15), "choir": Color(0.75, 0.45, 1.0), "seravel": Color(1, 0.3, 0.35),
+	"orrun": Color(0.5, 0.85, 1.0), "vulkaris": Color(1, 0.5, 0.15), "azrahel": Color(0.7, 0.4, 1.0)}
 var sprite: Sprite2D
 var shadow: Sprite2D
 var _flash_mat: ShaderMaterial
@@ -245,10 +249,17 @@ func reset_state() -> void:
 	var d: Dictionary = world.diff() if world else Prog.diff()
 	# dificultad progresiva: las primeras salas de cada zona perdonan más
 	var ramp: Array = world.room_ramp(world.room_at(spawn_pos)) if world else [1.0, 1.0, 1.0]
-	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0) * d.hp * (1.0 + 0.35 * asc) * (1.0 + 0.5 * Prog.ng) * float(ramp[0])
-	dmg_mult = d.dmg * (1.0 + 0.25 * asc) * (1.0 + 0.3 * Prog.ng) * float(ramp[1])
-	cd_mult = d.cd * (1.0 - 0.1 * asc) * float(ramp[2])
+	# los jefes y élites no se ablandan: en cualquier dificultad son un duelo de verdad
+	var big: bool = is_boss or cfg.get("elite", false)
+	var hp_m: float = float(d.boss_hp) if big else float(d.hp) * float(ramp[0])
+	var dmg_m: float = float(d.boss_dmg) if big else float(d.dmg) * float(ramp[1])
+	var cd_m: float = float(d.boss_cd) if big else float(d.cd) * float(ramp[2])
+	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0) * hp_m * (1.0 + 0.35 * asc) * (1.0 + 0.5 * Prog.ng)
+	dmg_mult = dmg_m * (1.0 + 0.25 * asc) * (1.0 + 0.3 * Prog.ng)
+	cd_mult = cd_m * (1.0 - 0.1 * asc)
 	_last_ok = spawn_pos
+	fury = false
+	_cat_t = 0.0
 	slow_t = 0.0
 	hp = max_hp
 	max_poise = cfg.poise
@@ -294,6 +305,13 @@ func _server_tick(delta: float) -> void:
 		poise = max(0.0, poise - max_poise * 0.25 * delta)
 	# los enemigos solo pelean dentro de su sala: ni te siguen ni aparecen en otra
 	var target: Node2D = world.nearest_player_in(home_room, global_position) if home_room != "" else world.nearest_player(global_position)
+	if fury and state == "chase" and active and target:
+		_cat_t -= delta
+		if _cat_t <= 0.0:
+			_cat_t = 13.0
+			state = "busy"
+			velocity = Vector2.ZERO
+			world.bcast("_boss_cataclysm", [idx, target.global_position, randi()])
 	match state:
 		"idle":
 			velocity = velocity.lerp(Vector2.ZERO, 0.2)
@@ -711,8 +729,71 @@ func server_apply_damage(dmg: float, dir: Vector2, poise_dmg: float) -> Dictiona
 		velocity += dir * (90.0 if not is_boss else 20.0)
 	return {"hp": hp, "broke": broke, "dead": hp <= 0.0}
 
+func fury_color() -> Color:
+	return FURY_BOSSES.get(type, Color(1, 0.4, 0.3))
+
+func start_fury() -> void:
+	## Golpea más fuerte, ataca antes y desata su Cataclismo cada cierto tiempo
+	fury = true
+	_cat_t = 4.0
+	dmg_mult *= 1.15
+	cd_mult *= 0.8
+	sprite.self_modulate = sprite.self_modulate.lerp(fury_color(), 0.35)
+
+func play_cataclysm(tpos: Vector2, seed: int) -> void:
+	## Cataclismo: anillos que hay que cruzar esquivando, lluvia de golpes alrededor del jugador y una corona de proyectiles
+	if state == "dead":
+		return
+	_attack_id += 1
+	var my_id := _attack_id
+	state = "busy"
+	var col := fury_color()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	_play("attack", 0)
+	_tell(0.9, col)
+	Audio.sfx("charge", -2.0, 0.0)
+	G.shake(4.0, 0.9)
+	Fx.ring(global_position + Vector2(0, -20), 90.0, 8.0, col, 0.9, 5.0)
+	Fx.light_flash(global_position + Vector2(0, -20), col, 3.0, 2.0, 0.9)
+	if not await _wait(0.9, my_id): return
+	_play("attack", 1)
+	for k in 2:
+		Haz.ring_wave(global_position, 20.0, 280.0, 1.5, cfg.dmg * 0.7 * dmg_mult, col, 10.0, idx)
+		Audio.sfx("slam", -6.0)
+		if not await _wait(0.65, my_id): return
+	for w in 3:
+		for i in 6:
+			var p: Vector2 = tpos + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 110.0 + w * 20.0)
+			if world.is_wall_at(p):
+				continue
+			Fx.telegraph_circle(p, 24.0, 0.7, col)
+			get_tree().create_timer(0.7, false).timeout.connect(_cat_strike.bind(p, col))
+		if not await _wait(0.55, my_id): return
+	_play("attack", 2)
+	Audio.sfx("enemy_shot", 0.0)
+	var n := 20
+	var off := rng.randf() * TAU
+	for i in n:
+		var a: float = off + TAU * i / n
+		world.spawn_projectile_local(global_position + Vector2(0, -16), Vector2.from_angle(a) * 135.0, cfg.dmg * 0.6 * dmg_mult, "red", "enemy", 1, 5.0, 3.0, 0)
+	if not await _wait(1.0, my_id): return
+	_end_attack(my_id)
+
+func _cat_strike(p: Vector2, col: Color) -> void:
+	if state == "dead" or not is_inside_tree():
+		return
+	Audio.sfx("hit_heavy", -10.0, 0.2)
+	Fx.ring(p, 4.0, 26.0, col, 0.3, 4.0)
+	Fx.burst(p, col, 14, 110.0, 0.5, "fx_soft", 60.0, Vector2.UP, 0.5)
+	Fx.light_flash(p, col, 1.6, 0.9, 0.3)
+	_hit_circle(p, 24.0, cfg.dmg * 0.8, Vector2.ZERO)
+
 func on_hurt(new_hp: float, dmg: float, dir: Vector2, crit: bool, broke: bool) -> void:
 	hp = new_hp
+	if multiplayer.is_server() and not fury and hp > 0.0 and hp < max_hp * 0.25 and active and asc == 0 and FURY_BOSSES.has(type):
+		fury = true  # evita repetir el aviso; start_fury lo confirma en todos los clientes
+		world.bcast("_boss_fury", [idx])
 	_flash(1.0, Color(1, 1, 1))
 	Fx.number(global_position + Vector2(0, cfg.off), dmg, Color(1, 0.85, 0.3) if crit else Color(1, 1, 1), crit)
 	Fx.burst(global_position + Vector2(0, cfg.off * 0.6), Color(1, 0.9, 0.7), 8 if not crit else 16, 110.0, 0.35, "fx_px", 50.0, dir)

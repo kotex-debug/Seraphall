@@ -157,9 +157,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_back()
 		return
 	if stage == "diff":
-		if event.is_action_pressed("ui_left") or event.is_action_pressed("left"):
+		if event.is_action_pressed("ui_up") or event.is_action_pressed("up") or event.is_action_pressed("ui_left") or event.is_action_pressed("left"):
 			diff_sel = wrapi(diff_sel - 1, 0, Prog.DIFFICULTIES.size()); _pop = 0.6; Audio.sfx("ui_move", -4.0)
-		elif event.is_action_pressed("ui_right") or event.is_action_pressed("right"):
+		elif event.is_action_pressed("ui_down") or event.is_action_pressed("down") or event.is_action_pressed("ui_right") or event.is_action_pressed("right"):
 			diff_sel = wrapi(diff_sel + 1, 0, Prog.DIFFICULTIES.size()); _pop = 0.6; Audio.sfx("ui_move", -4.0)
 		elif event.is_action_pressed("ui_accept"):
 			get_viewport().set_input_as_handled()
@@ -230,6 +230,40 @@ func _draw() -> void:
 	else:
 		_draw_creator()
 
+func _emblem(c: Vector2, rad: float, d: Dictionary, lit: bool) -> void:
+	## Calaveras según la dureza; una pluma en la más amable
+	var col: Color = d.color
+	draw_circle(c, rad + 2.0, UIKit.INK)
+	draw_circle(c, rad, Color(col, 0.28 if lit else 0.12))
+	draw_arc(c, rad, 0, TAU, 32, col if lit else col.darkened(0.45), 2.0)
+	var s := rad / 20.0
+	draw_set_transform(c, 0.0, Vector2(s, s))
+	var sk := int(d.skulls)
+	if sk == 0:
+		draw_colored_polygon(PackedVector2Array([Vector2(0, -12), Vector2(6, -2), Vector2(3, 10), Vector2(-3, 10), Vector2(-6, -2)]), col)
+		draw_line(Vector2(0, -10), Vector2(0, 12), UIKit.INK, 1.0)
+	for k in sk:
+		var sp := Vector2((k - (sk - 1) / 2.0) * 11.0, 0)
+		draw_rect(Rect2(sp - Vector2(4, 5), Vector2(9, 8)), UIKit.INK)
+		draw_rect(Rect2(sp - Vector2(3, 4), Vector2(7, 6)), col)
+		draw_rect(Rect2(sp + Vector2(-2, -2), Vector2(2, 2)), UIKit.INK)
+		draw_rect(Rect2(sp + Vector2(1, -2), Vector2(2, 2)), UIKit.INK)
+		draw_rect(Rect2(sp + Vector2(-2, 3), Vector2(5, 2)), col.darkened(0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _meter(pos: Vector2, label: String, v: float, value_text: String, col: Color) -> void:
+	## Barra de 12 celdas que se llena al elegir
+	_str(pos + Vector2(0, 9), label, UIKit.WHITE, 8)
+	var cells := 12
+	var fill := v * clampf(1.0 - _pop * 0.9, 0.0, 1.0) * cells
+	for i in cells:
+		var r := Rect2(pos + Vector2(84 + i * 9, 1), Vector2(7, 9))
+		draw_rect(r.grow(1), UIKit.INK)
+		draw_rect(r, col if i < fill else Color(0.2, 0.14, 0.24))
+		if i < fill:
+			draw_rect(Rect2(r.position, Vector2(7, 2)), col.lerp(UIKit.WHITE, 0.45))
+	_str(pos + Vector2(198, 9), value_text, col, 10, "title")
+
 func _draw_diff() -> void:
 	var lf := UIKit.font("logo")
 	var title := G.L(["ELIGE TU DESCENSO", "CHOOSE YOUR DESCENT"])
@@ -238,52 +272,54 @@ func _draw_diff() -> void:
 	lf.draw_string_outline(get_canvas_item(), tp + Vector2(0, 3), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, 8, UIKit.RED_DARK)
 	lf.draw_string_outline(get_canvas_item(), tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, 8, UIKit.INK)
 	lf.draw_string(get_canvas_item(), tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIKit.WHITE)
-	_cards.clear()
 	var n := Prog.DIFFICULTIES.size()
-	var cw := 142.0
-	var gap := 10.0
-	var x0 := 320.0 - (n * cw + (n - 1) * gap) / 2.0
+	var cur: Dictionary = Prog.DIFFICULTIES[diff_sel]
+	var col: Color = cur.color
+	# --- lista de descensos a la izquierda
+	_cards.clear()
 	for i in n:
 		var d: Dictionary = Prog.DIFFICULTIES[i]
 		var sel := i == diff_sel
-		var lift := (10.0 + sin(_t * 3.0) * 2.0) if sel else 0.0
-		var r := Rect2(Vector2(x0 + i * (cw + gap), 62 - lift), Vector2(cw, 238))
+		var slide := (12.0 + sin(_t * 3.0) * 2.0) if sel else 0.0
+		var r := Rect2(Vector2(16 + slide, 52 + i * 65), Vector2(204, 58))
 		_cards.append(r)
-		var col: Color = d.color
-		if sel:
-			for k in 8:
-				var a := TAU * k / 8.0 + _t * 0.6
-				var dv := Vector2.from_angle(a)
-				var c := r.get_center() + Vector2(0, -50)
-				draw_colored_polygon(PackedVector2Array([c + dv * 20 + dv.orthogonal() * 5, c + dv * 90, c + dv * 20 - dv.orthogonal() * 5]), Color(col, 0.09))
-		UIKit.frame(self, r, col if sel else Color(col.darkened(0.55), 1.0), Color(0.09, 0.03, 0.12, 0.96), 4.0, _t if sel else -1.0)
-		# emblema: calaveras / pluma
-		var ec := r.position + Vector2(cw / 2.0, 46)
-		draw_circle(ec, 22.0, UIKit.INK)
-		draw_circle(ec, 20.0, Color(col, 0.25 if sel else 0.12))
-		draw_arc(ec, 20.0, 0, TAU, 32, col, 2.0)
-		var sk := int(d.skulls)
-		if sk == 0:
-			draw_colored_polygon(PackedVector2Array([ec + Vector2(0, -12), ec + Vector2(6, -2), ec + Vector2(3, 10), ec + Vector2(-3, 10), ec + Vector2(-6, -2)]), col)
-			draw_line(ec + Vector2(0, -10), ec + Vector2(0, 12), UIKit.INK, 1.0)
-		for k in sk:
-			var sp := ec + Vector2((k - (sk - 1) / 2.0) * 11.0, 0)
-			draw_rect(Rect2(sp - Vector2(4, 5), Vector2(9, 8)), UIKit.INK)
-			draw_rect(Rect2(sp - Vector2(3, 4), Vector2(7, 6)), col)
-			draw_rect(Rect2(sp + Vector2(-2, -2), Vector2(2, 2)), UIKit.INK)
-			draw_rect(Rect2(sp + Vector2(1, -2), Vector2(2, 2)), UIKit.INK)
-			draw_rect(Rect2(sp + Vector2(-2, 3), Vector2(5, 2)), col.darkened(0.3))
-		_str(r.position + Vector2(0, 92), G.L(d.name).to_upper(), UIKit.WHITE if sel else UIKit.TEXT_DIM, 20, "logo", cw, HORIZONTAL_ALIGNMENT_CENTER)
-		_str(r.position + Vector2(0, 108), G.L(d.tag), col, 10, "title", cw, HORIZONTAL_ALIGNMENT_CENTER)
-		var bf := UIKit.font("body")
-		var desc := G.L(d.desc)
-		bf.draw_multiline_string_outline(get_canvas_item(), r.position + Vector2(10, 128), desc, HORIZONTAL_ALIGNMENT_LEFT, cw - 20, 15, 7, 3, UIKit.INK)
-		bf.draw_multiline_string(get_canvas_item(), r.position + Vector2(10, 128), desc, HORIZONTAL_ALIGNMENT_LEFT, cw - 20, 15, 7, Color(1, 1, 1, 0.92) if sel else UIKit.TEXT_DIM)
+		var dc: Color = d.color
+		UIKit.frame(self, r, dc if sel else dc.darkened(0.55), Color(0.09, 0.03, 0.12, 0.96), 4.0, _t if sel else -1.0)
+		_emblem(r.position + Vector2(30, 29), 19.0, d, sel)
+		_str(r.position + Vector2(56, 26), G.L(d.name).to_upper(), UIKit.WHITE if sel else UIKit.TEXT_DIM, 20, "logo")
+		_str(r.position + Vector2(56, 42), G.L(d.tag), dc if sel else dc.darkened(0.3), 10, "title", 146.0)
 		if i == 2:
-			UIKit.slash_band(self, Rect2(r.position + Vector2(18, -8), Vector2(cw - 36, 13)), UIKit.RED, 4.0)
-			_str(r.position + Vector2(0, 2), G.L(["RECOMENDADO", "RECOMMENDED"]), UIKit.WHITE, 8, "head", cw, HORIZONTAL_ALIGNMENT_CENTER)
-	_str(Vector2(0, 357), G.L(["[<- ->] ELEGIR    [ENTER] CONFIRMAR    [ESC] VOLVER", "[<- ->] CHOOSE    [ENTER] CONFIRM    [ESC] BACK"]), UIKit.TEXT_DIM, 8, "head", 640, HORIZONTAL_ALIGNMENT_CENTER)
-
+			UIKit.slash_band(self, Rect2(r.end - Vector2(92, 12), Vector2(92, 12)), UIKit.RED, 4.0)
+			_str(r.end - Vector2(86, 3), G.L(["RECOMENDADO", "RECOMMENDED"]), UIKit.WHITE, 8)
+	# --- ficha del descenso elegido
+	var pr := Rect2(Vector2(240, 52), Vector2(384, 256))
+	var rc := pr.position + Vector2(50, 48)
+	UIKit.frame(self, pr, col, Color(0.08, 0.03, 0.11, 0.97), 4.0, _t)
+	for k in 10:
+		var a := TAU * k / 10.0 + _t * 0.5
+		var dv := Vector2.from_angle(a)
+		draw_colored_polygon(PackedVector2Array([rc + dv * 34.0 + dv.orthogonal() * 4.0, rc + dv * 76.0, rc + dv * 34.0 - dv.orthogonal() * 4.0]), Color(col, 0.14))
+	_emblem(rc, 30.0 + _pop * 5.0, cur, true)
+	_str(pr.position + Vector2(96, 40 - _pop * 3.0), G.L(cur.name).to_upper(), UIKit.WHITE, 32, "logo")
+	_str(pr.position + Vector2(98, 58), G.L(cur.tag), col, 10, "title")
+	var bf := UIKit.font("body")
+	var desc := G.L(cur.desc)
+	bf.draw_multiline_string_outline(get_canvas_item(), pr.position + Vector2(98, 78), desc, HORIZONTAL_ALIGNMENT_LEFT, 274, 15, 4, 3, UIKit.INK)
+	bf.draw_multiline_string(get_canvas_item(), pr.position + Vector2(98, 78), desc, HORIZONTAL_ALIGNMENT_LEFT, 274, 15, 4, UIKit.WHITE)
+	draw_line(pr.position + Vector2(12, 122), pr.position + Vector2(372, 122), Color(col, 0.5), 1.0)
+	var mp := pr.position + Vector2(14, 130)
+	_meter(mp, G.L(["ENEMIGOS", "ENEMIES"]), sqrt(float(cur.hp) * float(cur.dmg) / 2.175), G.L(cur.foes), Color(0.65, 0.85, 1.0).lerp(col, 0.5))
+	_meter(mp + Vector2(0, 18), G.L(["JEFES", "BOSSES"]), sqrt(float(cur.boss_hp) * float(cur.boss_dmg) / 2.25), G.L(cur.boss_txt), UIKit.RED.lerp(col, 0.25))
+	_meter(mp + Vector2(0, 36), G.L(["CAER", "FALLING"]), 1.0 - float(cur.keep) * 0.85, "", UIKit.PINK)
+	_str(mp + Vector2(198, 45), G.L(["Plumas y Ecos", "Feathers & Echoes"]), UIKit.PINK, 10, "title")
+	_str(mp + Vector2(0, 66), G.L(cur.fall), UIKit.TEXT_DIM, 10, "title")
+	var ry := 66.0
+	for rule in cur.rules:
+		ry += 14.0
+		UIKit.diamond(self, mp + Vector2(4, ry - 3), 3.0, col)
+		_str(mp + Vector2(12, ry), G.L(rule), Color(1, 1, 1, 0.9), 10, "title")
+	_str(pr.position + Vector2(14, pr.size.y - 10), G.L(["Puedes cambiar de Descenso empezando una partida nueva.", "You can change your Descent by starting a new game."]), UIKit.TEXT_DIM, 10, "title")
+	_str(Vector2(0, 357), G.L(["[FLECHAS] ELEGIR    [ENTER] CONFIRMAR    [ESC] VOLVER", "[ARROWS] CHOOSE    [ENTER] CONFIRM    [ESC] BACK"]), UIKit.TEXT_DIM, 8, "head", 640, HORIZONTAL_ALIGNMENT_CENTER)
 func _draw_creator() -> void:
 	var lf := UIKit.font("logo")
 	var title := G.T("create_char")

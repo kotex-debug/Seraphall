@@ -89,7 +89,10 @@ Tres combates épicos escondidos, con recompensas que no se consiguen de otra fo
 - **Parry renovado** (desvío, parry perfecto, Réplica y cadenas) y **Pluma Dorada** en la Q: atraviesa, estalla en esquirlas y vuelve a tu mano.
 - **15 armas con arte nuevo** (guadaña, mangual, maza del Yunque, astas de Orrun, cetro del Rey...), cada una con su **Arte** [V] y su **Despertar**. Mejoras con hitos en +3, +5 y +10 y menú de armas rehecho.
 - **Árbol de habilidades ampliado**: 66 nodos en 6 ramas (nueva rama **Pluma** y un poder por cada jefe), elecciones excluyentes, **Estigmas** finales, maestría por rama y opción de olvidar en las Brasas.
+- **Tres huecos de partida**: *Nueva partida* abre la pantalla de partidas, donde eliges hueco, continúas o borras (con confirmación). *Continuar* abre la última que jugaste. Tu partida anterior pasa sola al hueco 1.
+- **Economía reequilibrada**: subir de nivel, mejorar armas y comprar cuesta más; repetir una sala ya limpiada rinde poco, y los cofres y misiones pagan una cantidad fija. No podrás comprarlo todo en una sola partida: toca elegir.
 - **Moneda mejorada**: los Ecos vuelan hacia ti y la **Resonancia** (racha de bajas sin recibir golpes) multiplica lo que ganas.
+- **Jefes de verdad en cualquier dificultad**: hasta en Ala Ligera tienen todas sus fases, y al borde de la muerte entran en **Furia Final** y desatan su **Cataclismo**. Menú de elección de dificultad rehecho.
 - **Anuncios épicos** al conseguir una habilidad o un arma, **jefes sin repetir la presentación** al reintentar (y siempre con su barra), **títulos de sala** que no se pisan y **diario de misiones** con filtros, páginas y seguimiento.
 - **Más contenido en cada Arconte**: 14 salas nuevas, 7 pruebas con su **Heraldo**, las puertas de los Arcontes se ganan, 4 PNJ con su encargo, 8 cacerías, 3 recuerdos, nuevas Brasas, cofres e inscripciones.
 - **Multijugador arreglado**: el amigo ya no se queda colgado si conecta antes de que empieces. Sala de espera, comprobación de versión, tiempos límite con mensajes claros y búsqueda de partidas en la red local.

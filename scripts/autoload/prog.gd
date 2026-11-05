@@ -4,11 +4,45 @@ extends Node
 signal changed
 signal quest_updated(id: String)
 
-const SAVE_PATH := "user://seraphall_save.json"
-## Las pruebas automáticas nunca tocan la partida real del jugador
-const SAVE_PATH_TEST := "user://seraphall_save_test.json"
-func save_path() -> String:
-	return SAVE_PATH_TEST if G.autotest != "" else SAVE_PATH
+const SAVE_SLOTS := 3
+var slot := 1   # hueco de partida en uso
+## Las pruebas automáticas usan sus propios huecos y nunca tocan las partidas reales
+func save_path(s := -1) -> String:
+	return ("user://seraphall_test_slot%d.json" if G.autotest != "" else "user://seraphall_slot%d.json") % (slot if s < 0 else s)
+
+func legacy_path() -> String:
+	return "user://seraphall_save_test.json" if G.autotest != "" else "user://seraphall_save.json"
+
+func _ready() -> void:
+	if G.autotest == "":
+		migrate_legacy()
+	pick_latest()
+
+func migrate_legacy() -> void:
+	## Antes solo había una partida: pasa a ser el hueco 1
+	if FileAccess.file_exists(legacy_path()) and not FileAccess.file_exists(save_path(1)):
+		DirAccess.rename_absolute(ProjectSettings.globalize_path(legacy_path()), ProjectSettings.globalize_path(save_path(1)))
+
+func pick_latest() -> bool:
+	## Elige la última partida jugada; si ya no existe, la primera que haya
+	if has_save(G.last_slot):
+		slot = G.last_slot
+		return true
+	for i in range(1, SAVE_SLOTS + 1):
+		if has_save(i):
+			slot = i
+			return true
+	slot = 1
+	return false
+
+func delete_save(s: int) -> void:
+	if has_save(s):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path(s)))
+
+func _remember_slot() -> void:
+	if G.last_slot != slot and G.autotest == "":
+		G.last_slot = slot
+		G.save_settings()
 
 # ------------------------------------------------------------------ datos de armas
 const WEAPONS := {
@@ -101,15 +135,15 @@ const WEAPON_AWAKE := {
 # ------------------------------------------------------------------ objetos
 ## type: consumable | amulet | key | material ; rarity 0-4
 const ITEMS := {
-	"bomb": {"type": "consumable", "icon": "bomb", "rarity": 1, "price": 120, "name": ["Nudo de Brasa", "Ember Knot"],
+	"bomb": {"type": "consumable", "icon": "bomb", "rarity": 1, "price": 180, "name": ["Nudo de Brasa", "Ember Knot"],
 		"desc": ["Plumas negras anudadas alrededor de un rescoldo vivo. Lánzalo con [X]: estalla en llamas.", "Black feathers knotted around a living ember. Throw with [X]: it bursts into flame."]},
-	"incense": {"type": "consumable", "icon": "incense", "rarity": 1, "price": 200, "name": ["Himno Embotellado", "Bottled Hymn"],
+	"incense": {"type": "consumable", "icon": "incense", "rarity": 1, "price": 300, "name": ["Himno Embotellado", "Bottled Hymn"],
 		"desc": ["Un coro diminuto atrapado en cristal. Al romperlo, +30% de daño durante 30 s.", "A tiny choir trapped in glass. Break it for +30% damage for 30 s."]},
-	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "price": 200, "name": ["Escama de Querubín", "Cherub Scale"],
+	"ointment": {"type": "consumable", "icon": "ointment", "rarity": 1, "price": 300, "name": ["Escama de Querubín", "Cherub Scale"],
 		"desc": ["Escama que mudan los querubines al crecer. Endurece la piel: -35% de daño durante 30 s.", "A scale cherubs shed as they grow. Hardens the skin: -35% damage for 30 s."]},
-	"vial_luz": {"type": "consumable", "icon": "vial_luz", "rarity": 1, "price": 180, "name": ["Vial de Luz", "Vial of Light"],
+	"vial_luz": {"type": "consumable", "icon": "vial_luz", "rarity": 1, "price": 270, "name": ["Vial de Luz", "Vial of Light"],
 		"desc": ["Luz de vela atrapada en cristal. Te devuelve 30 de Luz al momento.", "Candlelight trapped in glass. Restores 30 Light instantly."]},
-	"vial_aliento": {"type": "consumable", "icon": "vial_aliento", "rarity": 1, "price": 160, "name": ["Vial de Aliento", "Vial of Breath"],
+	"vial_aliento": {"type": "consumable", "icon": "vial_aliento", "rarity": 1, "price": 240, "name": ["Vial de Aliento", "Vial of Breath"],
 		"desc": ["Aire de las alturas, embotellado. Llena el aguante y lo recupera el doble de rápido durante 20 s.", "Bottled air from the heights. Fills your stamina and doubles its recovery for 20 s."]},
 	"phoenix": {"type": "consumable", "icon": "phoenix", "rarity": 3, "name": ["Plumón de Aurora", "Aurora Down"],
 		"desc": ["El primer plumón de un ángel recién nacido. Si caes, renaces al instante. Se consume solo.", "The first down of a newborn angel. If you fall, you are reborn at once. Used automatically."]},
@@ -127,9 +161,9 @@ const ITEMS := {
 		"desc": ["Tallada en el hueso de un ángel que cantaba. Abre la puerta del Círculo de la Guardiana.", "Carved from the bone of a singing angel. Opens the gate to the Circle of the Warden."]},
 	"map_carto": {"type": "key", "icon": "scroll", "rarity": 1, "name": ["Cartografía Táctil", "Tactile Chart"],
 		"desc": ["Un mapa en relieve hecho para dedos ciegos. Huele a vela y a polvo.", "A raised map made for blind fingers. It smells of candle and dust."]},
-	"iron": {"type": "material", "icon": "iron", "rarity": 2, "price": 700, "name": ["Esquirla de Nimbo", "Nimbus Shard"],
+	"iron": {"type": "material", "icon": "iron", "rarity": 2, "price": 1100, "name": ["Esquirla de Nimbo", "Nimbus Shard"],
 		"desc": ["Un trozo de la aureola que sellaba la Espiral. Ozias la usa para sus grabados y Brenna para las mejoras altas.", "A piece of the halo that sealed the Spiral. Ozias uses it for engravings and Brenna for high upgrades."]},
-	"tear": {"type": "material", "icon": "tear", "rarity": 3, "price": 900, "name": ["Lágrima Cristalizada", "Crystallized Tear"],
+	"tear": {"type": "material", "icon": "tear", "rarity": 3, "price": 1400, "name": ["Lágrima Cristalizada", "Crystallized Tear"],
 		"desc": ["Lo que queda de un ángel que lloró hasta olvidar por qué. Madre Ilse la usa para fortalecer tus Lágrimas.", "What remains of an angel who wept until she forgot why. Mother Ilse uses it to strengthen your Tears."]},
 }
 const RARITY_COLORS := [Color(0.75, 0.72, 0.78), Color(0.55, 0.9, 0.55), Color(0.35, 0.75, 1.0), Color(0.85, 0.45, 1.0), Color(1.0, 0.75, 0.25)]
@@ -174,19 +208,32 @@ const MEMORIES := {
 }
 
 # ------------------------------------------------------------------ dificultad
+## hp/dmg/cd valen para los enemigos comunes; boss_* para jefes y élites: en cualquier dificultad son un reto, con todas sus fases
 const DIFFICULTIES := [
 	{"name": ["Ala Ligera", "Light Wing"], "tag": ["Accesible: para todo el mundo", "Accessible: for everyone"],
-		"desc": ["Daño enemigo muy bajo, telegráficos más visibles y conservas todos tus Ecos. Las Brasas te devuelven plumas.", "Very low enemy damage, clearer telegraphs and you keep all your Echoes. Embers give feathers back."],
-		"hp": 0.6, "dmg": 0.4, "cd": 1.4, "ecos": 1.0, "keep": 1.0, "phase3": false, "skulls": 0, "color": Color(0.55, 0.85, 1.0), "regrow": true},
+		"desc": ["Explorar es asequible y no pierdes tus Ecos. Los jefes, en cambio, siguen siendo un duelo de verdad.", "Exploring is forgiving and you keep your Echoes. Bosses, however, are still a true duel."],
+		"foes": ["Muy asequibles", "Very forgiving"], "boss_txt": ["Un reto", "A challenge"], "fall": ["Conservas todos tus Ecos", "You keep all your Echoes"],
+		"rules": [["Las Brasas te devuelven plumas", "Embers give feathers back"], ["Avisos de ataque más visibles", "Clearer attack warnings"]],
+		"hp": 0.6, "dmg": 0.4, "cd": 1.4, "ecos": 1.0, "keep": 1.0, "phase3": true, "skulls": 0, "color": Color(0.55, 0.85, 1.0), "regrow": true,
+		"boss_hp": 0.85, "boss_dmg": 0.65, "boss_cd": 1.12},
 	{"name": ["Peregrino", "Pilgrim"], "tag": ["Para disfrutar de la historia", "To enjoy the story"],
-		"desc": ["Enemigos con menos vida y daño. Al morir conservas la mitad de tus Ecos. Los jefes no tienen fase final.", "Enemies have less health and damage. You keep half your Echoes on death. Bosses have no final phase."],
-		"hp": 0.75, "dmg": 0.6, "cd": 1.25, "ecos": 1.0, "keep": 0.5, "phase3": false, "skulls": 1, "color": Color(0.45, 0.9, 0.6), "regrow": false},
+		"desc": ["Enemigos con menos vida y daño, para centrarte en el mundo. Cada jefe te obligará a aprender sus ataques.", "Weaker enemies, so you can focus on the world. Every boss will force you to learn its attacks."],
+		"foes": ["Asequibles", "Forgiving"], "boss_txt": ["Duros", "Tough"], "fall": ["Conservas la mitad de tus Ecos", "You keep half your Echoes"],
+		"rules": [["Las primeras salas de cada zona son suaves", "The first rooms of each zone are gentle"]],
+		"hp": 0.75, "dmg": 0.6, "cd": 1.25, "ecos": 1.0, "keep": 0.5, "phase3": true, "skulls": 1, "color": Color(0.45, 0.9, 0.6), "regrow": false,
+		"boss_hp": 0.95, "boss_dmg": 0.8, "boss_cd": 1.05},
 	{"name": ["Desplumado", "Featherless"], "tag": ["La experiencia pensada", "The intended experience"],
-		"desc": ["El equilibrio previsto. Los jefes despiertan su fase final al borde de la muerte.", "The intended balance. Bosses awaken their final phase at death's door."],
-		"hp": 1.0, "dmg": 1.0, "cd": 1.0, "ecos": 1.0, "keep": 0.0, "phase3": true, "skulls": 2, "color": Color(1.0, 0.82, 0.3), "regrow": false},
+		"desc": ["El equilibrio previsto. Caer cuesta caro y cada Arconte es una prueba de maestría.", "The intended balance. Falling is costly and every Archon is a test of mastery."],
+		"foes": ["Exigentes", "Demanding"], "boss_txt": ["Muy duros", "Very tough"], "fall": ["Pierdes tus Ecos donde caes", "You drop your Echoes where you fall"],
+		"rules": [["Las primeras salas de cada zona son suaves", "The first rooms of each zone are gentle"]],
+		"hp": 1.0, "dmg": 1.0, "cd": 1.0, "ecos": 1.0, "keep": 0.0, "phase3": true, "skulls": 2, "color": Color(1.0, 0.82, 0.3), "regrow": false,
+		"boss_hp": 1.1, "boss_dmg": 1.0, "boss_cd": 0.95},
 	{"name": ["Serafín Caído", "Fallen Seraph"], "tag": ["Sin piedad", "No mercy"],
-		"desc": ["Enemigos más fuertes, rápidos y agresivos; los jefes ganan ataques nuevos. +30% de Ecos.", "Stronger, faster and more aggressive enemies; bosses gain new attacks. +30% Echoes."],
-		"hp": 1.45, "dmg": 1.5, "cd": 0.75, "ecos": 1.3, "keep": 0.0, "phase3": true, "skulls": 3, "color": Color(1.0, 0.25, 0.35), "regrow": false},
+		"desc": ["Todo golpea más fuerte, más rápido y con más saña desde la primera sala.", "Everything hits harder, faster and more viciously from the very first room."],
+		"foes": ["Sin piedad", "Merciless"], "boss_txt": ["Implacables", "Relentless"], "fall": ["Pierdes tus Ecos donde caes", "You drop your Echoes where you fall"],
+		"rules": [["Los jefes ganan ataques nuevos", "Bosses gain new attacks"], ["+30% de Ecos", "+30% Echoes"]],
+		"hp": 1.45, "dmg": 1.5, "cd": 0.75, "ecos": 1.3, "keep": 0.0, "phase3": true, "skulls": 3, "color": Color(1.0, 0.25, 0.35), "regrow": false,
+		"boss_hp": 1.5, "boss_dmg": 1.5, "boss_cd": 0.75},
 ]
 
 # ------------------------------------------------------------------ grabados de Ozias (infusiones de arma)
@@ -202,7 +249,7 @@ const INFUSIONS := {
 		"desc": ["Cada tercer golpe abre una herida: daño igual al 6% de la vida máxima.", "Every third hit opens a wound: damage equal to 6% of max health."]},
 }
 
-const SHOP := [["vial_luz", 99], ["vial_aliento", 99], ["bomb", 99], ["incense", 99], ["ointment", 99], ["_feather", 6], ["iron", 2], ["tear", 1]]
+const SHOP := [["vial_luz", 99], ["vial_aliento", 99], ["bomb", 99], ["incense", 99], ["ointment", 99], ["_feather", 4], ["iron", 2], ["tear", 1]]
 
 const OATHS := {
 	"carcelero": {"name": ["Juramento de la Cadena", "Oath of the Chain"], "color": Color(1, 0.5, 0.3),
@@ -283,7 +330,7 @@ func resonance_max() -> int:
 	return 8 if has_skill("p4") else 5
 
 func resonance_mult() -> float:
-	return 1.0 + 0.1 * resonance
+	return 1.0 + 0.06 * resonance
 
 func resonance_add() -> void:
 	resonance = mini(resonance + 1, resonance_max())
@@ -460,8 +507,8 @@ const SKILLS := {
 	# --- Pluma: la rama de tus alas
 	"p1": {"branch": "pluma", "pos": Vector2i(2, 0), "cost": 1, "req": [], "name": ["Pluma Afilada", "Sharpened Feather"], "desc": ["Con 7 plumas o menos, +10% de daño.", "With 7 feathers or fewer, +10% damage."]},
 	"p2": {"branch": "pluma", "pos": Vector2i(1, 1), "cost": 1, "req": ["p1"], "name": ["Plumón Protector", "Guarding Down"], "desc": ["Con 7 plumas o más, -10% de daño recibido.", "With 7 feathers or more, -10% damage taken."]},
-	"p3": {"branch": "pluma", "pos": Vector2i(3, 1), "cost": 1, "req": ["p1"], "name": ["Recolector", "Gatherer"], "desc": ["+20% de Ecos.", "+20% Echoes."]},
-	"p4": {"branch": "pluma", "pos": Vector2i(3, 2), "cost": 2, "req": ["p3"], "name": ["Resonancia Alta", "High Resonance"], "desc": ["La Resonancia sube hasta x1,8 y tarda más en apagarse.", "Resonance rises to x1.8 and takes longer to fade."]},
+	"p3": {"branch": "pluma", "pos": Vector2i(3, 1), "cost": 1, "req": ["p1"], "name": ["Recolector", "Gatherer"], "desc": ["+15% de Ecos de las bajas.", "+15% Echoes from kills."]},
+	"p4": {"branch": "pluma", "pos": Vector2i(3, 2), "cost": 2, "req": ["p3"], "name": ["Resonancia Alta", "High Resonance"], "desc": ["La Resonancia sube hasta x1,5 y tarda más en apagarse.", "Resonance rises to x1.5 and takes longer to fade."]},
 	"p5": {"branch": "pluma", "pos": Vector2i(1, 2), "cost": 2, "req": ["p2"], "name": ["Lluvia de Plumas", "Feather Shower"], "desc": ["El ataque cargado lanza un abanico de plumas.", "The heavy attack throws a fan of feathers."]},
 	"p6": {"branch": "pluma", "pos": Vector2i(0, 3), "cost": 2, "req": ["p5"], "name": ["Ala Rota", "Broken Wing"], "desc": ["Perder plumas te quita la mitad de vida máxima que antes.", "Losing feathers costs half as much max health."]},
 	"p7": {"branch": "pluma", "pos": Vector2i(4, 3), "cost": 2, "req": ["p4"], "name": ["Ofrenda", "Offering"], "desc": ["Cada Brasa que enciendes te recompensa con 400 Ecos.", "Each Ember you kindle rewards you with 400 Echoes."]},
@@ -488,7 +535,7 @@ const BRANCH_INFO := {
 	"ala": {"motto": ["Lo que no te toca no te mata.", "What can't touch you can't kill you."], "bonus": ["+3% de velocidad", "+3% speed"]},
 	"luz": {"motto": ["Arde la vela que te guía.", "The candle that guides you burns."], "bonus": ["+6% de daño de hechizos", "+6% spell damage"]},
 	"ceniza": {"motto": ["Caer es la primera lección.", "Falling is the first lesson."], "bonus": ["+5% de vida máxima", "+5% max health"]},
-	"pluma": {"motto": ["Cada pluma que pierdes te enseña algo.", "Every feather you lose teaches you something."], "bonus": ["+5% de Ecos", "+5% Echoes"]},
+	"pluma": {"motto": ["Cada pluma que pierdes te enseña algo.", "Every feather you lose teaches you something."], "bonus": ["+4% de Ecos", "+4% Echoes"]},
 	"arconte": {"motto": ["Lo que les arrancas, lo llevas contigo.", "What you tear from them, you carry with you."], "bonus": ["-", "-"]},
 }
 
@@ -503,7 +550,7 @@ func mastery(b: String) -> int:
 	return mini(branch_count(b) / 4, 3)
 
 func respec_cost() -> int:
-	return 150 + 40 * skills.size()
+	return 400 + 120 * skills.size()
 
 func respec() -> bool:
 	var c := respec_cost()
@@ -574,7 +621,7 @@ const QUESTS := {
 		"reward": {"ecos": 200, "flask": 1}},
 	"choir": {"type": "bounty", "title": ["Silencio en la Galería", "Silence in the Gallery"], "giver": "velaria",
 		"count": 1, "text": ["Resuelve el Atrio de las Voces y derrota al Coro Hueco (%d/%d)", "Solve the Atrium of Voices and defeat the Hollow Choir (%d/%d)"],
-		"reward": {"ecos": 600, "sp": 1}},
+		"reward": {"ecos": 350, "feathers": 1}},
 	"hymns": {"type": "side", "title": ["Las Páginas del Himno", "The Hymn Pages"], "giver": "",
 		"count": 3, "text": ["Reúne las páginas del Himno de la Vigilia (%d/%d)", "Gather the pages of the Hymn of the Vigil (%d/%d)"],
 		"reward": {"ecos": 500, "sp": 1, "item": "amulet_bell"}},
@@ -584,33 +631,33 @@ const QUESTS := {
 	# --- v0.9: encargos de los PNJ nuevos
 	"cirios": {"type": "side", "title": ["Luz para copiar", "Light to Copy By"], "giver": "",
 		"count": 3, "text": ["Lleva a Sor Nerea los cirios encendidos del Estrato (%d/%d)", "Bring Sister Nerea the Stratum's lit candles (%d/%d)"],
-		"reward": {"ecos": 900, "sp": 2, "flask": 1}},
+		"reward": {"ecos": 700, "sp": 1, "item": "tear"}},
 	"hilos": {"type": "side", "title": ["Hilo de plata", "Silver Thread"], "giver": "",
 		"count": 3, "text": ["Reúne hilo de plata para el Tejedor (%d/%d)", "Gather silver thread for the Weaver (%d/%d)"],
-		"reward": {"ecos": 1400, "sp": 2, "item": "tear"}},
+		"reward": {"ecos": 1000, "sp": 1, "item": "iron"}},
 	"moldes_r": {"type": "side", "title": ["Moldes rotos", "Broken Moulds"], "giver": "",
 		"count": 3, "text": ["Lleva a Ona los moldes rotos de la Fundición (%d/%d)", "Bring Ona the Foundry's broken moulds (%d/%d)"],
-		"reward": {"ecos": 2000, "sp": 2, "item": "iron", "free_upgrade": 1}},
+		"reward": {"ecos": 1400, "sp": 2, "free_upgrade": 1}},
 	"sellos": {"type": "side", "title": ["Los sellos del Rey", "The King's Seals"], "giver": "",
 		"count": 3, "text": ["Encuentra los sellos reales para el Heraldo (%d/%d)", "Find the royal seals for the Herald (%d/%d)"],
-		"reward": {"ecos": 2800, "sp": 3, "item": "phoenix"}},
+		"reward": {"ecos": 2000, "sp": 2, "item": "tear"}},
 	# --- v0.9: cacerías
 	"hunt_guardias": {"type": "bounty", "title": ["Caza: Guardias", "Hunt: Guards"], "giver": "", "kill": "guardia",
-		"count": 6, "text": ["Abate Guardias (%d/%d)", "Slay Guards (%d/%d)"], "reward": {"ecos": 500, "feathers": 2}},
+		"count": 6, "text": ["Abate Guardias (%d/%d)", "Slay Guards (%d/%d)"], "reward": {"ecos": 300, "feathers": 1}},
 	"hunt_penitentes": {"type": "bounty", "title": ["Caza: Penitentes", "Hunt: Penitents"], "giver": "", "kill": "penitente",
 		"count": 6, "text": ["Abate Penitentes (%d/%d)", "Slay Penitents (%d/%d)"], "reward": {"ecos": 600, "sp": 1}},
 	"hunt_musgosos": {"type": "bounty", "title": ["Caza: Musgosos", "Hunt: Mossbacks"], "giver": "", "kill": "musgoso",
-		"count": 15, "text": ["Abate Musgosos (%d/%d)", "Slay Mossbacks (%d/%d)"], "reward": {"ecos": 1000, "feathers": 3}},
+		"count": 15, "text": ["Abate Musgosos (%d/%d)", "Slay Mossbacks (%d/%d)"], "reward": {"ecos": 600, "feathers": 2}},
 	"hunt_garzas": {"type": "bounty", "title": ["Caza: Garzas", "Hunt: Herons"], "giver": "", "kill": "garza",
-		"count": 10, "text": ["Abate Garzas (%d/%d)", "Slay Herons (%d/%d)"], "reward": {"ecos": 1200, "sp": 1}},
+		"count": 10, "text": ["Abate Garzas (%d/%d)", "Slay Herons (%d/%d)"], "reward": {"ecos": 700, "feathers": 1}},
 	"hunt_ascuas": {"type": "bounty", "title": ["Caza: Ascuas", "Hunt: Cinders"], "giver": "", "kill": "ascua",
-		"count": 15, "text": ["Abate Ascuas (%d/%d)", "Slay Cinders (%d/%d)"], "reward": {"ecos": 1500, "feathers": 3}},
+		"count": 15, "text": ["Abate Ascuas (%d/%d)", "Slay Cinders (%d/%d)"], "reward": {"ecos": 900, "feathers": 2}},
 	"hunt_forjadores": {"type": "bounty", "title": ["Caza: Forjadores", "Hunt: Forgers"], "giver": "", "kill": "forjador",
-		"count": 10, "text": ["Abate Forjadores (%d/%d)", "Slay Forgers (%d/%d)"], "reward": {"ecos": 1800, "sp": 1}},
+		"count": 10, "text": ["Abate Forjadores (%d/%d)", "Slay Forgers (%d/%d)"], "reward": {"ecos": 1000, "feathers": 1}},
 	"hunt_cortesanos": {"type": "bounty", "title": ["Caza: Cortesanos", "Hunt: Courtiers"], "giver": "", "kill": "cortesano",
-		"count": 15, "text": ["Abate Cortesanos (%d/%d)", "Slay Courtiers (%d/%d)"], "reward": {"ecos": 2200, "feathers": 3}},
+		"count": 15, "text": ["Abate Cortesanos (%d/%d)", "Slay Courtiers (%d/%d)"], "reward": {"ecos": 1300, "feathers": 2}},
 	"hunt_caballeros": {"type": "bounty", "title": ["Caza: Caballeros", "Hunt: Knights"], "giver": "", "kill": "caballero",
-		"count": 10, "text": ["Abate Caballeros (%d/%d)", "Slay Knights (%d/%d)"], "reward": {"ecos": 2600, "sp": 2}},
+		"count": 10, "text": ["Abate Caballeros (%d/%d)", "Slay Knights (%d/%d)"], "reward": {"ecos": 1500, "sp": 1}},
 }
 
 # ------------------------------------------------------------------ estado
@@ -737,7 +784,7 @@ func move_speed() -> float:
 	return 118.0 * (1.12 if has_skill("a5") else 1.0) * (1.0 + 0.15 * desplume()) * (0.92 if oath == "carcelero" else 1.0) * (0.92 if has_skill("a11") else 1.0) * (1.08 if has_skill("a12") else 1.0) * (1.0 + 0.03 * mastery("ala"))
 
 func flask_count() -> int:
-	return flasks_max + (1 if has_skill("c3") else 0)
+	return mini(flasks_max + (1 if has_skill("c3") else 0), 8)
 
 func weapon_data(id := "") -> Dictionary:
 	if id == "":
@@ -779,19 +826,27 @@ func damage_taken_mult() -> float:
 	return (0.88 if has_skill("c2") else 1.0) * (0.65 if buffs.has("ointment") else 1.0) * (0.88 if has_skill("a11") else 1.0) * (0.9 if has_skill("p2") and wing_feathers >= 7 else 1.0)
 
 func ecos_mult() -> float:
-	return (1.0 + 0.03 * (attr.arcano - 1)) * diff().ecos * event_ecos * (1.0 + 0.25 * ng) * resonance_mult() * (1.2 if has_skill("p3") else 1.0) * (1.0 + 0.05 * mastery("pluma"))
+	return (1.0 + 0.03 * (attr.arcano - 1)) * diff().ecos * event_ecos * (1.0 + 0.25 * ng) * resonance_mult() * (1.15 if has_skill("p3") else 1.0) * (1.0 + 0.04 * mastery("pluma"))
 
-func level_cost() -> int:
-	return int(90 + 55 * level + 6 * level * level)
+func level_cost(lv := -1) -> int:
+	var l: int = level if lv < 0 else lv
+	return int(120 + 75 * l + 9 * l * l)
 
 func upgrade_cost(id: String) -> Array:
-	var lv: int = weapons.get(id, 0)
+	return upgrade_cost_at(int(weapons.get(id, 0)))
+
+func upgrade_cost_at(lv: int) -> Array:
 	# [ecos, fragmentos, esquirlas de nimbo, lágrimas]: despertar (+5) y ascender (+10) piden una Lágrima
-	return [180 * (lv + 1) + 40 * lv * lv, lv + 1, 1 if lv >= 3 else 0, 1 if lv == 4 or lv == 9 else 0]
+	return [320 * (lv + 1) + 90 * lv * lv, lv + 1, (2 if lv >= 7 else 1) if lv >= 3 else 0, 1 if lv == 4 or lv == 9 else 0]
 
 # ------------------------------------------------------------------ acciones
 func add_ecos(n: int) -> void:
 	ecos += int(n * ecos_mult())
+	changed.emit()
+
+## Cofres, misiones y recompensas fijas: no los multiplican ni la Resonancia ni las habilidades
+func add_ecos_flat(n: int) -> void:
+	ecos += n
 	changed.emit()
 
 func add_feathers(n: int) -> void:
@@ -933,10 +988,12 @@ func unequip_amulet(id: String) -> void:
 	changed.emit()
 
 # ------------------------------------------------------------------ servicios de la Sala del Nimbo
+const ENGRAVE_COST := 900
+
 func engrave(wid: String, inf: String) -> bool:
-	if infusion(wid) == inf or ecos < 400 or item_count("iron") < 1:
+	if infusion(wid) == inf or ecos < ENGRAVE_COST or item_count("iron") < 1:
 		return false
-	ecos -= 400
+	ecos -= ENGRAVE_COST
 	remove_item("iron", 1)
 	infusions[wid] = inf
 	Ach.unlock("engrave")
@@ -964,7 +1021,7 @@ func buy_flask_charge() -> bool:
 
 func shop_price(id: String) -> int:
 	if id == "_feather":
-		return 250
+		return 450
 	return int(ITEMS[id].get("price", 500))
 
 func shop_left(id: String, limit: int) -> int:
@@ -1156,33 +1213,35 @@ func from_dict(d: Dictionary) -> void:
 	changed.emit()
 
 func save_game() -> void:
-	var f := FileAccess.open(save_path(), FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(to_dict(), "\t"))
-		f.close()
+	# primero a un archivo temporal: un corte a mitad nunca deja la partida a medias
+	var path := save_path()
+	var tmp := path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(to_dict(), "\t"))
+	f.close()
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(path))
+	_remember_slot()
 
-func has_save() -> bool:
-	return FileAccess.file_exists(save_path())
+func has_save(s := -1) -> bool:
+	return FileAccess.file_exists(save_path(s))
 
-## Lee la partida guardada sin cargarla (para la ficha de "Continuar" en la pantalla de inicio)
-func peek_save() -> Dictionary:
-	if not has_save():
+## Lee la partida guardada sin cargarla (para las fichas de la pantalla de inicio)
+func peek_save(s := -1) -> Dictionary:
+	if not has_save(s):
 		return {}
-	var f := FileAccess.open(save_path(), FileAccess.READ)
+	var f := FileAccess.open(save_path(s), FileAccess.READ)
 	if f == null:
 		return {}
 	var data = JSON.parse_string(f.get_as_text())
 	f.close()
 	return data if data is Dictionary else {}
-
 func load_game() -> bool:
-	if not has_save():
-		return false
-	var f := FileAccess.open(save_path(), FileAccess.READ)
-	var data = JSON.parse_string(f.get_as_text())
-	f.close()
-	if data is Dictionary:
+	var data: Dictionary = peek_save()
+	if not data.is_empty():
 		from_dict(data)
+		_remember_slot()
 		# partidas antiguas: sus logros pasan al perfil sin avisos
 		var legacy := []
 		for k in flags:

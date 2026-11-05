@@ -250,6 +250,10 @@ func show_area(title: String, sub: String) -> void:
 	big_layer.add_child(a)
 
 func big_message(text: String, color: Color, dur := 2.5, slow := false) -> void:
+	# el último aviso sustituye al anterior: nunca se pisan
+	for old in big_layer.get_children():
+		if old is BigMessage:
+			old.queue_free()
 	var b := BigMessage.new()
 	b.text = text
 	b.color = color
@@ -1285,9 +1289,12 @@ class BossPanel extends Control:
 		_shake = max(0.0, _shake - delta)
 		_trail = max(r, lerpf(_trail, r, delta * (0.8 if _dmg_t > 0.6 else 2.5)))
 		if boss.phase != _phase:
+			var up_ph: bool = boss.phase > _phase
 			_phase = boss.phase
 			_phase_t = 1.6
 			var th2: Dictionary = THEMES[bstyle]
+			if up_ph:
+				hud.big_message(G.T("boss_phase") % ["", "I", "II", "III"][clampi(_phase, 1, 3)], th2.bright, 1.4, true)
 			for k2 in 30:
 				_parts.append([Vector2(BX + randf() * BW, BY + BH / 2), Vector2(randf_range(-80, 80), randf_range(-100, -20)), randf_range(0.5, 1.0), th2.accent, 200.0, 2.0])
 		_phase_t = max(0.0, _phase_t - delta)

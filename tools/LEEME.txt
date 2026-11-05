@@ -15,4 +15,4 @@ COOPERATIVO (2 JUGADORES)
   y conectad escribiendo la IP.
 - Los dos debéis tener la misma versión del juego.
 
-Tu partida se guarda en %APPDATA%\Godot\app_userdata\Seraphall\
+Tienes 3 huecos de partida. Se guardan en %APPDATA%\Godot\app_userdata\Seraphall\

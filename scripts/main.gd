@@ -27,6 +27,80 @@ func _ready() -> void:
 			start_game("new")
 		"join":
 			Net.join_ip("127.0.0.1")
+		"slots":
+			# tres huecos: independientes, se migra la partida antigua, se borra con confirmación
+			var sd_s := OS.get_environment("SERAPHALL_SHOTS")
+			var fails := []
+			for s0 in [1, 2, 3]:
+				Prog.delete_save(s0)
+			# la partida antigua pasa al hueco 1 sin perderse
+			var fl := FileAccess.open(Prog.legacy_path(), FileAccess.WRITE)
+			Prog.slot = 1
+			Prog.reset()
+			Prog.level = 7
+			G.look = Look.sane({"body": "f", "hair": 1, "name": "Antigua"})
+			fl.store_string(JSON.stringify(Prog.to_dict()))
+			fl.close()
+			Prog.migrate_legacy()
+			if not Prog.has_save(1) or int(Prog.peek_save(1).get("level", 0)) != 7 or FileAccess.file_exists(Prog.legacy_path()):
+				fails.append("migración")
+			# otra partida en el hueco 3, con su propio progreso
+			Prog.slot = 3
+			Prog.reset()
+			Prog.level = 21
+			Prog.difficulty = 3
+			Prog.playtime = 12600.0
+			Prog.wing_feathers = 4
+			Prog.last_brasa = "yunque"
+			Prog.flags = {"seravel_dead": true, "orrun_dead": true}
+			G.look = Look.sane({"body": "m", "hair": 2, "name": "Kael"})
+			Prog.save_game()
+			if Prog.has_save(2) or int(Prog.peek_save(1).get("level", 0)) != 7 or int(Prog.peek_save(3).get("level", 0)) != 21:
+				fails.append("huecos no independientes")
+			# archivo dañado: el juego no se rompe
+			Prog.slot = 2
+			var bad_f := FileAccess.open(Prog.save_path(2), FileAccess.WRITE)
+			bad_f.store_string("{esto no es json")
+			bad_f.close()
+			if not Prog.peek_save(2).is_empty() or Prog.load_game():
+				fails.append("archivo dañado")
+			_build_title()
+			title._skip_intro()
+			await get_tree().create_timer(0.5).timeout
+			_open_slots("new")
+			await get_tree().create_timer(0.8).timeout
+			var ui: Control = title_layer.get_child(title_layer.get_child_count() - 1)
+			await _shot(sd_s + "/s01_huecos.png")
+			# borrar pide confirmación
+			ui._on_delete(1)
+			if not Prog.has_save(2):
+				fails.append("borró sin confirmar")
+			await get_tree().create_timer(0.3).timeout
+			await _shot(sd_s + "/s02_confirmar.png")
+			ui._on_delete(1)
+			if Prog.has_save(2) or not Prog.has_save(1) or not Prog.has_save(3):
+				fails.append("borrado incorrecto")
+			await get_tree().create_timer(0.3).timeout
+			await _shot(sd_s + "/s03_borrado.png")
+			# elegir el hueco 3 carga esa partida
+			Prog.reset()
+			ui.sel = 2
+			ui._pick()
+			await get_tree().create_timer(2.0).timeout
+			print("SLOTS hueco=", Prog.slot, " nivel=", Prog.level, " dificultad=", Prog.difficulty, " mundo=", world != null)
+			if Prog.slot != 3 or Prog.level != 21 or world == null:
+				fails.append("no carga el hueco")
+			# guardar solo escribe en el suyo, y sin dejar temporales
+			Prog.level = 22
+			Prog.save_game()
+			if int(Prog.peek_save(3).get("level", 0)) != 22 or int(Prog.peek_save(1).get("level", 0)) != 7 or FileAccess.file_exists(Prog.save_path(3) + ".tmp"):
+				fails.append("guardado cruzado")
+			for fs in fails:
+				print("FALLO ", fs)
+			for s9 in [1, 2, 3]:
+				Prog.delete_save(s9)
+			print("AUTOTEST_SLOTS_OK" if fails.is_empty() else "AUTOTEST_SLOTS_FAIL")
+			get_tree().quit()
 		"lobby_host":
 			# el anfitrión se queda en la sala 8 s (el caso que antes colgaba al cliente) y luego empieza
 			Prog.reset()
@@ -52,13 +126,16 @@ func _ready() -> void:
 			await get_tree().create_timer(0.5).timeout
 			title._skip_intro()
 			await get_tree().create_timer(1.0).timeout
-			_on_title_action("new", "")
+			_open_new_game("new")
 			await get_tree().create_timer(0.8).timeout
 			await _shot(sd + "/n01_dificultad.png")
 			var ng: Control = title_layer.get_child(title_layer.get_child_count() - 1)
 			ng.diff_sel = 0
 			await get_tree().create_timer(0.5).timeout
 			await _shot(sd + "/n02_ala_ligera.png")
+			ng.diff_sel = 3
+			await get_tree().create_timer(0.5).timeout
+			await _shot(sd + "/n02b_serafin.png")
 			ng.diff_sel = 2
 			ng._confirm_diff()
 			await get_tree().create_timer(0.8).timeout
@@ -97,7 +174,7 @@ func _ready() -> void:
 			_build_title()
 			await get_tree().create_timer(5.0).timeout
 			await _shot(sd + "/p01_titulo.png")
-			_on_title_action("new", "")
+			_open_new_game("new")
 			await get_tree().create_timer(0.6).timeout
 			var ng: Control = title_layer.get_child(title_layer.get_child_count() - 1)
 			await get_tree().create_timer(0.6).timeout
@@ -187,23 +264,20 @@ func _build_title() -> void:
 func _on_title_action(act: String, arg: String) -> void:
 	match act:
 		"continue":
+			Prog.pick_latest()
 			Prog.load_game()
 			Net.close()
 			_transition_to_game("continue")
 		"new":
 			Net.close()
-			_open_new_game("new")
+			_open_slots("new")
 		"host":
 			if Net.host() != OK:
 				title.toast(G.L(["No se pudo abrir el puerto 24680: ¿hay otra partida abierta?", "Could not open port 24680: is another game running?"]))
 				return
 			title.show_panel("host")
 		"host_start":
-			if Prog.has_save():
-				Prog.load_game()
-				_transition_to_game("continue")
-			else:
-				_open_new_game("host")
+			_open_slots("host")
 		"copy":
 			var c := Net.online_code()
 			if c == "":
@@ -229,6 +303,24 @@ func _on_title_action(act: String, arg: String) -> void:
 			title.show_main_menu()
 		"quit":
 			get_tree().quit()
+
+func _open_slots(mode: String) -> void:
+	var sl := preload("res://scripts/ui/save_slots.gd").new()
+	sl.chosen.connect(_on_slot_chosen.bind(mode))
+	sl.cancelled.connect(_on_new_game_cancel.bind(mode))
+	if title and is_instance_valid(title):
+		title._clear_menu()
+	title_layer.add_child(sl)
+
+func _on_slot_chosen(slot: int, occupied: bool, mode: String) -> void:
+	Prog.slot = slot
+	if not occupied:
+		_open_new_game(mode)
+	elif Prog.load_game():
+		_transition_to_game("continue")
+	else:
+		_toast_title(G.L(["No se puede leer esa partida.", "That save can't be read."]))
+		_open_slots(mode)
 
 func _open_new_game(mode: String) -> void:
 	var ng := preload("res://scripts/ui/new_game.gd").new()
@@ -337,7 +429,8 @@ func _on_connected() -> void:
 func _on_host_world_ready() -> void:
 	if world or Net.is_host:
 		return
-	# el cliente usa su propio personaje guardado (o uno nuevo)
+	# el cliente usa su última partida (o un personaje nuevo)
+	Prog.pick_latest()
 	if not Prog.load_game():
 		Prog.reset()
 	start_game("client")
@@ -1975,6 +2068,120 @@ func _run_autotest() -> void:
 			await _shot(out + "/pr10_santuario.png")
 			var ok_p: bool = r_end == "sanct" and w._prologue == null and Prog.quest_active("main1") and not get_tree().paused
 			print("AUTOTEST_PROLOGUE_OK" if ok_p else "AUTOTEST_PROLOGUE_FAIL")
+			get_tree().quit()
+		"economy":
+			# reparto real de Ecos y puntos: una partida entera sin farmear, por estrato. Falla si se dispara.
+			var by := {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+			var sp_by := {1: 0, 2: 0, 3: 0, 4: 0}
+			var shards := 0
+			var irons := 0
+			var tears := 0
+			var flask_rew := 0
+			var phoenix := 0
+			for en in w.enemies:
+				if en.type == "eco_tutor" or en.type in ["verdugo", "coloso"]:
+					continue
+				by[Strata.stratum_of_room(w.room_at(en.spawn_pos))] += float(en.cfg.ecos)
+			var stat_room := {"carcelero": 1, "choir": 1, "seravel": 1, "orrun": 2, "vulkaris": 3, "azrahel": 4}
+			for tr5 in w.TRIALS:
+				var st5 := Strata.stratum_of_room(w.TRIALS[tr5].room)
+				for wv5 in w.TRIALS[tr5].waves:
+					for sp5 in wv5:
+						by[st5] += float(Enemy.TYPES[sp5[0]].ecos)
+				var rw5: Dictionary = w.TRIALS[tr5].reward
+				by[st5] += float(rw5.get("ecos", 0))
+				shards += int(rw5.get("feathers", 0))
+				irons += int(rw5.get("items", {}).get("iron", 0))
+				tears += int(rw5.get("items", {}).get("tear", 0))
+			for ik in w.interactables:
+				var it5: Interactable = w.interactables[ik]
+				if it5.kind != "chest":
+					continue
+				var st6 := Strata.stratum_of_room(w.room_at(it5.position))
+				by[st6] += float(it5.data.get("ecos", 0))
+				shards += int(it5.data.get("feathers", 0))
+				irons += int(it5.data.get("items", {}).get("iron", 0))
+				tears += int(it5.data.get("items", {}).get("tear", 0))
+				phoenix += int(it5.data.get("items", {}).get("phoenix", 0))
+			var q_st := {"main1": 1, "main2": 2, "main3": 3, "main4": 4, "eggs": 2, "names": 3, "roses": 4, "feathers": 1, "husks": 1, "map": 1, "choir": 1, "hymns": 1, "jailer_hunt": 1,
+				"cirios": 1, "hilos": 2, "moldes_r": 3, "sellos": 4, "hunt_guardias": 1, "hunt_penitentes": 1, "hunt_musgosos": 2, "hunt_garzas": 2, "hunt_ascuas": 3, "hunt_forjadores": 3, "hunt_cortesanos": 4, "hunt_caballeros": 4}
+			for qk in Prog.QUESTS:
+				var rq: Dictionary = Prog.QUESTS[qk].reward
+				var st7: int = int(q_st.get(qk, 1))
+				by[st7] += float(rq.get("ecos", 0))
+				sp_by[st7] += int(rq.get("sp", 0))
+				shards += int(rq.get("feathers", 0))
+				flask_rew += int(rq.get("flask", 0))
+			for bs in stat_room:
+				by[stat_room[bs]] += float(Enemy.TYPES[bs].ecos)
+			# gasto supuesto: 70% en niveles, 30% en mejorar un arma; +15% de media por Resonancia en las bajas
+			var bank := 0.0
+			var lvl := 1
+			var total_sp := 1
+			var wlv := 0
+			var wbank := 0.0
+			var tree_cost := 0
+			for sk5 in Prog.SKILLS:
+				if not Prog.SKILLS[sk5].has("excl") or str(sk5) < str(Prog.SKILLS[sk5].excl):
+					tree_cost += int(Prog.SKILLS[sk5].cost)
+			var bad5 := []
+			for st8 in [1, 2, 3, 4]:
+				bank += by[st8] * 1.15 * 0.7
+				wbank += by[st8] * 1.15 * 0.3
+				while true:
+					var lc := Prog.level_cost(lvl)
+					if bank < lc:
+						break
+					bank -= lc
+					lvl += 1
+					total_sp += 1
+				while wlv < 10:
+					var uc: Array = Prog.upgrade_cost_at(wlv)
+					if wbank < uc[0]:
+						break
+					wbank -= uc[0]
+					wlv += 1
+				total_sp += int(sp_by[st8])
+				print("ECONOMY estrato ", st8, ": ecos=", int(by[st8]), " nivel=", lvl, " puntos_totales=", total_sp, " arma=+", wlv)
+			print("ECONOMY arbol_coste=", tree_cost, " fragmentos=", shards, " esquirlas=", irons, " lagrimas=", tears, " lagrimas_extra=", flask_rew, " plumones=", phoenix)
+			if lvl < 16 or lvl > 34:
+				bad5.append("nivel final fuera de rango: %d" % lvl)
+			if float(total_sp) / tree_cost > 0.6:
+				bad5.append("se puede comprar demasiado árbol: %d/%d" % [total_sp, tree_cost])
+			if wlv >= 10:
+				bad5.append("un arma al máximo demasiado fácil")
+			# los jefes aprietan incluso en las dificultades bajas
+			for dd5 in Prog.DIFFICULTIES:
+				if not dd5.phase3 or float(dd5.boss_hp) < 0.8 or float(dd5.boss_dmg) < 0.6:
+					bad5.append("jefe blando en " + str(dd5.name[0]))
+			# la furia final y el Cataclismo funcionan de principio a fin
+			var lp5: Player = w.local_player()
+			lp5.iframes = 9999.0
+			var ca5: Enemy = w._enemy_of("carcelero")
+			lp5.respawn_at(w.tile_pos(49, 40))
+			var t5 := 0.0
+			while w.active_boss != ca5 and t5 < 30.0:
+				await get_tree().create_timer(0.25).timeout
+				t5 += 0.25
+			w._server_damage(ca5.idx, ca5.max_hp * 0.8, Vector2.RIGHT, 0.0, false)
+			await get_tree().create_timer(0.5).timeout
+			print("ECONOMY furia=", ca5.fury, " vida=", int(ca5.hp), "/", int(ca5.max_hp))
+			if not ca5.fury:
+				bad5.append("sin furia final")
+			lp5.hp = Prog.max_hp()
+			ca5.state = "chase"
+			ca5._cat_t = 0.0
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/e01_cataclismo.png")
+			await get_tree().create_timer(2.0).timeout
+			await _shot(out + "/e02_cataclismo.png")
+			await get_tree().create_timer(4.0).timeout
+			print("ECONOMY tras_cataclismo estado=", ca5.state)
+			if ca5.state == "busy" and ca5._attack_id == 0:
+				bad5.append("cataclismo sin lanzar")
+			for b5 in bad5:
+				print("FALLO ", b5)
+			print("AUTOTEST_ECONOMY_OK" if bad5.is_empty() else "AUTOTEST_ECONOMY_FAIL")
 			get_tree().quit()
 		"retry":
 			# jefe: la primera vez con presentación; al morir y volver, directo a la pelea y con su barra

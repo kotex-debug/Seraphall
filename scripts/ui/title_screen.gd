@@ -306,7 +306,7 @@ func show_main_menu() -> void:
 	_stage = "menu"
 	_clear_menu()
 	var items := []
-	if Prog.has_save():
+	if Prog.pick_latest():
 		items.append([G.T("continue"), "continue"])
 		var sd := Prog.peek_save()
 		if not sd.is_empty():
@@ -780,7 +780,7 @@ class SaveCard extends Control:
 	var data := {}
 	var _t := 0.0
 	var _bust: Texture2D
-	const BRASAS := {"sanct": "area_sanct", "gate": "area_yard", "nimbo": "area_nimbo", "umbral": "area_juicio"}
+
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var lk: Dictionary = data.get("look", {})
@@ -807,7 +807,7 @@ class SaveCard extends Control:
 		var ng := int(data.get("ng", 0))
 		if ng > 0:
 			tf.draw_string(get_canvas_item(), Vector2(58, 58), "NG+%d" % ng, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.RED)
-		var area: String = G.T(BRASAS.get(str(data.get("last_brasa", "sanct")), "area_sanct"))
+		var area: String = G.L(Strata.BRASA_NAMES.get(str(data.get("last_brasa", "sanct")), Strata.BRASA_NAMES.sanct))
 		tf.draw_string(get_canvas_item(), Vector2(8, 78), area, HORIZONTAL_ALIGNMENT_LEFT, size.x - 14, 10, UIKit.CYAN)
 		var pt := float(data.get("playtime", 0.0))
 		var rows := [[G.L(["Tiempo", "Time"]), "%d:%02d" % [int(pt / 3600.0), int(pt / 60.0) % 60]],
