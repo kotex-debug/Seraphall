@@ -2,10 +2,10 @@ extends Node2D
 ## Mundo del Estrato I: construye el mapa, gestiona entidades, red, jefes, misiones y escenas.
 
 const TS := 16
-const MAPW := 96
+const MAPW := 384   # cuatro estratos en franjas de 96 casillas
 const MAPH := 96
 
-const ROOMS := [
+const ROOMS_I := [
 	{"id": "circle", "c": Vector2i(49, 14), "r": 13},
 	{"id": "yard", "rect": Rect2i(38, 32, 23, 14)},
 	{"id": "alcove", "rect": Rect2i(29, 36, 8, 7)},
@@ -41,14 +41,21 @@ const ROOMS := [
 	{"id": "cor_link", "rect": Rect2i(31, 77, 3, 5)},
 	{"id": "cornisa", "rect": Rect2i(13, 63, 21, 14)},
 ]
-const AREAS := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
+const AREAS_I := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
 	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
 	"nimbo": "area_nimbo", "nim_link": "area_nimbo", "choir": "area_choir", "choir_link": "area_atrio",
 	"celdas": "area_celdas", "cel_link": "area_celdas", "cel_up": "area_celdas", "atrio": "area_atrio", "atr_link": "area_atrio",
 	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio",
 	"cap_link": "area_capilla", "capilla": "area_capilla", "cad_link": "area_cadalso", "cadalso": "area_cadalso",
 	"cor_link": "area_cornisa", "cornisa": "area_cornisa"}
-const PEACE_AREAS := ["area_sanct", "area_mirador", "area_nimbo", "area_capilla"]
+const PEACE_AREAS_I := ["area_sanct", "area_mirador", "area_nimbo", "area_capilla"]
+var ROOMS: Array = ROOMS_I + Strata.ROOMS
+var AREAS: Dictionary = AREAS_I.merged(Strata.AREAS)
+var PEACE_AREAS: Array = PEACE_AREAS_I + Strata.PEACE
+var AREA_COLORS: Dictionary = AREA_COLORS_I.merged(Strata.AREA_COLORS)
+var PITS: Array = PITS_I + [[Rect2i(229, 57, 3, 3), "ember"], [Rect2i(249, 59, 3, 3), "ember"], [Rect2i(134, 37, 3, 3), "void"], [Rect2i(326, 61, 3, 3), "void"]]
+var TRIALS: Dictionary = TRIALS_I.merged(Strata.TRIALS)
+var ARENAS: Dictionary = ARENAS_I.merged({"orrun": ["b_arena", "luz"], "vulkaris": ["f_arena", "celda"], "azrahel": ["t_arena", "luz"], "verdugo": ["cadalso", "luz"], "coloso": ["cornisa", "luz"]})
 
 var main: Node
 var leaner: Depth3D.Leaner
@@ -111,6 +118,7 @@ func _ready() -> void:
 	_scatter_decor()
 	_spawn_enemies()
 	_spawn_interactables()
+	_build_strata()
 	_build_gate()
 	camera = Camera2D.new()
 	camera.position_smoothing_enabled = false
@@ -241,6 +249,13 @@ func _build_map() -> void:
 					t = 19 if rng.randf() < 0.6 else t
 				if rid == "cadalso" or rid == "cad_link":
 					t = 20 + rng.randi_range(0, 1)
+				var stn := Strata.stratum_of_room(rid)
+				if stn > 1:
+					var fl: Array = Strata.FLOORS[stn]
+					var rr := rng.randf()
+					t = fl[0] if rr < 0.6 else (fl[2] if rr < 0.8 else (fl[3] if rr < 0.92 else fl[1]))
+					if (rid == "t_escalera" and absf(x - 335.5) < 1.6) or rid == "t_link5" or (rid == "t_link4" and absf(x - 335.5) < 1.6):
+						t = Strata.CARPET
 				floor_layer.set_cell(c, 0, Vector2i(t, 0))
 			elif g == 2:
 				var below := y + 1 < MAPH and grid[(y + 1) * MAPW + x] == 1
@@ -254,6 +269,9 @@ func _build_map() -> void:
 						wt = 30 + rng.randi_range(0, 1)
 					elif brid in ["atrio", "atr_link"] and rng.randf() < 0.5:
 						wt = 32 + rng.randi_range(0, 1)
+					var wst := Strata.stratum_of_room(brid)
+					if wst > 1:
+						wt = Strata.WALLS[wst][0 if rng.randf() < 0.7 else 1]
 					wall_layer.set_cell(c, 0, Vector2i(wt, 0))
 				else:
 					wall_layer.set_cell(c, 0, Vector2i(6, 0))
@@ -304,7 +322,7 @@ func _build_tileset() -> TileSet:
 	var ntiles: int = src.texture.get_width() / TS
 	for i in ntiles:
 		src.create_tile(Vector2i(i, 0))
-	for i in [6, 7, 8, 9, 12, 16, 18, 28, 29, 30, 31, 32, 33]:
+	for i in [6, 7, 8, 9, 12, 16, 18, 28, 29, 30, 31, 32, 33, 38, 39, 44, 45, 50, 51]:
 		if i >= ntiles:
 			continue
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
@@ -337,7 +355,7 @@ func _scatter_decor() -> void:
 				var c := _prop("candle", p, 4, rng.randi_range(0, 3), 0.0, Color(1, 0.65, 0.3), 0.7)
 				c.set_meta("anim", 4)
 
-const PITS := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"],
+const PITS_I := [[Rect2i(37, 61, 4, 4), "ember"], [Rect2i(52, 60, 5, 4), "ember"], [Rect2i(79, 58, 6, 5), "void"],
 	[Rect2i(24, 48, 4, 3), "chains"], [Rect2i(65, 16, 2, 6), "light"], [Rect2i(72, 16, 2, 6), "light"], [Rect2i(75, 49, 2, 3), "void"]]
 
 func is_pit_at(p: Vector2) -> bool:
@@ -361,7 +379,7 @@ func is_wall_at(p: Vector2) -> bool:
 	return grid[y * MAPW + x] != 1
 
 # ====================================================================== cartografía (mapa y minimapa)
-const AREA_COLORS := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
+const AREA_COLORS_I := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0.75, 0.6, 0.85), "area_gallery": Color(0.45, 0.6, 1.0),
 	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
 	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0), "area_celdas": Color(0.85, 0.45, 0.35),
 	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55), "area_capilla": Color(0.7, 1.0, 0.85),
@@ -437,10 +455,24 @@ func map_texture() -> ImageTexture:
 ## Mapa detallado: 3 píxeles por casilla, con losas, borde iluminado, muros con ladrillo y pozos que brillan.
 var _map_hd: ImageTexture
 var _map_hd_seen := -1
-func map_texture_hd() -> ImageTexture:
-	var n := 0
+func areas_of_stratum(st: int) -> Array:
+	var out := []
 	for r in ROOMS:
-		if Prog.flags.get("seen_" + r.id, false):
+		if Strata.stratum_of_room(r.id) != st:
+			continue
+		var a: String = AREAS.get(r.id, "")
+		if a != "" and not a in out:
+			out.append(a)
+	return out
+
+func map_seen(rid: String) -> bool:
+	## sala vista y del estrato en el que estás (el mapa solo muestra tu estrato)
+	return Prog.flags.get("seen_" + rid, false) and Strata.stratum_of_room(rid) == cur_stratum()
+
+func map_texture_hd() -> ImageTexture:
+	var n := cur_stratum() * 1000
+	for r in ROOMS:
+		if map_seen(r.id):
 			n += 1
 	if _map_hd and n == _map_hd_seen:
 		return _map_hd
@@ -457,7 +489,7 @@ func map_texture_hd() -> ImageTexture:
 				for dy in [1, 2]:
 					if y + dy < MAPH and grid[(y + dy) * MAPW + x] == 1 and room_of[(y + dy) * MAPW + x] >= 0:
 						var wr: String = ROOMS[room_of[(y + dy) * MAPW + x]].id
-						if Prog.flags.get("seen_" + wr, false):
+						if map_seen(wr):
 							var wc: Color = AREA_COLORS.get(AREAS.get(wr, ""), Color.WHITE)
 							for py in K:
 								for px in K:
@@ -469,7 +501,7 @@ func map_texture_hd() -> ImageTexture:
 									img.set_pixel(x * K + px, y * K + py, cc)
 							break
 				continue
-			if room_of[i] < 0 or not Prog.flags.get("seen_" + ROOMS[room_of[i]].id, false):
+			if room_of[i] < 0 or not map_seen(ROOMS[room_of[i]].id):
 				continue
 			var rid: String = ROOMS[room_of[i]].id
 			var c: Color = AREA_COLORS.get(AREAS.get(rid, ""), Color.WHITE)
@@ -514,12 +546,25 @@ func map_texture_hd() -> ImageTexture:
 
 ## Dónde está el siguiente paso de la misión principal (en casillas), o INF si no se sabe
 const OBJECTIVE_ROOMS := {"brasa": Vector2(49, 86), "talk_brenna": Vector2(46, 84), "trial_celdas": "celdas", "kill_carcelero": "yard",
-	"trial_umbral": "antesala", "enter_circle": Vector2(63.5, 13.5), "kill_seravel": "circle"}
+	"trial_umbral": "antesala", "enter_circle": Vector2(63.5, 13.5), "kill_seravel": "circle",
+	"talk_oso": Vector2(113.5, 57.6), "enter_ciervo": "b_arena", "kill_orrun": "b_arena",
+	"talk_archivero": Vector2(201.5, 50.8), "enter_yunque": "f_arena", "kill_vulkaris": "f_arena",
+	"talk_lirio": Vector2(323, 57.4), "enter_trono": "t_arena", "kill_azrahel": "t_arena"}
 func objective_pos() -> Vector2:
-	if not Prog.quest_active("main1"):
+	var mq := ""
+	var cs := cur_stratum()
+	var qid := "main%d" % cs
+	if Prog.quest_active(qid):
+		mq = qid
+	if mq == "":
+		# sin misión en este estrato: señala la grieta al siguiente si ya está abierta
+		for boss in Strata.RIFTS:
+			var rd: Array = Strata.RIFTS[boss]
+			if int(rd[1]) == cs + 1 and wflags.get(boss + "_dead", false):
+				return rd[0]
 		return Vector2.INF
-	var steps: Array = Prog.QUESTS.main1.steps
-	var st: int = Prog.quests.main1.step
+	var steps: Array = Prog.QUESTS[mq].steps
+	var st: int = Prog.quests[mq].step
 	if st >= steps.size():
 		return Vector2.INF
 	var where = OBJECTIVE_ROOMS.get(steps[st].id, null)
@@ -537,7 +582,7 @@ func map_markers() -> Array:
 	var out := []
 	for id in interactables:
 		var it: Interactable = interactables[id]
-		if not is_instance_valid(it) or not Prog.flags.get("seen_" + room_at(it.position), false):
+		if not is_instance_valid(it) or not map_seen(room_at(it.position)):
 			continue
 		var tp: Vector2 = it.position / TS
 		match it.kind:
@@ -554,24 +599,26 @@ func map_markers() -> Array:
 				out.append(["bench", tp, Color(0.7, 0.9, 1.0), ""])
 			"lore":
 				out.append(["lore", tp, Color(0.6, 0.85, 1.0), ""])
+			"rift":
+				out.append(["objective", tp, Color(0.7, 0.45, 1.0), ""])
 	# pruebas de las antesalas, cierres e inscripciones
-	for tid in ["celdas", "atrio", "umbral"]:
+	for tid in ["celdas", "atrio", "umbral", "cienaga", "moldes", "galeria"]:
 		var room: String = TRIALS[tid].room if TRIALS.has(tid) else "atrio"
-		if Prog.flags.get("seen_" + room, false):
+		if map_seen(room):
 			out.append(["trial_done" if trial_done(tid) else "trial", _room_corner(room), UIKit.GOLD if trial_done(tid) else UIKit.RED, ""])
 	for L in LOCKS:
 		var lr: Rect2i = L[1]
-		if not trial_done(L[0]) and Prog.flags.get("seen_" + room_at(tile_pos(lr.position.x, lr.position.y + 1)), false) or (not trial_done(L[0]) and Prog.flags.get("seen_" + room_at(tile_pos(lr.position.x, lr.position.y - 1)), false)):
+		if not trial_done(L[0]) and map_seen(room_at(tile_pos(lr.position.x, lr.position.y + 1))) or (not trial_done(L[0]) and map_seen(room_at(tile_pos(lr.position.x, lr.position.y - 1)))):
 			out.append(["lock", Vector2(lr.get_center()), Color(0.75, 0.7, 0.8), ""])
 	for e in enemies:
-		if e.is_boss and Prog.flags.get("seen_" + room_at(e.spawn_pos), false):
-			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", "-"), false)
+		if e.is_boss and not e.type in ["verdugo", "coloso"] and map_seen(room_at(e.spawn_pos)):
+			var dead: bool = wflags.get(Prog.BOSS_INFO.get(e.type, {}).get("flag", e.type + "_dead"), false)
 			out.append(["boss_dead" if dead else "boss", e.spawn_pos / TS, UIKit.RED, G.T(e.cfg.get("title", "boss_carcelero"))])
 	var obj := objective_pos()
 	if obj != Vector2.INF:
 		out.append(["objective", obj, UIKit.GOLD, ""])
 	for c in entities.get_children():
-		if c is GhostEcho and Prog.flags.get("echo_" + c.id, false):
+		if c is GhostEcho and Prog.flags.get("echo_" + c.id, false) and cur_stratum() == 1:
 			out.append(["echo", c.position / TS, Color(0.6, 0.85, 1.0), ""])
 	for pid in players:
 		var q: Player = players[pid]
@@ -597,7 +644,7 @@ func _prop(tex: String, pos: Vector2, frames := 1, frame := 0, collide := 0.0, l
 	s.position = pos
 	s.offset = Vector2(0, -s.texture.get_height() / 2.0 + 2)
 	entities.add_child(s)
-	if tex in ["pillar", "statue", "organ"]:
+	if tex in ["pillar", "statue", "organ", "tree_dead", "throne"]:
 		leaner.add(s, 1.5 if tex != "organ" else 1.1)
 	if collide > 0.0:
 		var b := StaticBody2D.new()
@@ -763,6 +810,8 @@ func arena_fx(kind: String) -> void:
 	match kind:
 		"seravel_p3":
 			create_tween().tween_property(canvas_mod, "color", Color(0.75, 0.62, 0.55), 1.5)
+		"azrahel_p3":
+			create_tween().tween_property(canvas_mod, "color", Color(0.36, 0.26, 0.5), 1.8)
 		"carcelero_p2":
 			for l in arena_lights:
 				if is_instance_valid(l):
@@ -964,6 +1013,12 @@ func _spawn_enemies() -> void:
 	# jefes secretos: ocultos hasta que se les invoca
 	_add_enemy("verdugo", tile_pos(84.5, 90.5), false)
 	_add_enemy("coloso", BossColoso.ANCHOR, false)
+	# Estratos II-IV y sus Arcontes
+	for e2 in Strata.ENEMIES:
+		_add_enemy(e2[0], tile_pos(e2[1], e2[2]), false)
+	_add_enemy("orrun", tile_pos(141, 9), false)
+	_add_enemy("vulkaris", tile_pos(240, 9), false)
+	_add_enemy("azrahel", tile_pos(336, 8), false)
 
 func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 	var e: Enemy
@@ -978,6 +1033,12 @@ func _add_enemy(type: String, pos: Vector2, extra: bool) -> Enemy:
 			e = preload("res://scripts/actors/boss_verdugo.gd").new()
 		"coloso":
 			e = preload("res://scripts/actors/boss_coloso.gd").new()
+		"orrun":
+			e = preload("res://scripts/actors/boss_orrun.gd").new()
+		"vulkaris":
+			e = preload("res://scripts/actors/boss_vulkaris.gd").new()
+		"azrahel":
+			e = preload("res://scripts/actors/boss_azrahel.gd").new()
 		_:
 			e = Enemy.new()
 	e.setup(enemies.size(), type, pos, self)
@@ -1039,6 +1100,9 @@ func _apply_world_flags(instant: bool) -> void:
 			e.die(); e.visible = false
 		if e.type == "choir" and wflags.get("choir_dead", false):
 			e.die(); e.visible = false
+		if e.type in Strata.ARCHONS and wflags.get(e.type + "_dead", false):
+			e.die(); e.visible = false
+	_refresh_rifts()
 	if Prog.dropped_ecos.has("amount") and (int(Prog.dropped_ecos.amount) > 0 or int(Prog.dropped_ecos.get("feather", 0)) > 0):
 		_spawn_ecos_drop()
 
@@ -1053,7 +1117,8 @@ func _after_load() -> void:
 	var p := local_player()
 	if p:
 		p.respawn_at(_brasa_spawn(Prog.last_brasa))
-	hud.show_area(G.T("stratum1"), G.T("area_sanct"))
+	var st: int = int(Strata.BRASA_STRATUM.get(Prog.last_brasa, 1))
+	hud.show_area(G.L(Strata.STRATUM_NAMES[st]), G.T(AREAS.get(room_at(p.global_position), "area_sanct")) if p else "")
 	if not Prog.shadow.is_empty():
 		get_tree().create_timer(1.0).timeout.connect(_request_shadow)
 	if Prog.ng > 0:
@@ -1221,11 +1286,17 @@ func _check_area(lp: Player) -> void:
 			target = Color(0.52, 0.42, 0.46)
 		elif a == "area_juicio":
 			target = Color(0.62, 0.55, 0.52)
+		elif Strata.AMBIENT.has(a):
+			target = Strata.AMBIENT[a]
 		create_tween().tween_property(canvas_mod, "color", target, 1.5)
 		var peaceful := a in PEACE_AREAS
 		create_tween().tween_property(self, "_calm", 1.0 if peaceful else 0.0, 2.0)
 		if active_boss == null and not _contemplating:
-			Audio.play_music("chapel" if a == "area_capilla" else ("peace" if peaceful else "explore"), 2.5)
+			var st := Strata.stratum_of_room(r)
+			var mus: String = "chapel" if a == "area_capilla" else ("peace" if peaceful else Strata.MUSIC.get(st, "explore"))
+			if not ResourceLoader.exists("res://assets/audio/music_%s.ogg" % mus):
+				mus = "explore"
+			Audio.play_music(mus, 2.5)
 	if r == "yard" and not wflags.get("carcelero_intro", false) and not wflags.get("carcelero_dead", false) and lp.is_alive() and lp.global_position.y < 43 * TS:
 		if multiplayer.is_server():
 			_server_start_carcelero()
@@ -1237,6 +1308,7 @@ func _check_area(lp: Player) -> void:
 		else:
 			_request_choir.rpc_id(1)
 	_check_trials(lp, r)
+	_check_archons(lp, r)
 	if r == "atrio" and not Prog.flags.get("atrio_echo", false) and not trial_done("atrio"):
 		_atrio_echo()
 	if r == "escala" and not Prog.flags.get("escala_seen", false):
@@ -1309,6 +1381,8 @@ func try_interact(p: Player) -> void:
 			bcast("_ring_bell", [it.id])
 		"altar":
 			_altar(it)
+		"rift":
+			_rift(it)
 		"lore":
 			Prog.flags["read_" + it.id] = true
 			_count_lore()
@@ -1565,6 +1639,10 @@ func _enemy_die(idx: int) -> void:
 			_on_seravel_dead(e)
 		"verdugo", "coloso":
 			_on_secret_dead(e)
+		"orrun", "vulkaris":
+			_on_archon_dead(e)
+		"azrahel":
+			_on_azrahel_dead(e)
 
 const LOOT := {"hueco": [["bomb", 0.14], ["incense", 0.05]], "acolito": [["incense", 0.14], ["bomb", 0.08]],
 	"bestia": [["ointment", 0.16], ["bomb", 0.1]], "carcelero": [["key_vestibule", 1.0], ["amulet_ash", 1.0], ["iron", 1.0]],
@@ -1625,6 +1703,8 @@ func spawn_extra_enemy(type: String, pos: Vector2) -> void:
 func _spawn_extra(type: String, pos: Vector2) -> void:
 	var e := _add_enemy(type, pos, true)
 	e.state = "chase"
+	if type == "sombra":
+		e.apply_shadow_look(G.look, Prog.wing_feathers)
 	Fx.burst(pos, Color(1, 0.3, 0.3), 20, 70.0, 0.6, "fx_soft", 180.0, Vector2.UP, 0.5)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1789,12 +1869,15 @@ func _reset_enemies() -> void:
 			continue
 		if e.type == "choir" and wflags.get("choir_dead", false):
 			continue
+		if e.type in Strata.ARCHONS and wflags.get(e.type + "_dead", false):
+			continue
 		e.asc = 0
 		e.reset_state()
 		if e.is_boss:
 			e.active = (e.type == "carcelero" and wflags.get("carcelero_intro", false)) or (e.type == "choir" and wflags.get("choir_intro", false))
 	for i in enemies.size():
 		enemies[i].idx = i
+	_archon_started.clear()
 	if active_boss and active_boss.type == "seravel" and not wflags.get("seravel_dead", false):
 		_boss_started = false
 		set_gate(wflags.get("carcelero_dead", false), true)
@@ -1853,6 +1936,9 @@ func _grant(d: Dictionary) -> void:
 func _talk(id: String) -> void:
 	Prog.flags["known_" + id] = true
 	var lines := []
+	if id in Strata.ERRANDS:
+		_talk_strata(id)
+		return
 	match id:
 		"peregrina":
 			if not Prog.flags.get("met_peregrina", false):
@@ -2274,15 +2360,11 @@ func _on_seravel_dead(e: Enemy) -> void:
 		# tercer giro: el recuerdo de la Primera Pluma
 		Prog.unlock_memory("m3")
 		await hud.memory_sequence(G.L(Prog.MEMORIES.m3.title), Prog.MEMORIES.m3.lines.map(func(l): return G.L(l)))
-		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name())
+		_refresh_rifts()
+		hud.end_card(G.T("demo_end_title"), G.T("demo_end_body") % Prog.route_name(), false)
 		Audio.play_music("theme", 2.0)
 		if multiplayer.is_server():
 			Prog.save_game()
-		# avance del Estrato II
-		await get_tree().create_timer(9.5 if G.autotest == "" else 0.5).timeout
-		var tz := preload("res://scripts/ui/intro_film.gd").new()
-		tz.mode = "teaser"
-		add_child(tz)
 	dialog.play(lines, done, true)
 
 # ====================================================================== muerte
@@ -2521,7 +2603,7 @@ func _boss_feats(e: Enemy) -> void:
 	var lp := local_player()
 	if lp == null or lp.global_position.distance_to(e.global_position) > 520.0:
 		return
-	var main := e.type in ["carcelero", "choir", "seravel"]
+	var main := e.type in ["carcelero", "choir", "seravel", "orrun", "vulkaris", "azrahel"]
 	var secret := e.type in ["verdugo", "coloso"]
 	if _fight_boss == e and _fight_hits == 0 and lp.is_alive():
 		if main:
@@ -2535,23 +2617,21 @@ func _boss_feats(e: Enemy) -> void:
 	for b in ["carcelero", "choir", "seravel"]:
 		if b == e.type or wflags.get(b + "_dead", false):
 			n += 1
-		if Prog.flags.get("hard_" + b, false):
+	for b3 in ["seravel", "orrun", "vulkaris", "azrahel"]:
+		if Prog.flags.get("hard_" + b3, false):
 			hard += 1
+	var big := 0
+	for b4 in ["seravel", "orrun", "vulkaris", "azrahel"]:
+		if b4 == e.type or wflags.get(b4 + "_dead", false):
+			big += 1
+	Ach.set_max("great_archons", big)
 	Ach.set_max("archons", n)
 	Ach.set_max("hard_archons", hard)
 	Ach.set_max("spared", Prog.spared.size())
 	if Net.is_online() and players.size() >= 2:
 		Prog.achieve("coop_boss")
-	if e.type == "seravel" and asc_fight.is_empty():
-		if _fight_boss == e and _fight_flasks == 0:
-			Prog.achieve("dry")
-		if Prog.wing_feathers >= Prog.WING_MAX:
-			Prog.achieve("full_wings")
-		if Prog.deaths == 0:
-			Prog.achieve("deathless")
-		if Prog.playtime < 40.0 * 60.0:
-			Prog.achieve("speedrun")
-		Prog.achieve("route_wings" if Prog.route_score() >= 0 else "route_throne")
+	if e.type == "seravel" and asc_fight.is_empty() and Prog.deaths == 0:
+		Prog.achieve("deathless1")
 
 # ====================================================================== batallas secretas
 const SECRET_ARENAS := {"verdugo": ["cadalso", "luz"], "coloso": ["cornisa", "luz"]}
@@ -2921,6 +3001,399 @@ class PingMarker extends Node2D:
 		f.draw_string_outline(get_canvas_item(), Vector2(-w / 2.0, y - 12), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, Color(UIKit.INK, a))
 		f.draw_string(get_canvas_item(), Vector2(-w / 2.0, y - 12), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(c, a))
 
+
+# ====================================================================== Estratos II-IV (juego base completo)
+var _archon_started := {}
+
+func cur_stratum() -> int:
+	var lp := local_player()
+	if lp == null:
+		return 1
+	return Strata.stratum_of_room(room_at(lp.global_position))
+
+func _build_strata() -> void:
+	for b in Strata.BRASAS:
+		_add_inter("brasa", b[0], tile_pos(b[1].x, b[1].y))
+	for c in Strata.CHESTS:
+		_add_inter("chest", c[0], tile_pos(c[1].x, c[1].y), c[2])
+	for l in Strata.LORE:
+		var ll := []
+		for ln in l[2]:
+			ll.append(["lore_title", ln])
+		_add_inter("lore", l[0], tile_pos(l[1].x, l[1].y), {"lines": ll})
+	for n in Strata.NPCS:
+		_add_inter("npc", n[0], tile_pos(n[1].x, n[1].y), n[2])
+	for e in Strata.ERRAND_ITEMS:
+		_add_inter("pickup", e[0], tile_pos(e[1].x, e[1].y), {"icon": e[3], "quest": e[2]})
+	_build_strata_decor()
+
+func _build_strata_decor() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 777
+	# --- Bosque: árboles muertos llenos de plumas, nidos, niebla y esporas
+	for r in ROOMS:
+		var st := Strata.stratum_of_room(r.id)
+		if st == 1 or str(r.id).contains("link") or str(r.id).ends_with("arena"):
+			continue
+		var rc := _rect_of(r)
+		var n := int(rc.size.x * rc.size.y / 70)
+		for k in n:
+			var x := rng.randi_range(rc.position.x + 1, rc.end.x - 2)
+			var y := rng.randi_range(rc.position.y + 1, rc.end.y - 2)
+			if not (_floor_at(x, y) and _floor_at(x, y + 1)):
+				continue
+			var p := tile_pos(x + rng.randf_range(-0.3, 0.3), y + 0.5)
+			match st:
+				2:
+					if rng.randf() < 0.55:
+						_prop("tree_dead", p, 1, 0, 5.0).flip_h = rng.randf() < 0.5
+					else:
+						_prop("nest", p)
+				3:
+					var roll := rng.randf()
+					if roll < 0.35:
+						_prop("crucible", p, 2, 1, 6.0, Color(1, 0.5, 0.2), 1.3)
+					elif roll < 0.6:
+						_prop("anvil", p, 1, 0, 6.0)
+					elif roll < 0.8:
+						_prop("halo_mold", p, 1, 0, 0.0, Color(1, 0.6, 0.2), 0.8)
+					else:
+						_prop("brazier", p, 4, rng.randi_range(0, 3), 6.0, Color(1, 0.55, 0.2), 1.6).set_meta("anim", true)
+				4:
+					var roll2 := rng.randf()
+					if roll2 < 0.4:
+						_prop("rosebush", p)
+					elif roll2 < 0.65:
+						_prop("pillar", p, 1, 0, 6.0)
+					elif roll2 < 0.85:
+						_prop("statue", p, 1, 0, 5.0).flip_h = rng.randf() < 0.5
+					else:
+						_prop("banner", p, 2, rng.randi_range(0, 1))
+	for spec in [["b_sendero", "spores"], ["b_arboleda", "mist"], ["b_cienaga", "mist"], ["b_nidos", "gold"], ["b_arena", "spores"],
+			["f_crisoles", "embers"], ["f_fragua", "embers"], ["f_moldes", "embers"], ["f_arena", "embers"], ["f_biblio", "gold"],
+			["t_jardin", "gold"], ["t_corte", "gold"], ["t_galeria", "notes"], ["t_escalera", "gold"], ["t_arena", "spores"]]:
+		for r2 in ROOMS:
+			if r2.id == spec[0]:
+				var amb := RoomAmbience.new()
+				amb.rect = Rect2(Vector2(_rect_of(r2).position) * TS, Vector2(_rect_of(r2).size) * TS)
+				amb.kind = spec[1]
+				add_child(amb)
+	for sp in [Vector2(110.5, 58), Vector2(204.5, 52), Vector2(336, 58)]:
+		var ls := LightShafts.new()
+		ls.position = tile_pos(sp.x, sp.y)
+		ls.col = Color(1, 0.9, 0.65)
+		add_child(ls)
+	for cp in [Vector2(302, 54), Vector2(371, 55), Vector2(336.5, 35), Vector2(204.5, 54)]:
+		var ch := Depth3D.Chandelier.new()
+		ch.position = tile_pos(cp.x, cp.y)
+		add_child(ch)
+	for tp in [Vector2(226, 51.7), Vector2(234, 51.7), Vector2(246, 51.7), Vector2(254, 51.7), Vector2(228, 25.7), Vector2(252, 25.7), Vector2(236, 77.7), Vector2(244, 77.7)]:
+		var wt := WallTorch.new()
+		wt.position = tile_pos(tp.x, tp.y)
+		wt.col = Color(1, 0.55, 0.2)
+		entities.add_child(wt)
+	for tp2 in [Vector2(325, 29.7), Vector2(347, 29.7), Vector2(298, 43.7), Vector2(306, 43.7), Vector2(366, 45.7), Vector2(376, 45.7), Vector2(332, 79.7), Vector2(340, 79.7)]:
+		var wt2 := WallTorch.new()
+		wt2.position = tile_pos(tp2.x, tp2.y)
+		wt2.col = Color(0.8, 0.55, 1.0)
+		entities.add_child(wt2)
+	# el Trono Vacío al fondo de la sala del Rey
+	_prop("throne", tile_pos(336, 3.2), 1, 0, 14.0, Color(0.7, 0.45, 1.0), 2.0)
+	for cp2 in [Vector2(328, 5), Vector2(344, 5), Vector2(328, 17), Vector2(344, 17)]:
+		var col := Depth3D.Column.new()
+		col.position = tile_pos(cp2.x, cp2.y)
+		col.height = 80.0
+		col.radius = 6.0
+		entities.add_child(col)
+	for fp in [Vector2(108, 58), Vector2(114, 64), Vector2(326, 60), Vector2(346, 64), Vector2(320, 65)]:
+		var fpc := FlowerPatch.new()
+		fpc.position = tile_pos(fp.x, fp.y)
+		fpc.count = 10
+		fpc.petal = Color(0.95, 0.9, 1.0) if fp.x < 200 else Color(1, 0.85, 0.35)
+		entities.add_child(fpc)
+	_fireflies(Rect2(104 * TS, 54 * TS, 14 * TS, 14 * TS))
+	_fireflies(Rect2(318 * TS, 54 * TS, 36 * TS, 14 * TS))
+
+func _refresh_rifts() -> void:
+	for boss in Strata.RIFTS:
+		var id: String = "rift_" + boss
+		if wflags.get(boss + "_dead", false) and not interactables.has(id):
+			var rd: Array = Strata.RIFTS[boss]
+			_add_inter("rift", id, tile_pos(rd[0].x, rd[0].y), {"to": rd[1]})
+
+func _rift(it: Interactable) -> void:
+	var to: int = int(it.data.get("to", 2))
+	var lines := [["", [("Una grieta en la Espiral, abierta hacia abajo. Del otro lado llega un aire que huele a %s." % ["", "", "plumas mojadas", "hierro fundido", "rosas sin olor"][to]),
+		("A rift in the Spiral, opening downwards. From beyond comes air that smells of %s." % ["", "", "wet feathers", "molten iron", "scentless roses"][to])]]]
+	dialog.play(lines, _request_descend.bind(to))
+
+func _request_descend(to: int) -> void:
+	if multiplayer.is_server():
+		bcast("_descend", [to])
+	else:
+		_rpc_descend.rpc_id(1, to)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_descend(to: int) -> void:
+	if multiplayer.is_server():
+		bcast("_descend", [to])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _descend(to: int) -> void:
+	var lp := local_player()
+	if lp == null:
+		return
+	lp.cutscene = true
+	Audio.sfx("shadow_rise", -2.0, 0.0)
+	G.flash(Color(0.6, 0.4, 1.0, 0.4), 0.4)
+	hud.fade_to(1.0, 0.9)
+	await get_tree().create_timer(1.0).timeout
+	var arr: Vector2 = Strata.ARRIVAL[to]
+	lp.respawn_at(tile_pos(arr.x + (0.0 if lp.variant == 1 else 1.2), arr.y))
+	camera.position = lp.global_position
+	_area = ""
+	var bid: String = Strata.ARRIVAL_BRASA[to]
+	if not wflags.get("brasa_" + bid, false):
+		_light_brasa(bid)
+	Prog.last_brasa = bid
+	var q := "main%d" % to
+	if Prog.QUESTS.has(q) and not Prog.quests.has(q):
+		Prog.start_quest(q)
+	Prog.achieve("s%d_enter" % to)
+	await get_tree().create_timer(0.4).timeout
+	hud.fade_to(0.0, 1.2)
+	hud.show_area(G.L(Strata.STRATUM_NAMES[to]), G.T(AREAS.get(room_at(lp.global_position), "")))
+	lp.cutscene = false
+	if multiplayer.is_server():
+		Prog.save_game()
+
+func travel_to_brasa(id: String) -> void:
+	var lp := local_player()
+	if lp == null or not interactables.has(id):
+		return
+	hud.fade_to(1.0, 0.4)
+	await get_tree().create_timer(0.45).timeout
+	lp.respawn_at(_brasa_spawn(id))
+	camera.position = lp.global_position
+	Prog.last_brasa = id
+	_area = ""
+	hud.fade_to(0.0, 0.6)
+	Fx.burst(lp.global_position + Vector2(0, -10), Color(1, 0.75, 0.4), 30, 90.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.5)
+	Audio.sfx("heal")
+
+func lit_brasas() -> Array:
+	var out := []
+	for id in Strata.BRASA_NAMES:
+		if interactables.has(id) and interactables[id].used:
+			out.append(id)
+	return out
+
+func _check_archons(lp: Player, r: String) -> void:
+	if lp == null or not lp.is_alive() or active_boss != null or not asc_fight.is_empty() or secret_fight != "":
+		return
+	for aid in Strata.ARCHONS:
+		var A: Dictionary = Strata.ARCHONS[aid]
+		if r == A.room and not wflags.get(aid + "_dead", false) and not _archon_started.has(aid):
+			_archon_started[aid] = true
+			if multiplayer.is_server():
+				bcast("_archon_intro", [aid])
+			else:
+				_rpc_archon.rpc_id(1, aid)
+			return
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_archon(aid: String) -> void:
+	if multiplayer.is_server() and active_boss == null:
+		bcast("_archon_intro", [aid])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _archon_intro(aid: String) -> void:
+	_archon_started[aid] = true
+	var e := _enemy_of(aid)
+	if e == null or not e.is_alive():
+		return
+	var A: Dictionary = Strata.ARCHONS[aid]
+	active_boss = e
+	e.visible = true
+	seal_for(aid)
+	var steps: Array = Prog.QUESTS.get(A.quest, {}).get("steps", [])
+	if steps.size() >= 2:
+		Prog.quest_step(A.quest, steps[steps.size() - 2].id)
+	var lp := local_player()
+	if lp:
+		lp.cutscene = true
+	hud.letterbox(true)
+	_cam_focus = e.global_position + Vector2(0, -30)
+	Audio.stop_music(0.6)
+	Audio.sfx("roar", 0.0)
+	G.shake(5.0, 0.8)
+	Fx.light_flash(e.global_position, Strata.AREA_COLORS.get(AREAS.get(A.room, ""), Color.WHITE), 3.0, 2.0, 0.8)
+	hud.big_message(G.T("boss_" + aid), Strata.AREA_COLORS.get(AREAS.get(A.room, ""), UIKit.GOLD), 2.6, true)
+	await get_tree().create_timer(1.6).timeout
+	var lines := []
+	for l in A.intro:
+		lines.append([l[0], l[1]])
+	var go := func() -> void:
+		_cam_focus = null
+		hud.letterbox(false)
+		if lp:
+			lp.cutscene = false
+		if not is_instance_valid(e) or not e.is_alive():
+			return
+		e.active = true
+		e.state = "chase"
+		e.cooldown = 1.0
+		hud.show_boss(e)
+		Audio.play_music(str(A.music), 0.3)
+		G.shockwave(e.global_position + Vector2(0, -20), 1.5, 0.6)
+	dialog.play(lines, go, true)
+
+func _on_archon_dead(e: Enemy) -> void:
+	var aid := e.type
+	var A: Dictionary = Strata.ARCHONS[aid]
+	unseal_arena()
+	wflags[aid + "_dead"] = true
+	Prog.flags[aid + "_dead"] = true
+	hud.hide_boss()
+	active_boss = null
+	G.slowmo("kill", 0.2, 1.5)
+	G.flash(Color(1, 1, 1, 0.75), 0.8)
+	G.shake(10.0, 1.4)
+	Audio.stop_music(0.3)
+	Fx.burst(e.global_position + Vector2(0, -24), Strata.AREA_COLORS.get(AREAS.get(A.room, ""), Color.WHITE), 80, 240.0, 1.6, "fx_feather", 180.0, Vector2.UP, 1.5, false, Vector2(0, 30))
+	Fx.ring(e.global_position + Vector2(0, -24), 10.0, 220.0, Color(1, 0.9, 0.6), 1.2, 10.0)
+	Prog.achieve(aid)
+	await get_tree().create_timer(1.2).timeout
+	Audio.play_music("victory", 0.1)
+	hud.big_message(G.T("archon_defeated"), Color(1, 0.85, 0.45), 4.0)
+	Prog.flasks_max += 1
+	Prog.skill_points += 1
+	G.toast(G.T("flask_up"), Color(1, 0.6, 0.5))
+	G.toast(G.L(["+1 Punto de Habilidad", "+1 Skill Point"]), UIKit.GOLD)
+	Prog.quest_step(A.quest, "kill_" + aid)
+	var lp := local_player()
+	if lp:
+		lp.refresh_stats(true)
+	if multiplayer.is_server():
+		Prog.save_game()
+	await get_tree().create_timer(3.0).timeout
+	var lines := []
+	if e.get_meta("spared", false):
+		lines.append([str(A.death[0][0]), ["¿Me perdonas? Entonces aún queda algo en ti que el Arquitecto no ha fundido.", "You spare me? Then there's still something in you the Architect hasn't melted down."]])
+	for l in A.death:
+		lines.append([l[0], l[1]])
+	var st: int = int(A.stratum)
+	var done := func() -> void:
+		_refresh_rifts()
+		hud.end_card(G.L(["ESTRATO %s SUPERADO", "STRATUM %s CLEARED"]) % ["II", "III"][st - 2],
+			G.L(["Una grieta se ha abierto donde cayó el Arconte.\nEl descenso continúa: %s.\nTu destino se inclina hacia: %s", "A rift has opened where the Archon fell.\nThe descent continues: %s.\nYour fate leans towards: %s"]) % [G.T(["", "", "area_bosque", "area_fundicion", "area_trono_vacio"][st + 1]), Prog.route_name()], false)
+		Audio.play_music("theme", 2.0)
+		if multiplayer.is_server():
+			Prog.save_game()
+	dialog.play(lines, done, true)
+
+# ---------------------------------------------------------------------- final del juego base
+func _on_azrahel_dead(e: Enemy) -> void:
+	unseal_arena()
+	wflags["azrahel_dead"] = true
+	Prog.flags["azrahel_dead"] = true
+	hud.hide_boss()
+	active_boss = null
+	var lp := local_player()
+	if lp:
+		lp.cutscene = true
+	G.slowmo("kill", 0.15, 2.5)
+	G.flash(Color(0.8, 0.6, 1.0, 0.9), 1.2)
+	G.shake(14.0, 3.0)
+	G.chroma(2.5, 2.0)
+	Audio.stop_music(0.2)
+	Fx.burst(e.global_position + Vector2(0, -24), Color(0.75, 0.5, 1.0), 120, 280.0, 2.0, "fx_feather", 180.0, Vector2.UP, 1.8, false, Vector2(0, 30))
+	Fx.ring(e.global_position + Vector2(0, -24), 10.0, 300.0, Color(0.8, 0.6, 1.0), 1.6, 12.0)
+	Prog.achieve("azrahel")
+	Prog.quest_step("main4", "kill_azrahel")
+	Prog.flags["base_complete"] = true
+	if multiplayer.is_server():
+		Prog.save_game()
+	await get_tree().create_timer(2.5).timeout
+	hud.letterbox(true)
+	var wings := Prog.route_score() >= 0
+	var lines := [
+		["Azrahel", ["Así que... era verdad. Un Desplumado bajando hasta el fondo.", "So... it was true. A Featherless descending to the very bottom."]],
+		["Azrahel", ["Yo fui el primero que se negó. Me sentaron aquí para que todos lo vieran... y nadie lo escuchara.", "I was the first to refuse. They sat me here so all would see it... and none would hear it."]],
+		["Azrahel", ["La orden que llevas grabada... «mata al Rey del Abismo». ¿Nunca te preguntaste quién la escribió?", "The order burned into you... \"slay the King of the Abyss\". Did you never wonder who wrote it?"]],
+		["???", ["Bien hecho. Muy bien hecho. Ahora siéntate en el trono. Es tuyo.", "Well done. Very well done. Now sit upon the throne. It is yours."]],
+		["???", ["Siempre fue tuyo. Yo te guié hasta aquí, pluma a pluma.", "It was always yours. I guided you here, feather by feather."]],
+		["", ["La Voz deja de fallar. Por primera vez se oye entera, sin interferencias... y la reconoces.", "The Voice stops glitching. For the first time you hear it whole, without interference... and you recognise it."]],
+		["El Arquitecto", ["Yo construí la Espiral. Yo os encerré. Yo os di la orden. Y tú la has cumplido.", "I built the Spiral. I locked you in. I gave you the order. And you have carried it out."]],
+		["Azrahel", ["No le escuches... la Espiral no se sostiene con tronos. Se sostiene con... los que obedecen.", "Don't listen to him... the Spiral isn't held up by thrones. It's held up by... those who obey."]],
+	]
+	if wings:
+		lines.append(["", ["No te sientas. Le das la espalda al trono. Y algo cruje, muy arriba y muy abajo a la vez.", "You do not sit. You turn your back on the throne. And something cracks, far above and far below at once."]])
+	else:
+		lines.append(["", ["Tocas el trono. Está frío. Y en el instante en que lo tocas, algo cruje, muy arriba y muy abajo a la vez.", "You touch the throne. It is cold. And the instant you touch it, something cracks, far above and far below at once."]])
+	lines.append(["El Arquitecto", ["¿Qué has...? ¡No! ¡La Espiral...!", "What have you...? No! The Spiral...!"]])
+	dialog.play(lines, _ending_sequence.bind(wings), true)
+
+func _ending_sequence(wings: bool) -> void:
+	# la Espiral se agrieta en dos direcciones: arriba, los Cielos Rotos; abajo, el Abismo Sin Nombre
+	Audio.sfx("thunder", 2.0, 0.0)
+	Audio.sfx("gate", 0.0, 0.0)
+	for k in 6:
+		G.shake(12.0, 0.6)
+		G.flash(Color(1, 1, 1, 0.35 + k * 0.08), 0.25)
+		var abyss: Node = get_node_or_null("Abyss")
+		if abyss and abyss.has_method("_make_bolt"):
+			abyss.call("_make_bolt")
+		await get_tree().create_timer(0.5).timeout
+	Prog.achieve("ending")
+	Prog.achieve("route_wings" if wings else "route_throne")
+	if Prog.deaths == 0:
+		Prog.achieve("deathless")
+	if Prog.playtime < 3.0 * 3600.0:
+		Prog.achieve("speedrun")
+	if _fight_flasks == 0:
+		Prog.achieve("dry")
+	if Prog.wing_feathers >= Prog.WING_MAX:
+		Prog.achieve("full_wings")
+	hud.end_card(G.L(["LA ESPIRAL SE ROMPE", "THE SPIRAL BREAKS"]),
+		G.L(["Arriba, una grieta hacia los Cielos Rotos. Abajo, otra hacia el Abismo Sin Nombre.\nTu destino: %s.  Continuará...", "Above, a rift to the Broken Heavens. Below, another to the Nameless Abyss.\nYour fate: %s.  To be continued..."]) % Prog.route_name(), true)
+	Audio.play_music("theme", 1.0)
+	if multiplayer.is_server():
+		Prog.save_game()
+	await get_tree().create_timer(12.5 if G.autotest == "" else 2.0).timeout
+	var cr := preload("res://scripts/ui/credits.gd").new()
+	cr.wings = wings
+	add_child(cr)
+	await cr.finished
+	hud.letterbox(false)
+	var lp := local_player()
+	if lp:
+		lp.cutscene = false
+		lp.respawn_at(_brasa_spawn("jardin" if interactables.has("jardin") else "sanct"))
+	G.toast(G.L(["Juego base completado. Puedes seguir explorando, buscar los secretos o empezar un Segundo Descenso.", "Base game complete. You can keep exploring, hunt the secrets or begin a Second Descent."]), UIKit.GOLD)
+
+# ---------------------------------------------------------------------- PNJ de los Estratos II-IV
+func _talk_strata(id: String) -> void:
+	var errand: Array = Strata.ERRANDS[id]
+	var q: String = errand[0]
+	var main_q = {"oso": ["main2", "talk_oso"], "archivero": ["main3", "talk_archivero"], "lirio": ["main4", "talk_lirio"]}[id]
+	var lines: Array
+	if not Prog.flags.get("met_" + id, false):
+		Prog.flags["met_" + id] = true
+		lines = Strata.DIALOGUE[id]
+		var start := func() -> void:
+			if not Prog.quests.has(q):
+				Prog.start_quest(q)
+			Prog.quest_step(main_q[0], main_q[1])
+		dialog.play(lines, start)
+		return
+	Prog.quest_step(main_q[0], main_q[1])
+	if Prog.quest_done(q) and not Prog.flags.get("errand_thanks_" + id, false):
+		Prog.flags["errand_thanks_" + id] = true
+		dialog.play(Strata.DIALOGUE[id + "_done"], Callable())
+		return
+	dialog.play(Strata.DIALOGUE[id + "_again"], Callable())
+
 class RoundTable extends Node2D:
 	## Mesa redonda de piedra con velas y el emblema del Nimbo roto
 	var t := 0.0
@@ -3132,7 +3605,7 @@ func _v04_tick(delta: float, lp: Player) -> void:
 	_spare_target = null
 	if lp and lp.is_alive() and active_boss and is_instance_valid(active_boss) and active_boss.is_alive() and asc_fight.is_empty():
 		var b := active_boss
-		if b.type in ["carcelero", "choir", "seravel"] and b.is_staggered() and b.hp / b.max_hp < 0.2 and lp.global_position.distance_to(b.global_position) < 80.0:
+		if b.type in ["carcelero", "choir", "seravel", "orrun", "vulkaris"] and b.is_staggered() and b.hp / b.max_hp < 0.2 and lp.global_position.distance_to(b.global_position) < 80.0:
 			_spare_target = b
 	# plumas de reanimación
 	for q in players.values():
@@ -3497,7 +3970,7 @@ class EventFx extends Node2D:
 
 
 # ====================================================================== salas de jefe selladas
-const ARENAS := {"carcelero": ["yard", "celda"], "choir": ["choir", "coro"], "seravel": ["circle", "luz"]}
+const ARENAS_I := {"carcelero": ["yard", "celda"], "choir": ["choir", "coro"], "seravel": ["circle", "luz"]}
 var _seals: Array[Node2D] = []
 
 func seal_for(boss_type: String) -> void:
@@ -3774,7 +4247,7 @@ class FloorDecals extends Node2D:
 # ====================================================================== v0.7: antesalas de los jefes
 ## Antes de cada jefe hay una sala con su propia prueba: oleadas que salen de las celdas, un puzle de
 ## campanas que hay que tañer como lo cantaba el Coro (al revés) y el Custodio del Umbral.
-const TRIALS := {
+const TRIALS_I := {
 	"celdas": {"room": "celdas", "seal": "celda", "title": "trial_celdas",
 		"waves": [[["hueco", 18.5, 47.3], ["hueco", 22.5, 47.3], ["hueco", 26.5, 47.3]],
 			[["hueco", 18.5, 47.3], ["acolito", 31, 51], ["hueco", 30.5, 47.3], ["hueco", 22.5, 47.3]],
@@ -4310,13 +4783,19 @@ func _trial_complete(id: String) -> void:
 	Prog.flags["trial_" + id] = true
 	if trial_done("celdas") and trial_done("atrio") and trial_done("umbral"):
 		Prog.achieve("trials")
+	var mb := 0
+	for t3 in ["cienaga", "moldes", "galeria"]:
+		if trial_done(t3):
+			mb += 1
+	Ach.set_max("minibosses", mb)
 	unseal_arena()
 	_refresh_locks(false)
 	_ensure_trial_chest(id, true)
 	hud.hide_trial()
 	hud.big_message(G.T("trial_done"), Color(1, 0.85, 0.4), 2.6)
 	Audio.sfx("levelup")
-	Audio.play_music("explore", 2.0)
+	var stm := Strata.stratum_of_room(TRIALS[id].room)
+	Audio.play_music(Strata.MUSIC.get(stm, "explore") if ResourceLoader.exists("res://assets/audio/music_%s.ogg" % Strata.MUSIC.get(stm, "explore")) else "explore", 2.0)
 	Prog.quest_step("main1", "trial_" + id)
 	if id == "celdas":
 		get_tree().create_timer(2.8).timeout.connect(G.toast.bind(G.T("shortcut_open"), Color(0.9, 0.8, 0.7)))
@@ -4566,7 +5045,7 @@ class RoomAmbience extends Node2D:
 	var t := 0.0
 	func _ready() -> void:
 		z_index = 3 if kind != "mist" else -7
-		if kind in ["gold", "notes", "spores"]:
+		if kind in ["gold", "notes", "spores", "embers"]:
 			material = Fx.add_material()
 	func _process(delta: float) -> void:
 		t += delta
@@ -4576,7 +5055,7 @@ class RoomAmbience extends Node2D:
 				parts.clear()
 				queue_redraw()
 			return
-		var rate: float = {"drip": 3.0, "notes": 2.0, "gold": 7.0, "mist": 2.5, "spores": 3.0}[kind]
+		var rate: float = {"drip": 3.0, "notes": 2.0, "gold": 7.0, "mist": 2.5, "spores": 3.0, "embers": 9.0}[kind]
 		if randf() < delta * rate:
 			var p := Vector2(randf_range(rect.position.x, rect.end.x), randf_range(rect.position.y, rect.end.y))
 			parts.append([p, 0.0, randf_range(0.7, 1.3)])
@@ -4614,6 +5093,10 @@ class RoomAmbience extends Node2D:
 				"spores":
 					var q3 := p + Vector2(sin(k * 3.0 + p.x) * 5.0, -k * 8.0)
 					draw_circle(q3, 1.2, Color(0.7, 1.0, 0.85, sin(k / 3.0 * PI) * 0.9))
+				"embers":
+					var q4 := p + Vector2(sin(k * 4.0 + p.x) * 4.0, -k * 26.0)
+					var ea := sin(k / 3.0 * PI)
+					draw_rect(Rect2(q4, Vector2(1, 1)), Color(1, 0.6 + 0.3 * ea, 0.2, ea))
 
 
 class Urn extends Node2D:

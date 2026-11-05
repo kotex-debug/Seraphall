@@ -41,6 +41,65 @@ const TYPES := {
 	"coloso": {"sheet": "fx_soft", "fw": 32, "fh": 32, "hp": 2600.0, "speed": 0.0, "radius": 22.0, "dmg": 30.0, "poise": 99999.0,
 		"ecos": 5000, "aggro": 900.0, "range": 900.0, "cd": 1.35, "off": -10.0, "boss": true, "title": "boss_coloso",
 		"anims": {"idle": [0, 1, 1.0], "walk": [0, 1, 1.0], "attack": [0, 1, 1.0], "dead": [0, 1]}},
+	# ---- Estrato II: Bosque de Plumas Muertas
+	"musgoso": {"sheet": "enemy_musgoso", "ai": "hueco", "fw": 32, "fh": 32, "hp": 72.0, "speed": 66.0, "radius": 7.0, "dmg": 18.0, "poise": 40.0,
+		"ecos": 62, "aggro": 160.0, "range": 30.0, "cd": 1.0, "off": -14.0, "light": Color(0.6, 1.0, 0.85),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"nidal": {"sheet": "enemy_nidal", "ai": "acolito", "proj": "feather", "fw": 32, "fh": 32, "hp": 58.0, "speed": 54.0, "radius": 7.0, "dmg": 16.0, "poise": 18.0,
+		"ecos": 72, "aggro": 200.0, "range": 165.0, "cd": 1.8, "off": -14.0, "light": Color(0.85, 1.0, 0.7),
+		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
+	"espino": {"sheet": "enemy_espino", "ai": "planidera", "fw": 32, "fh": 32, "hp": 64.0, "speed": 44.0, "radius": 7.0, "dmg": 18.0, "poise": 22.0,
+		"ecos": 80, "aggro": 200.0, "range": 175.0, "cd": 2.5, "off": -16.0, "light": Color(0.85, 1.0, 0.5), "tear": Color(0.75, 1.0, 0.5),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"garza": {"sheet": "enemy_garza", "ai": "bestia", "fw": 38, "fh": 28, "hp": 108.0, "speed": 86.0, "radius": 10.0, "dmg": 24.0, "poise": 44.0,
+		"ecos": 86, "aggro": 180.0, "range": 150.0, "cd": 2.0, "off": -12.0, "light": Color(0.6, 1.0, 0.95),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
+	"lacrima": {"sheet": "enemy_lacrima", "ai": "planidera", "fw": 32, "fh": 32, "hp": 950.0, "speed": 48.0, "radius": 12.0, "dmg": 22.0, "poise": 120.0,
+		"ecos": 1300, "aggro": 300.0, "range": 230.0, "cd": 1.2, "off": -16.0, "elite": true, "title": "lacrima_title", "scale": 1.7, "tears": 6,
+		"light": Color(0.7, 1.0, 1.0), "tear": Color(0.8, 1.0, 1.0),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	# ---- Estrato III: Fundición de Halos
+	"ascua": {"sheet": "enemy_ascua", "ai": "hueco", "fw": 32, "fh": 32, "hp": 96.0, "speed": 70.0, "radius": 7.0, "dmg": 24.0, "poise": 46.0,
+		"ecos": 92, "aggro": 170.0, "range": 30.0, "cd": 0.95, "off": -14.0, "light": Color(1, 0.55, 0.2),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"fundidor": {"sheet": "enemy_fundidor", "ai": "guardia", "fw": 32, "fh": 32, "hp": 160.0, "speed": 52.0, "radius": 8.0, "dmg": 28.0, "poise": 70.0,
+		"ecos": 122, "aggro": 170.0, "range": 120.0, "cd": 1.4, "off": -14.0, "shield": true, "light": Color(1, 0.6, 0.25),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"chispero": {"sheet": "enemy_chispero", "ai": "penitente", "fw": 32, "fh": 32, "hp": 112.0, "speed": 50.0, "radius": 8.0, "dmg": 30.0, "poise": 44.0,
+		"ecos": 116, "aggro": 200.0, "range": 125.0, "cd": 2.1, "off": -14.0, "light": Color(1, 0.7, 0.3),
+		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 7.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"forjador": {"sheet": "enemy_forjador", "ai": "acolito", "proj": "dawn", "fw": 32, "fh": 32, "hp": 84.0, "speed": 54.0, "radius": 7.0, "dmg": 24.0, "poise": 22.0,
+		"ecos": 106, "aggro": 210.0, "range": 170.0, "cd": 1.7, "off": -14.0, "light": Color(1, 0.5, 0.2),
+		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
+	"kronagh": {"sheet": "enemy_kronagh", "ai": "custodio", "fw": 48, "fh": 48, "hp": 1400.0, "speed": 64.0, "radius": 12.0, "dmg": 32.0, "poise": 150.0,
+		"ecos": 1900, "aggro": 280.0, "range": 150.0, "cd": 1.1, "off": -20.0, "elite": true, "title": "kronagh_title", "light": Color(1, 0.85, 0.45),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	# ---- Estrato IV: El Trono Vacío
+	"cortesano": {"sheet": "enemy_cortesano", "ai": "acolito", "proj": "red", "fw": 32, "fh": 32, "hp": 112.0, "speed": 56.0, "radius": 7.0, "dmg": 30.0, "poise": 26.0,
+		"ecos": 142, "aggro": 210.0, "range": 170.0, "cd": 1.6, "off": -14.0, "light": Color(1, 0.85, 0.4),
+		"anims": {"idle": [0, 4, 5.0], "walk": [0, 4, 7.0], "attack": [1, 3, 6.0], "dead": [2, 1]}},
+	"caballero": {"sheet": "enemy_caballero", "ai": "guardia", "fw": 32, "fh": 32, "hp": 215.0, "speed": 56.0, "radius": 8.0, "dmg": 36.0, "poise": 90.0,
+		"ecos": 172, "aggro": 180.0, "range": 125.0, "cd": 1.3, "off": -14.0, "shield": true, "light": Color(0.8, 0.55, 1.0),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 8.0], "dead": [3, 1]}},
+	"doncella": {"sheet": "enemy_doncella", "ai": "planidera", "fw": 32, "fh": 32, "hp": 124.0, "speed": 46.0, "radius": 7.0, "dmg": 32.0, "poise": 30.0,
+		"ecos": 162, "aggro": 210.0, "range": 180.0, "cd": 2.2, "off": -16.0, "light": Color(1, 0.75, 0.5), "tear": Color(1, 0.8, 0.4), "tears": 4,
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"sabueso": {"sheet": "enemy_sabueso", "ai": "bestia", "fw": 38, "fh": 28, "hp": 172.0, "speed": 94.0, "radius": 10.0, "dmg": 34.0, "poise": 50.0,
+		"ecos": 162, "aggro": 190.0, "range": 150.0, "cd": 1.8, "off": -12.0, "light": Color(1, 0.8, 0.3),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 10.0], "attack": [2, 2, 10.0], "dead": [3, 1]}},
+	"ysolde": {"sheet": "enemy_ysolde", "ai": "custodio", "fw": 48, "fh": 48, "hp": 2000.0, "speed": 70.0, "radius": 12.0, "dmg": 40.0, "poise": 170.0,
+		"ecos": 2700, "aggro": 300.0, "range": 160.0, "cd": 0.95, "off": -20.0, "elite": true, "title": "ysolde_title", "light": Color(0.85, 0.6, 1.0),
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	# ---- Arcontes de los Estratos II-IV
+	"orrun": {"sheet": "enemy_orrun", "fw": 64, "fh": 64, "hp": 2500.0, "speed": 82.0, "radius": 18.0, "dmg": 30.0, "poise": 280.0,
+		"ecos": 6000, "aggro": 400.0, "range": 220.0, "cd": 1.15, "off": -28.0, "boss": true, "title": "boss_orrun",
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 8.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	"vulkaris": {"sheet": "enemy_vulkaris", "fw": 64, "fh": 64, "hp": 3500.0, "speed": 54.0, "radius": 18.0, "dmg": 38.0, "poise": 340.0,
+		"ecos": 9000, "aggro": 400.0, "range": 240.0, "cd": 1.2, "off": -28.0, "boss": true, "title": "boss_vulkaris",
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
+	"azrahel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 5400.0, "speed": 80.0, "radius": 13.0, "dmg": 44.0, "poise": 320.0,
+		"ecos": 15000, "aggro": 500.0, "range": 220.0, "cd": 1.05, "off": -26.0, "boss": true, "title": "boss_azrahel",
+		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},
 	"seravel": {"sheet": "boss_seravel", "fw": 52, "fh": 56, "hp": 1500.0, "speed": 70.0, "radius": 13.0, "dmg": 24.0, "poise": 200.0,
 		"ecos": 3000, "aggro": 400.0, "range": 200.0, "cd": 1.2, "off": -26.0, "boss": true, "title": "boss_seravel",
 		"anims": {"idle": [0, 6, 7.0], "walk": [0, 6, 9.0], "attack": [1, 3, 8.0], "idle2": [2, 6, 9.0], "attack2": [3, 3, 9.0], "dead": [4, 0]}},
@@ -48,6 +107,8 @@ const TYPES := {
 
 var idx := -1
 var type := "hueco"
+var ai := "hueco"          # conducta (los enemigos de los Estratos II-IV reutilizan la de uno del I)
+var base_sc := 1.0
 var cfg: Dictionary
 var world: Node
 var spawn_pos := Vector2.ZERO
@@ -83,6 +144,8 @@ func setup(p_idx: int, p_type: String, pos: Vector2, p_world: Node) -> void:
 	idx = p_idx
 	type = p_type
 	cfg = TYPES[type]
+	ai = str(cfg.get("ai", type))
+	base_sc = float(cfg.get("scale", 1.0))
 	world = p_world
 	spawn_pos = pos
 	position = pos
@@ -115,7 +178,9 @@ func _ready() -> void:
 	sprite.offset = Vector2(0, cfg.off)
 	_flash_mat = Fx.flash_material()
 	sprite.material = _flash_mat
+	sprite.scale = Vector2.ONE * base_sc
 	add_child(sprite)
+	shadow.scale *= base_sc
 	var cast := Depth3D.CastShadow.new()
 	cast.src = sprite
 	cast.world = world
@@ -124,7 +189,9 @@ func _ready() -> void:
 	if not is_boss:
 		var el := PointLight2D.new()
 		el.texture = Fx.tex("light")
-		el.color = Color(1, 0.45, 0.3) if type != "acolito" else Color(0.7, 0.45, 1)
+		el.color = Color(1, 0.45, 0.3) if ai != "acolito" else Color(0.7, 0.45, 1)
+		if cfg.has("light"):
+			el.color = cfg.light
 		if type == "planidera":
 			el.color = Color(0.5, 0.8, 1.0)
 		if type == "custodio":
@@ -212,7 +279,7 @@ func _chase(target: Node2D, delta: float) -> void:
 	var d := to.length()
 	facing = 1 if to.x >= 0.0 else -1
 	var want := Vector2.ZERO
-	match type:
+	match ai:
 		"planidera":
 			# flota a media distancia y llora sobre ti
 			if d < 90.0:
@@ -248,7 +315,7 @@ func _chase(target: Node2D, delta: float) -> void:
 	velocity = velocity.lerp(want.limit_length(1.0) * cfg.speed * (0.55 if slow_t > 0.0 else 1.0), clamp(delta * 6.0, 0.0, 1.0))
 
 func _choose_attack(d: float) -> String:
-	match type:
+	match ai:
 		"hueco":
 			return "slash"
 		"bestia":
@@ -340,10 +407,12 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			if not await _wait(0.6, my_id): return
 			_play("attack", 2)
 			Audio.sfx("enemy_shot")
-			var n := 5 if type == "custodio" else (3 if phase == 1 else 5)
+			var n := 5 if ai == "custodio" else (3 if phase == 1 else 5)
+			if cfg.get("elite", false):
+				n += 2
 			for i in n:
 				var a := dir.angle() + (i - (n - 1) / 2.0) * 0.26
-				world.spawn_projectile_local(global_position + Vector2(0, -12), Vector2.from_angle(a) * 125.0, cfg.dmg, "orb", "enemy", 1, 5.0, 3.0, 0)
+				world.spawn_projectile_local(global_position + Vector2(0, -12), Vector2.from_angle(a) * 125.0, cfg.dmg, str(cfg.get("proj", "orb")), "enemy", 1, 5.0, 3.0, 0)
 			if not await _wait(0.6, my_id): return
 		"leap":
 			# se agacha y salta hacia ti: sube hacia la cámara (crece y se separa de su sombra) y cae con fuerza
@@ -358,7 +427,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			while lt < dur:
 				var k := lt / dur
 				sprite.position.y = -sin(k * PI) * 40.0
-				sprite.scale = Vector2.ONE * (1.0 + sin(k * PI) * 0.28)
+				sprite.scale = Vector2.ONE * (1.0 + sin(k * PI) * 0.28) * base_sc
 				shadow.modulate.a = 0.55 - sin(k * PI) * 0.3
 				if multiplayer.is_server():
 					lunge = ((dest - global_position) / maxf(dur - lt, 0.06)).limit_length(320.0)
@@ -368,7 +437,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 					return
 				lt += 0.016
 			sprite.position.y = 0.0
-			sprite.scale = Vector2(1.3, 0.75)
+			sprite.scale = Vector2(1.3, 0.75) * base_sc
 			shadow.modulate.a = 0.55
 			if multiplayer.is_server():
 				lunge = Vector2.ZERO
@@ -393,8 +462,8 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 			_play("attack", 2)
 			var rng2 := RandomNumberGenerator.new()
 			rng2.seed = seed
-			for i in 3:
-				var tp: Vector2 = tpos + (Vector2.ZERO if i == 0 else Vector2.from_angle(rng2.randf() * TAU) * rng2.randf_range(18.0, 34.0))
+			for i in int(cfg.get("tears", 3)):
+				var tp: Vector2 = tpos + (Vector2.ZERO if i == 0 else Vector2.from_angle(rng2.randf() * TAU) * rng2.randf_range(18.0, 34.0 + i * 6.0))
 				_drop_tear(tp, 0.55 + i * 0.18)
 			if not await _wait(1.0, my_id): return
 		"blink":
@@ -508,7 +577,7 @@ func _drop_tear(p: Vector2, dur: float) -> void:
 	f.dur = dur
 	f.linger = 0.05
 	f.additive = true
-	f.modulate = Color(0.55, 0.9, 1.0)
+	f.modulate = cfg.get("tear", Color(0.55, 0.9, 1.0))
 	f.position = p
 	f.on_land = _tear_splash.bind(p)
 	world.get_node("FX").add_child(f)
@@ -596,7 +665,7 @@ func on_hurt(new_hp: float, dmg: float, dir: Vector2, crit: bool, broke: bool) -
 	Fx.burst(global_position + Vector2(0, cfg.off * 0.6), Color(1, 0.9, 0.7), 8 if not crit else 16, 110.0, 0.35, "fx_px", 50.0, dir)
 	Fx.burst(global_position + Vector2(0, cfg.off * 0.6), Color(1, 0.5, 0.2), 4, 60.0, 0.5, "fx_soft", 70.0, dir, 0.3)
 	Fx.sparks(global_position + Vector2(0, cfg.off * 0.6), dir if dir != Vector2.ZERO else Vector2.UP, Color(1, 0.7, 0.35), 5 if not crit else 12, 140.0, 90.0)
-	sprite.scale = Vector2(1.2, 0.85)
+	sprite.scale = Vector2(1.2, 0.85) * base_sc
 	if _hp_bar:
 		_hp_bar.visible = true
 		_hp_bar.ratio = hp / max_hp
@@ -675,7 +744,7 @@ func die() -> void:
 	if world and not is_boss:
 		var soul := Depth3D.Soul.new()
 		soul.position = global_position + Vector2(0, -4)
-		soul.col = Color(0.6, 0.85, 1.0) if type != "custodio" else Color(1, 0.9, 0.6)
+		soul.col = Color(0.6, 0.85, 1.0) if ai != "custodio" else Color(1, 0.9, 0.6)
 		world.get_node("FX").add_child(soul)
 
 # ====================================================================== visual
@@ -704,7 +773,7 @@ func _animate(delta: float) -> void:
 		var f := int(_frame) % int(row[1])
 		sprite.region_rect = Rect2(f * cfg.fw, row[0] * cfg.fh, cfg.fw, cfg.fh)
 	sprite.flip_h = facing < 0
-	sprite.scale = sprite.scale.lerp(Vector2.ONE, clamp(delta * 10.0, 0.0, 1.0))
+	sprite.scale = sprite.scale.lerp(Vector2.ONE * base_sc, clamp(delta * 10.0, 0.0, 1.0))
 	if state == "stagger":
 		sprite.rotation = sin(Time.get_ticks_msec() * 0.03) * 0.08
 		sprite.modulate = Color(1.0, 0.85, 0.6)

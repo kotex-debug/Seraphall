@@ -1233,6 +1233,122 @@ func _run_autotest() -> void:
 			print("ACH pct=", Ach.percent(), " xp=", Ach.xp_total(), " count=", Ach.count("base"))
 			print("AUTOTEST_ACH_OK")
 			get_tree().quit()
+		"strata":
+			var lp: Player = w.local_player()
+			lp.iframes = 99999.0
+			Prog.level = 40
+			Prog.attr.vigor = 20
+			lp.refresh_stats(true)
+			var skip := func() -> void:
+				for k in 12:
+					if w.dialog.is_open():
+						w.dialog._advance()
+					await get_tree().create_timer(0.15).timeout
+			w.wflags["seravel_dead"] = true
+			w._refresh_rifts()
+			lp.respawn_at(w.tile_pos(49, 9))
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/s00_grieta.png")
+			var stops := {2: [["llegada", Vector2(143.5, 86)], ["sendero", Vector2(140, 62)], ["nidos", Vector2(111, 62)], ["cienaga_borde", Vector2(160, 63)], ["arboleda", Vector2(140, 39)], ["madriguera", Vector2(110, 37)]],
+				3: [["llegada", Vector2(239.5, 86)], ["crisoles", Vector2(240, 60)], ["biblio", Vector2(205, 57)], ["fragua", Vector2(240, 33)], ["archivo", Vector2(207, 31)]],
+				4: [["llegada", Vector2(335.5, 86)], ["jardin", Vector2(336, 61)], ["corte", Vector2(302, 55)], ["escalera", Vector2(336, 35)]]}
+			var boss_of := {2: ["orrun", Vector2(141, 16)], 3: ["vulkaris", Vector2(240, 16)], 4: ["azrahel", Vector2(336, 18)]}
+			for stn in [2, 3, 4]:
+				w._descend(stn)
+				await get_tree().create_timer(2.6).timeout
+				for st0 in stops[stn]:
+					lp.respawn_at(w.tile_pos(st0[1].x, st0[1].y))
+					await get_tree().create_timer(1.4).timeout
+					await skip.call()
+					await _shot(out + "/s%d_%s.png" % [stn, st0[0]])
+				# mini-jefe de la prueba del estrato
+				var tid: String = ["", "", "cienaga", "moldes", "galeria"][stn]
+				var T: Dictionary = w.TRIALS[tid]
+				var last: Array = T.waves[T.waves.size() - 1][0]
+				lp.respawn_at(w.tile_pos(last[1], last[2] + 5))
+				await get_tree().create_timer(0.8).timeout
+				w._spawn_trial_enemy(last[0], w.tile_pos(last[1], last[2]))
+				await get_tree().create_timer(2.2).timeout
+				await _shot(out + "/s%d_minijefe.png" % stn)
+				w._reset_enemies()
+				w._trial_reset()
+				# Arconte
+				var bo: Array = boss_of[stn]
+				lp.respawn_at(w.tile_pos(bo[1].x, bo[1].y))
+				await get_tree().create_timer(1.6).timeout
+				await _shot(out + "/s%d_arconte_intro.png" % stn)
+				await skip.call()
+				await get_tree().create_timer(2.5).timeout
+				var be: Enemy = w._enemy_of(bo[0])
+				print("ARCHON ", bo[0], " active=", be.active, " hp=", be.hp)
+				for k2 in 4:
+					await get_tree().create_timer(0.9).timeout
+					await _shot(out + "/s%d_arconte_%d.png" % [stn, k2])
+				w._server_damage(be.idx, be.max_hp * 0.52, Vector2.RIGHT, 0.0, false)
+				await get_tree().create_timer(1.5).timeout
+				await _shot(out + "/s%d_arconte_fase2.png" % stn)
+				for k3 in 3:
+					await get_tree().create_timer(1.0).timeout
+					await _shot(out + "/s%d_arconte_f2_%d.png" % [stn, k3])
+				if stn == 4:
+					w._server_damage(be.idx, be.max_hp * 0.25, Vector2.RIGHT, 0.0, false)
+					await get_tree().create_timer(2.0).timeout
+					await _shot(out + "/s4_arconte_fase3.png")
+					for k4 in 3:
+						await get_tree().create_timer(1.0).timeout
+						await _shot(out + "/s4_arconte_f3_%d.png" % k4)
+				w._server_damage(be.idx, be.max_hp, Vector2.RIGHT, 0.0, false)
+				await get_tree().create_timer(4.5).timeout
+				await _shot(out + "/s%d_arconte_muerte.png" % stn)
+				for k5 in 20:
+					if w.dialog.is_open():
+						w.dialog._advance()
+					await get_tree().create_timer(0.3).timeout
+				await get_tree().create_timer(1.5).timeout
+				await _shot(out + "/s%d_fin.png" % stn)
+				await get_tree().create_timer(4.0).timeout
+			await get_tree().create_timer(3.0).timeout
+			await _shot(out + "/s9_creditos.png")
+			print("STRATA flags orrun=", w.wflags.get("orrun_dead"), " vulkaris=", w.wflags.get("vulkaris_dead"), " azrahel=", w.wflags.get("azrahel_dead"), " base=", Prog.flags.get("base_complete"))
+			print("ACH pct=", Ach.percent())
+			print("AUTOTEST_STRATA_OK")
+			get_tree().quit()
+		"finale":
+			var lp: Player = w.local_player()
+			lp.iframes = 99999.0
+			for b in ["seravel", "orrun", "vulkaris"]:
+				w.wflags[b + "_dead"] = true
+			w._descend(4)
+			await get_tree().create_timer(2.5).timeout
+			lp.respawn_at(w.tile_pos(336, 18))
+			await get_tree().create_timer(1.6).timeout
+			for k in 12:
+				if w.dialog.is_open():
+					w.dialog._advance()
+				await get_tree().create_timer(0.15).timeout
+			await get_tree().create_timer(2.0).timeout
+			var be: Enemy = w._enemy_of("azrahel")
+			await _shot(out + "/f00_azrahel.png")
+			w._server_damage(be.idx, be.max_hp * 2.0, Vector2.RIGHT, 0.0, false)
+			await get_tree().create_timer(3.0).timeout
+			for k2 in 14:
+				await _shot(out + "/f1%02d_dialogo.png" % k2) if k2 % 3 == 0 else null
+				if w.dialog.is_open():
+					w.dialog._advance()
+				await get_tree().create_timer(0.5).timeout
+			await get_tree().create_timer(2.5).timeout
+			await _shot(out + "/f20_grieta.png")
+			await get_tree().create_timer(1.5).timeout
+			await _shot(out + "/f21_fin.png")
+			await get_tree().create_timer(2.2).timeout
+			await _shot(out + "/f22_creditos.png")
+			await get_tree().create_timer(1.0).timeout
+			await _shot(out + "/f23_creditos.png")
+			await get_tree().create_timer(4.0).timeout
+			await _shot(out + "/f24_vuelta.png")
+			print("FINALE base=", Prog.flags.get("base_complete"), " ending=", Ach.is_unlocked("ending"), " pct=", Ach.percent())
+			print("AUTOTEST_FINALE_OK")
+			get_tree().quit()
 		"coopui":
 			var lp: Player = w.local_player()
 			lp.iframes = 9999.0

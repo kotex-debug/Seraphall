@@ -124,6 +124,22 @@ func _ready() -> void:
 			light.energy = 0.35
 			light.position = Vector2(0, -14)
 			add_child(light)
+		"rift":
+			# Grieta del Descenso: lleva al estrato siguiente
+			spr.texture = Fx.tex("rift")
+			spr.region_enabled = true
+			_fw = 40
+			_frames = 2
+			spr.region_rect = Rect2(0, 0, 40, 40)
+			spr.offset = Vector2(0, -6)
+			spr.material = Fx.add_material()
+			radius = 26.0
+			light = PointLight2D.new()
+			light.texture = Fx.tex("light")
+			light.color = Color(0.65, 0.4, 1.0)
+			light.texture_scale = 2.0
+			light.energy = 1.2
+			add_child(light)
 		"altar":
 			# altares de las batallas secretas: el tajo del Verdugo o el Cuerno del Abismo
 			var art := AltarArt.new()
@@ -194,6 +210,8 @@ func prompt() -> String:
 			return G.T("interact") % G.T("ring_bell")
 		"lore":
 			return G.T("interact") % G.T("read")
+		"rift":
+			return G.T("interact") % G.L(["Descender al Estrato %s", "Descend to Stratum %s"]) % ["", "I", "II", "III", "IV"][int(data.get("to", 2))]
 		"altar":
 			if str(data.get("style", "")) == "horn":
 				return G.T("interact") % G.L(["Soplar el cuerno", "Blow the horn"])
@@ -266,6 +284,12 @@ func ring() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	match kind:
+		"rift":
+			spr.region_rect = Rect2((int(_t * 5.0) % 2) * 40, 0, 40, 40)
+			spr.rotation = sin(_t * 0.7) * 0.15
+			light.energy = 1.1 + 0.3 * sin(_t * 3.0)
+			if randf() < 0.3:
+				Fx.burst(global_position + Vector2(randf_range(-10, 10), -6), Color(0.7, 0.45, 1.0), 1, 25.0, 0.8, "fx_px", 60.0, Vector2.UP)
 		"brasa":
 			if used:
 				var f := 1 + int(_t * 9.0) % 6

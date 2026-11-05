@@ -185,7 +185,9 @@ func weapon_memory_mult(etype: String, wid := "") -> float:
 		return 1.0
 	return 1.2 if int(weapon_kills.get(wid, {}).get(etype, 0)) >= WEAPON_MEMORY[etype][0] else 1.0
 
-const BESTIARY := ["hueco", "acolito", "planidera", "penitente", "bestia", "guardia", "custodio"]
+const BESTIARY := ["hueco", "acolito", "planidera", "penitente", "bestia", "guardia", "custodio",
+	"musgoso", "nidal", "espino", "garza", "lacrima", "ascua", "fundidor", "chispero", "forjador", "kronagh",
+	"cortesano", "caballero", "doncella", "sabueso", "ysolde"]
 func record_kill(etype: String) -> void:
 	Ach.add("kills")
 	if etype in BESTIARY:
@@ -229,6 +231,9 @@ func route_score() -> int:
 	for b in BOSS_INFO:
 		if flags.get(BOSS_INFO[b].flag, false):
 			sc += 2 if spared.has(b) else -1
+	for b2 in ["orrun", "vulkaris"]:
+		if flags.get(b2 + "_dead", false):
+			sc += 2 if spared.has(b2) else -1
 	sc += memories.size()
 	if oath != "":
 		sc -= 1
@@ -318,6 +323,36 @@ const QUESTS := {
 			{"id": "kill_seravel", "text": ["Derrota a Seravel, Guardiana de las Puertas", "Defeat Seravel, Warden of the Gates"]},
 		],
 		"reward": {"ecos": 0, "sp": 2}},
+	"main2": {"type": "main", "title": ["El Bosque de Plumas Muertas", "The Forest of Dead Feathers"], "giver": "",
+		"steps": [
+			{"id": "talk_oso", "text": ["Busca a alguien en el Claro de los Nidos, al oeste del sendero", "Find someone in the Clearing of Nests, west of the path"]},
+			{"id": "enter_ciervo", "text": ["Cruza la Arboleda Hueca hasta el Santuario del Ciervo", "Cross the Hollow Grove to the Stag's Sanctuary"]},
+			{"id": "kill_orrun", "text": ["Derrota a Orrun, el Ciervo Hueco", "Defeat Orrun, the Hollow Stag"]},
+		],
+		"reward": {"ecos": 0, "sp": 1}},
+	"main3": {"type": "main", "title": ["La Fundición de Halos", "The Halo Foundry"], "giver": "",
+		"steps": [
+			{"id": "talk_archivero", "text": ["Busca la Biblioteca de los Nombres, al oeste de los crisoles", "Find the Library of Names, west of the crucibles"]},
+			{"id": "enter_yunque", "text": ["Sube por la Gran Fragua hasta el Gran Yunque", "Climb through the Great Forge to the Great Anvil"]},
+			{"id": "kill_vulkaris", "text": ["Derrota a Vulkaris, el Herrero de Aureolas", "Defeat Vulkaris, the Halo Smith"]},
+		],
+		"reward": {"ecos": 0, "sp": 1}},
+	"main4": {"type": "main", "title": ["El Trono Vacío", "The Empty Throne"], "giver": "",
+		"steps": [
+			{"id": "talk_lirio", "text": ["Habla con quien cuida el Jardín de Espinas Doradas", "Speak with whoever tends the Garden of Golden Thorns"]},
+			{"id": "enter_trono", "text": ["Sube la Escalinata del Rey hasta el Trono Vacío", "Climb the King's Stairway to the Empty Throne"]},
+			{"id": "kill_azrahel", "text": ["Derrota a Azrahel, Rey del Abismo", "Defeat Azrahel, King of the Abyss"]},
+		],
+		"reward": {"ecos": 0, "sp": 2}},
+	"eggs": {"type": "side", "title": ["Huevos de Luz", "Eggs of Light"], "giver": "oso",
+		"count": 3, "text": ["Encuentra los huevos de luz del bosque (%d/%d)", "Find the forest's eggs of light (%d/%d)"],
+		"reward": {"ecos": 1500, "sp": 2, "flask": 1}},
+	"names": {"type": "side", "title": ["Nombres Perdidos", "Lost Names"], "giver": "archivero",
+		"count": 3, "text": ["Recupera las placas con nombres de la Fundición (%d/%d)", "Recover the name plates of the Foundry (%d/%d)"],
+		"reward": {"ecos": 2200, "sp": 2, "item": "phoenix"}},
+	"roses": {"type": "side", "title": ["Rosas Vivas", "Living Roses"], "giver": "lirio",
+		"count": 3, "text": ["Encuentra las rosas que huelen (%d/%d)", "Find the roses that smell (%d/%d)"],
+		"reward": {"ecos": 3000, "sp": 3, "flask": 1}},
 	"feathers": {"type": "side", "title": ["Plumas para la Forja", "Feathers for the Forge"], "giver": "brenna",
 		"count": 5, "text": ["Reúne Fragmentos de Pluma (%d/%d)", "Gather Feather Shards (%d/%d)"],
 		"reward": {"ecos": 300, "free_upgrade": 1}},
@@ -760,6 +795,12 @@ func _complete(id: String) -> void:
 		add_item(r.item)
 	if id == "hymns":
 		achieve("hymn")
+	if id == "eggs":
+		achieve("oso_eggs")
+	if id == "names":
+		achieve("names")
+	if id == "roses":
+		achieve("roses")
 	Audio.sfx("levelup")
 	G.toast(G.T("quest_done") + ": " + G.L(QUESTS[id].title), Color(1.0, 0.85, 0.4))
 

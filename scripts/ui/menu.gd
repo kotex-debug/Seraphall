@@ -52,11 +52,15 @@ func _ready() -> void:
 	G.language_changed.connect(_on_changed)
 
 func get_tabs() -> Array:
-	return ["service"] if tab == "service" else TABS
+	if tab == "service" or tab == "travel":
+		return [tab]
+	return TABS
 
 func tab_key(t: String) -> String:
 	if t == "service":
 		return "svc_" + str(ctx.get("npc", "nyx"))
+	if t == "travel":
+		return "tab_travel"
 	return TAB_KEYS[t]
 
 func sigil_c() -> Vector2:
@@ -117,7 +121,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu") or event.is_action_pressed("pause"):
 		get_viewport().set_input_as_handled()
 		close()
-	elif tab == "service":
+	elif tab == "service" or tab == "travel":
 		return
 	elif event.is_action_pressed("spell1"):
 		get_viewport().set_input_as_handled()
@@ -151,6 +155,7 @@ func _rebuild(animate := true) -> void:
 		"controls": _build_controls()
 		"codex": _build_codex()
 		"ach": _build_ach()
+		"travel": _build_travel()
 	if animate:
 		content.position.x = 20 + 40 * _anim_dir
 		content.modulate.a = 0.0
@@ -260,6 +265,9 @@ func _build_char() -> void:
 		["memory", G.T("memories"), "%d/%d" % [Prog.memories.size(), Prog.MEMORIES.size()]],
 		["quest", G.L(["Tiempo", "Playtime"]), "%d min" % int(Prog.playtime / 60.0)],
 	]
+	if at_brasa:
+		var tvb := _btn(G.L(["VIAJAR ENTRE BRASAS", "TRAVEL BETWEEN EMBERS"]), Vector2(426, 244), _on_open_travel, true, 168)
+		tvb.add_theme_color_override("font_color", UIKit.GOLD)
 	if at_brasa and Net.is_online():
 		var mate: Player = world.partner()
 		if mate:
@@ -276,6 +284,46 @@ func _build_char() -> void:
 		vv.size = Vector2(50, 0)
 		vv.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		yy += 25.0
+
+func _on_open_travel() -> void:
+	open("travel", {"brasa": true})
+
+func _build_travel() -> void:
+	_panel(Rect2(0, 0, 600, 296), UIKit.GOLD_DARK)
+	_lbl(G.L(["VIAJAR ENTRE BRASAS  -  las Brasas encendidas están unidas por el mismo fuego", "TRAVEL BETWEEN EMBERS  -  every lit Ember shares the same fire"]), Vector2(14, 10), 8, UIKit.GOLD, 0.0, "head")
+	var lit: Array = world.lit_brasas()
+	var cur := Prog.last_brasa
+	for st in [1, 2, 3, 4]:
+		var x = 14.0 + (st - 1) * 146.0
+		var nm: String = G.L(Strata.STRATUM_NAMES[st])
+		var parts := nm.split(" · ")
+		var reached := false
+		for id0 in Strata.BRASA_NAMES:
+			if int(Strata.BRASA_STRATUM[id0]) == st and id0 in lit:
+				reached = true
+		_lbl(parts[0], Vector2(x, 32), 8, UIKit.WHITE if reached else UIKit.TEXT_DIM, 0.0, "head")
+		_lbl(G.T(["", "area_sanct", "area_bosque", "area_fundicion", "area_trono_vacio"][st]) if reached else "???", Vector2(x, 44), 10, Strata.AREA_COLORS.get(["", "", "area_bosque", "area_fundicion", "area_trono"][st], UIKit.GOLD) if reached else UIKit.TEXT_DIM, 140, "title")
+		var fl := BrasaGlyph.new()
+		fl.position = Vector2(x + 54, 90)
+		fl.lit = reached
+		content.add_child(fl)
+		var y := 130.0
+		for id in Strata.BRASA_NAMES:
+			if int(Strata.BRASA_STRATUM[id]) != st:
+				continue
+			var known: bool = id in lit
+			var label: String = G.L(Strata.BRASA_NAMES[id]) if known else "???"
+			if id == cur:
+				label = "> " + label
+			var b := _btn(label, Vector2(x, y), _on_travel.bind(id), known and id != cur, 138)
+			if id == cur:
+				b.add_theme_color_override("font_disabled_color", UIKit.GOLD)
+			y += 26.0
+	_lbl(G.L(["Al viajar descansas en la Brasa de destino.", "Travelling rests you at the destination Ember."]), Vector2(14, 270), 10, UIKit.TEXT_DIM, 0.0, "title")
+
+func _on_travel(id: String) -> void:
+	close()
+	world.travel_to_brasa(id)
 
 func _on_travel_partner() -> void:
 	close()
@@ -644,6 +692,28 @@ const CODEX := [
 	["carcelero", "cinematic/carcelero_body", Rect2(0, 0, 92, 112), ["El Carcelero", "The Jailer"], ["No encerraba a los presos para castigarlos, sino para esconderlos. Su llave no abre: impide que algo entre.", "He didn't lock the prisoners away to punish them, but to hide them. His key doesn't open: it keeps something out."]],
 	["choir", "boss_singer", Rect2(0, 0, 26, 36), ["El Coro Hueco", "The Hollow Choir"], ["Tres voces que cantaban un nombre al revés para que su dueño no despertara. Cuando callaron, algo se dio la vuelta en el fondo.", "Three voices that sang a name backwards so its owner would not wake. When they fell silent, something turned over at the bottom."]],
 	["seravel", "cinematic/seravel_body", Rect2(0, 0, 72, 112), ["Seravel, Guardiana de las Puertas", "Seravel, Warden of the Gates"], ["La primera de los serafines. Confió en el verdugo que le arrancó la primera pluma. Todavía lo espera a las puertas... del mismo lado, si la perdonas.", "First of the seraphim. She trusted the executioner who tore out her first feather. She still waits for them at the gates... on the same side, if you spare her."]],
+	# Estrato II
+	["musgoso", "enemy_musgoso", Rect2(0, 0, 32, 32), ["Hueco Musgoso", "Mossy Husk"], ["Huecos que se tumbaron a esperar en el bosque hasta que el musgo los levantó por ellos.", "Husks that lay down to wait in the forest until the moss stood them back up."]],
+	["nidal", "enemy_nidal", Rect2(0, 0, 32, 32), ["Sacerdote Nidal", "Nest Priest"], ["Bendicen nidos vacíos y lanzan plumas afiladas a quien se acerque a ellos.", "They bless empty nests and hurl sharpened feathers at anyone who comes near."]],
+	["espino", "enemy_espino", Rect2(0, 0, 32, 32), ["Espina Llorona", "Weeping Thorn"], ["Plañideras que echaron raíces. Sus lágrimas son espinas verdes.", "Mourners that took root. Their tears are green thorns."]],
+	["garza", "enemy_garza", Rect2(0, 0, 38, 28), ["Garza de Ceniza", "Ash Heron"], ["La manada de Orrun. Embisten en línea recta y no saben frenar.", "Orrun's herd. They charge in straight lines and don't know how to stop."]],
+	["lacrima", "enemy_lacrima", Rect2(0, 0, 32, 32), ["Madre Lacrima", "Mother Lacrima"], ["Lloró tanto por las crías que no volvieron que la ciénaga entera es su llanto.", "She wept so long for the chicks that never returned that the whole marsh is her grief."]],
+	# Estrato III
+	["ascua", "enemy_ascua", Rect2(0, 0, 32, 32), ["Hueco de Ascua", "Ember Husk"], ["Huecos que se acercaron demasiado a los crisoles. Ahora arden sin consumirse.", "Husks that came too close to the crucibles. Now they burn without being consumed."]],
+	["fundidor", "enemy_fundidor", Rect2(0, 0, 32, 32), ["Fundidor", "Founder"], ["Guardianes de la Fundición con escudos de molde. Golpéalos por la espalda.", "Foundry wardens with mould-shields. Strike them from behind."]],
+	["chispero", "enemy_chispero", Rect2(0, 0, 32, 32), ["Chispero", "Sparkling"], ["Penitentes de metal fundido. Saltan sobre ti y salpican al caer.", "Penitents of molten metal. They leap on you and splash when they land."]],
+	["forjador", "enemy_forjador", Rect2(0, 0, 32, 32), ["Forjador de Nombres", "Name-Forger"], ["Funden los nombres de los caídos para hacer aureolas. Lanzan brasas.", "They melt down the names of the fallen to make halos. They hurl embers."]],
+	["kronagh", "enemy_kronagh", Rect2(0, 0, 48, 48), ["Kronagh, el Reloj de Bronce", "Kronagh, the Bronze Clock"], ["Un guardián de bronce que mide el tiempo que tarda en enfriarse una aureola... y el que te queda a ti.", "A bronze warden that measures how long a halo takes to cool... and how long you have left."]],
+	# Estrato IV
+	["cortesano", "enemy_cortesano", Rect2(0, 0, 32, 32), ["Cortesano", "Courtier"], ["Llevan mil años esperando una orden del trono. Cualquier visita les parece una amenaza.", "They have waited a thousand years for an order from the throne. Any visitor looks like a threat."]],
+	["caballero", "enemy_caballero", Rect2(0, 0, 32, 32), ["Caballero del Trono", "Throne Knight"], ["Juraron proteger al Rey. Nadie les dijo de quién.", "They swore to protect the King. Nobody told them from whom."]],
+	["doncella", "enemy_doncella", Rect2(0, 0, 32, 32), ["Doncella de Espinas", "Thorn Maiden"], ["Lloran oro. Donde caen sus lágrimas, crecen rosas que no huelen.", "They weep gold. Where their tears fall, scentless roses grow."]],
+	["sabueso", "enemy_sabueso", Rect2(0, 0, 38, 28), ["Sabueso Real", "Royal Hound"], ["Los perros del Rey. Huelen las plumas sueltas desde el otro lado de la corte.", "The King's hounds. They smell loose feathers from across the court."]],
+	["ysolde", "enemy_ysolde", Rect2(0, 0, 48, 48), ["Reina Ysolde", "Queen Ysolde"], ["La reina de una corte arrodillada. Nunca se sentó junto al Rey: el Arquitecto no le dejó silla.", "Queen of a kneeling court. She never sat beside the King: the Architect left her no chair."]],
+	# Arcontes de los Estratos II-IV
+	["orrun", "enemy_orrun", Rect2(0, 0, 64, 64), ["Orrun, el Ciervo Hueco", "Orrun, the Hollow Stag"], ["Guardaba los nidos de los serafines recién caídos. Cuando supo que los huevos estaban vacíos, ardió por dentro.", "He guarded the nests of newly fallen seraphs. When he learnt the eggs were empty, he burned from within."]],
+	["vulkaris", "enemy_vulkaris", Rect2(0, 0, 64, 64), ["Vulkaris, Herrero de Aureolas", "Vulkaris, the Halo Smith"], ["Forjó todas las aureolas de la Espiral, también la tuya. Lleva la primera fundida a la espalda.", "He forged every halo in the Spiral, yours too. He wears the first one melted onto his back."]],
+	["azrahel", "cinematic/azrahel_body", Rect2(0, 0, 72, 112), ["Azrahel, Rey del Abismo", "Azrahel, King of the Abyss"], ["El primero que se negó. Lo sentaron en el trono más alto para que todos lo vieran y nadie lo escuchara.", "The first who refused. They sat him on the highest throne so that all would see him and none would hear him."]],
 ]
 var _codex_sel := "hueco"
 const CODEX_NPCS := [
@@ -654,14 +724,25 @@ const CODEX_NPCS := [
 	["nyx", "nyx", ["Nyx", "Nyx"], ["Mercader de la máscara de pico. Compra barato, vende caro y nunca pregunta de dónde vienes.", "Beak-masked merchant. Buys cheap, sells dear and never asks where you come from."]],
 	["velaria", "velaria", ["Sor Velaria", "Sister Velaria"], ["Guarda los ecos de los Arcontes caídos y deja que vuelvas a enfrentarte a ellos.", "Keeper of the fallen Archons' echoes; she lets you face them again."]],
 	["preso", "preso", ["Tobías", "Tobias"], ["Preso de las Celdas de Espera. Lleva tanto tiempo esperando que ya no recuerda a quién.", "Prisoner of the Waiting Cells. He's waited so long he no longer remembers for whom."]],
+	["oso", "oso", ["Hermano Oso", "Brother Bear"], ["Fue serafín. Un día dejó de volar y se quedó a cuidar lo que queda del Bosque de Plumas Muertas.", "He was a seraph. One day he stopped flying and stayed to tend what's left of the Forest of Dead Feathers."]],
+	["archivero", "archivero", ["El Archivero", "The Archivist"], ["Copia los nombres que la Fundición arranca a los caídos antes de que se pierdan para siempre.", "He copies the names the Foundry tears from the fallen before they are lost forever."]],
+	["lirio", "lirio", ["Lirio, la Jardinera", "Lirio, the Gardener"], ["Cuida el jardín de un Rey que nunca baja a verlo. Sus rosas de oro no huelen a nada.", "She tends the garden of a King who never comes down to see it. Her golden roses smell of nothing."]],
 	["peregrina", "peregrina", ["Sael, la Peregrina", "Sael, the Pilgrim"], ["Sube la Escalinata del Juicio desde hace trescientos años. Siempre despierta abajo.", "She has climbed the Stairs of Judgement for three hundred years. She always wakes at the bottom."]],
 ]
+
+var _codex_page := 0
+const CODEX_PER_PAGE := 9
 
 func _build_codex() -> void:
 	_panel(Rect2(0, 0, 200, 296), UIKit.RED)
 	_lbl(G.L(["CÓDICE", "CODEX"]), Vector2(14, 10), 8, UIKit.GOLD, 0.0, "head")
+	var pages := int(ceil(CODEX.size() / float(CODEX_PER_PAGE)))
+	_codex_page = clampi(_codex_page, 0, pages - 1)
+	_lbl("%d/%d" % [_codex_page + 1, pages], Vector2(124, 10), 8, UIKit.TEXT_DIM, 0.0, "head")
+	_btn("<", Vector2(150, 6), _on_codex_page.bind(-1), _codex_page > 0, 18)
+	_btn(">", Vector2(172, 6), _on_codex_page.bind(1), _codex_page < pages - 1, 18)
 	var y := 28.0
-	for e in CODEX:
+	for e in CODEX.slice(_codex_page * CODEX_PER_PAGE, (_codex_page + 1) * CODEX_PER_PAGE):
 		var known: bool = Prog.flags.get("killed_" + e[0], false)
 		var nm := G.L(e[3]) if known else "???"
 		var b := _btn(nm.to_upper() if known else nm, Vector2(12, y), _on_codex.bind(e[0]), true, 176)
@@ -679,7 +760,8 @@ func _build_codex() -> void:
 	_panel(Rect2(210, 0, 390, 296), UIKit.PURPLE)
 	if _codex_sel == "_npc":
 		var i2 := 0
-		for np in CODEX_NPCS:
+		var npcs: Array = CODEX_NPCS.slice(_codex_page * 8 % CODEX_NPCS.size(), _codex_page * 8 % CODEX_NPCS.size() + 8)
+		for np in npcs:
 			var kn: bool = Prog.flags.get("known_" + np[0], false)
 			var cx := 218.0 + (i2 % 4) * 95.0
 			var cy := 10.0 + (i2 / 4) * 142.0
@@ -705,14 +787,19 @@ func _build_codex() -> void:
 		pv.size = Vector2(140, 140)
 		content.add_child(pv)
 		_lbl(G.L(e2[3]).to_upper() if known2 else "???", Vector2(376, 24), 8, UIKit.GOLD if known2 else UIKit.TEXT_DIM, 210, "head")
-		var boss: bool = e2[0] in ["carcelero", "choir", "seravel"]
-		_lbl(G.L(["ARCONTE", "ARCHON"]) if boss else (G.L(["ÉLITE", "ELITE"]) if e2[0] == "custodio" else G.L(["CRIATURA DE LA ESPIRAL", "CREATURE OF THE SPIRAL"])), Vector2(376, 40), 8, UIKit.RED if boss else UIKit.CYAN, 210, "head")
+		var boss: bool = e2[0] in ["carcelero", "choir", "seravel", "orrun", "vulkaris", "azrahel"]
+		_lbl(G.L(["ARCONTE", "ARCHON"]) if boss else (G.L(["ÉLITE", "ELITE"]) if e2[0] in ["custodio", "lacrima", "kronagh", "ysolde"] else G.L(["CRIATURA DE LA ESPIRAL", "CREATURE OF THE SPIRAL"])), Vector2(376, 40), 8, UIKit.RED if boss else UIKit.CYAN, 210, "head")
 		_lbl(G.L(e2[4]) if known2 else G.L(["Derrótalo para conocer su historia.", "Defeat it to learn its story."]), Vector2(376, 62), 15, UIKit.WHITE, 210)
 		var kills := 0
 		for w in Prog.weapon_kills.values():
 			kills += int(w.get(e2[0], 0))
 		if known2 and not boss and kills > 0:
 			_lbl(G.L(["Abatidos: %d", "Slain: %d"]) % kills, Vector2(222, 170), 10, UIKit.TEXT_DIM, 0.0, "title")
+
+func _on_codex_page(d: int) -> void:
+	_codex_page += d
+	Audio.sfx("ui_move", -10.0)
+	_rebuild(false)
 
 func _on_codex(id: String) -> void:
 	_codex_sel = id
@@ -2026,7 +2113,7 @@ class MapView extends Control:
 		var b := Rect2()
 		var first := true
 		for r in world.ROOMS:
-			if not Prog.flags.get("seen_" + r.id, false):
+			if not world.map_seen(r.id):
 				continue
 			var rc := Rect2(world._rect_of(r))
 			b = rc if first else b.merge(rc)
@@ -2066,12 +2153,12 @@ class MapView extends Control:
 		var full := Vector2(tex.get_width(), tex.get_height())
 		# --- niebla sobre las salas vecinas sin explorar (rayado diagonal y "?")
 		for r in world.ROOMS:
-			if Prog.flags.get("seen_" + r.id, false):
+			if world.map_seen(r.id) or Strata.stratum_of_room(r.id) != world.cur_stratum():
 				continue
 			var rect: Rect2i = world._rect_of(r)
 			var adj := false
 			for r2 in world.ROOMS:
-				if Prog.flags.get("seen_" + r2.id, false) and world._rect_of(r2).grow(1).intersects(rect):
+				if world.map_seen(r2.id) and world._rect_of(r2).grow(1).intersects(rect):
 					adj = true
 			if adj:
 				var rr := Rect2(_o + Vector2(rect.position) * SC, Vector2(rect.size) * SC)
@@ -2094,7 +2181,7 @@ class MapView extends Control:
 		draw_texture_rect(tex, Rect2(_o, full), false)
 		# zona actual: brillo pulsante sobre sus salas
 		for r in world.ROOMS:
-			if world.AREAS.get(r.id, "") == cur and Prog.flags.get("seen_" + r.id, false):
+			if world.AREAS.get(r.id, "") == cur and world.map_seen(r.id):
 				var rcu := Rect2(_o + Vector2(world._rect_of(r).position) * SC, Vector2(world._rect_of(r).size) * SC)
 				draw_rect(rcu, Color(1, 1, 1, 0.05 + 0.04 * sin(t * 4.0)))
 		# marcadores
@@ -2184,7 +2271,7 @@ class MapView extends Control:
 		# --- rótulos de zona en placas, encima de cada zona y sin pisar iconos
 		var areas := {}
 		for r in world.ROOMS:
-			if not Prog.flags.get("seen_" + r.id, false):
+			if not world.map_seen(r.id):
 				continue
 			var a: String = world.AREAS.get(r.id, "")
 			if a == "":
@@ -2277,12 +2364,12 @@ class MapView extends Control:
 			draw_line(cpt, cpt + Vector2(0, 10 * sy), UIKit.GOLD_DARK, 2.0)
 		# panel de leyenda (izquierda)
 		UIKit.frame(self, Rect2(4, 4, 136, size.y - 8), UIKit.RED_DARK, Color(0.08, 0.03, 0.1, 0.85), 3.0, -1.0)
-		var st_parts: PackedStringArray = G.T("stratum1").split(" - ")
+		var st_parts: PackedStringArray = G.L(Strata.STRATUM_NAMES[world.cur_stratum()]).split(" · ")
 		_str(Vector2(12, 16), st_parts[0], UIKit.GOLD, 8)
 		if st_parts.size() > 1:
 			_str(Vector2(12, 27), st_parts[1], UIKit.GOLD.darkened(0.15), 8)
 		var ly := 40.0
-		for a in world.AREA_COLORS:
+		for a in world.areas_of_stratum(world.cur_stratum()):
 			var seen_any: bool = areas.has(a)
 			var nm2 := G.T(a).to_upper() if seen_any else "???"
 			var ac: Color = world.AREA_COLORS[a] if seen_any else Color(0.3, 0.3, 0.3)
@@ -2361,9 +2448,10 @@ class CodexPortrait extends Control:
 
 	func _draw_boss_art() -> void:
 		var c := size / 2.0 + Vector2(0, 18 + roundf(sin(_t * 2.0) * 2.0))
-		if sheet == "cinematic/seravel_body":
+		if sheet == "cinematic/seravel_body" or sheet == "cinematic/azrahel_body":
+			var pre := "cinematic/seravel_" if sheet == "cinematic/seravel_body" else "cinematic/azrahel_"
 			var k := 0.62
-			var wing := Fx.tex("cinematic/seravel_wing")
+			var wing := Fx.tex(pre + "wing")
 			var flap := sin(_t * 1.6) * 3.0
 			var wr := Rect2(c + Vector2(-103, -81 - flap) * k, Vector2(96, 104) * k)
 			draw_texture_rect(wing, wr, false)
@@ -2371,9 +2459,9 @@ class CodexPortrait extends Control:
 			draw_texture_rect(wing, wr, false)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 			draw_texture_rect(Fx.tex(sheet), Rect2(c + Vector2(-36, -56) * k, Vector2(72, 112) * k), false)
-			draw_texture_rect(Fx.tex("cinematic/seravel_sword"), Rect2(c + Vector2(24, -39) * k, Vector2(12, 84) * k), false)
-			draw_texture_rect(Fx.tex("cinematic/seravel_eyes"), Rect2(c + Vector2(-36, -56) * k, Vector2(72, 112) * k), false, Color(1, 1, 1, 0.7 + 0.3 * sin(_t * 3.0)))
-			draw_texture_rect(Fx.tex("cinematic/seravel_halo"), Rect2(c + Vector2(-22, -77 + sin(_t * 2.4) * 2.0) * k, Vector2(44, 14) * k), false)
+			draw_texture_rect(Fx.tex(pre + "sword"), Rect2(c + Vector2(24, -39) * k, Vector2(12, 84) * k), false)
+			draw_texture_rect(Fx.tex(pre + "eyes"), Rect2(c + Vector2(-36, -56) * k, Vector2(72, 112) * k), false, Color(1, 1, 1, 0.7 + 0.3 * sin(_t * 3.0)))
+			draw_texture_rect(Fx.tex(pre + "halo"), Rect2(c + Vector2(-22, -77 + sin(_t * 2.4) * 2.0) * k, Vector2(44, 14) * k), false)
 		else:
 			var k2 := 1.0
 			var r2 := Rect2(c + Vector2(-46, -66) * k2, Vector2(92, 112) * k2)
@@ -2957,3 +3045,26 @@ class AchScrollHint extends Control:
 		var y := (size.y - h) * vb.value / maxf(1.0, total - page)
 		draw_rect(Rect2(Vector2(1, y), Vector2(4, h)), UIKit.INK)
 		draw_rect(Rect2(Vector2(2, y + 1), Vector2(2, h - 2)), UIKit.GOLD)
+
+
+class BrasaGlyph extends Control:
+	## llama pequeña sobre su pedestal (apagada si aún no has llegado a ese estrato)
+	var lit := true
+	var t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		draw_rect(Rect2(-12, 10, 24, 6), UIKit.INK)
+		draw_rect(Rect2(-11, 11, 22, 4), Color(0.3, 0.22, 0.3))
+		if not lit:
+			draw_circle(Vector2(0, 4), 4.0, Color(0.25, 0.2, 0.28))
+			return
+		for i in 3:
+			var h := 18.0 - i * 5.0 + sin(t * (7.0 + i)) * 2.0
+			var w := 9.0 - i * 2.5
+			var c = [Color(1, 0.4, 0.15), Color(1, 0.7, 0.3), Color(1, 0.95, 0.7)][i]
+			draw_colored_polygon(PackedVector2Array([Vector2(-w, 10), Vector2(w, 10), Vector2(sin(t * 5.0 + i) * 2.0, 10 - h)]), c)
+		draw_circle(Vector2(0, 2), 14.0 + sin(t * 3.0), Color(1, 0.6, 0.2, 0.08))

@@ -376,7 +376,7 @@ func _bolt(p: Vector2, abyss: Node) -> void:
 	var b := Bolt.new()
 	b.position = p
 	world.get_node("FX").add_child(b)
-	Audio.sfx("thunder" if FileAccess.file_exists("res://assets/audio/sfx_thunder.wav") else "slam", -4.0)
+	Audio.sfx("thunder" if ResourceLoader.exists("res://assets/audio/sfx_thunder.wav") else "slam", -4.0)
 	G.flash(Color(0.75, 0.9, 1.0, 0.25), 0.12)
 	Fx.light_flash(p, Color(0.7, 0.9, 1.0), 2.2, 1.6, 0.3)
 	Fx.burst(p, Color(0.75, 0.9, 1.0), 14, 120.0, 0.4, "fx_px", 180.0)

@@ -176,7 +176,7 @@ func set_progress(v: float, text: String) -> void:
 func _refresh_quests() -> void:
 	for c in quest_box.get_children():
 		c.queue_free()
-	var order := ["main1", "feathers", "husks", "map", "choir", "jailer_hunt"]
+	var order := ["main4", "main3", "main2", "main1", "roses", "names", "eggs", "feathers", "husks", "map", "choir", "jailer_hunt"]
 	var shown := 0
 	for id in order:
 		if not Prog.quest_active(id) or shown >= 3:
@@ -284,7 +284,7 @@ func fade_from_black(dur: float) -> void:
 func fade_to(alpha: float, dur: float) -> void:
 	create_tween().tween_property(fade_rect, "color:a", alpha, dur)
 
-func end_card(title: String, body: String) -> void:
+func end_card(title: String, body: String, thanks := true) -> void:
 	var c := ColorRect.new()
 	c.color = Color(0.05, 0.02, 0.08, 0.0)
 	c.size = Vector2(640, 360)
@@ -297,7 +297,7 @@ func end_card(title: String, body: String) -> void:
 	t.extrude = 4
 	t.extrude_color = UIKit.RED
 	c.add_child(t)
-	var b := UIKit.label(body + "\n\n" + G.L(["Gracias por jugar a SERAPHALL.", "Thank you for playing SERAPHALL."]), 15, UIKit.WHITE)
+	var b := UIKit.label(body + ("\n\n" + G.L(["Gracias por jugar a SERAPHALL.", "Thank you for playing SERAPHALL."]) if thanks else ""), 15, UIKit.WHITE)
 	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.position = Vector2(0, 176)
 	b.size = Vector2(640, 60)
@@ -1107,6 +1107,12 @@ class BossPanel extends Control:
 		"seravel": {"deep": Color(0.4, 0.26, 0.04), "bright": Color(1.0, 0.86, 0.42), "frame": Color(0.85, 0.66, 0.25), "accent": Color(1.0, 0.95, 0.75), "glow": Color(1, 0.85, 0.5)},
 		"custodio": {"deep": Color(0.3, 0.27, 0.22), "bright": Color(0.95, 0.88, 0.62), "frame": Color(0.72, 0.7, 0.68), "accent": Color(1.0, 0.85, 0.45), "glow": Color(1, 0.9, 0.6)},
 		"verdugo": {"deep": Color(0.3, 0.02, 0.06), "bright": Color(1.0, 0.25, 0.35), "frame": Color(0.25, 0.22, 0.3), "accent": Color(1.0, 0.8, 0.45), "glow": Color(1, 0.3, 0.4)},
+		"orrun": {"deep": Color(0.08, 0.2, 0.32), "bright": Color(0.6, 0.9, 1.0), "frame": Color(0.85, 0.82, 0.75), "accent": Color(0.85, 0.95, 1.0), "glow": Color(0.5, 0.85, 1.0)},
+		"vulkaris": {"deep": Color(0.35, 0.08, 0.02), "bright": Color(1.0, 0.55, 0.2), "frame": Color(0.36, 0.34, 0.42), "accent": Color(1.0, 0.75, 0.35), "glow": Color(1, 0.5, 0.2)},
+		"azrahel": {"deep": Color(0.16, 0.04, 0.3), "bright": Color(0.75, 0.5, 1.0), "frame": Color(0.25, 0.2, 0.32), "accent": Color(1.0, 0.82, 0.4), "glow": Color(0.7, 0.45, 1.0)},
+		"lacrima": {"deep": Color(0.05, 0.2, 0.24), "bright": Color(0.6, 0.95, 1.0), "frame": Color(0.3, 0.42, 0.45), "accent": Color(0.8, 1.0, 1.0), "glow": Color(0.6, 0.95, 1.0)},
+		"kronagh": {"deep": Color(0.3, 0.2, 0.05), "bright": Color(1.0, 0.82, 0.4), "frame": Color(0.62, 0.48, 0.25), "accent": Color(1.0, 0.9, 0.55), "glow": Color(1, 0.85, 0.45)},
+		"ysolde": {"deep": Color(0.22, 0.08, 0.28), "bright": Color(1.0, 0.85, 0.55), "frame": Color(0.75, 0.7, 0.62), "accent": Color(0.85, 0.6, 1.0), "glow": Color(0.85, 0.6, 1.0)},
 		"coloso": {"deep": Color(0.05, 0.22, 0.3), "bright": Color(0.5, 0.92, 1.0), "frame": Color(0.42, 0.4, 0.5), "accent": Color(0.7, 1.0, 1.0), "glow": Color(0.5, 0.9, 1.0)},
 	}
 	func _ready() -> void:
@@ -1285,6 +1291,23 @@ class BossPanel extends Control:
 					var a := 1.0 - ph
 					draw_rect(Rect2(np, Vector2(2, 2)), Color(acc, a))
 					draw_rect(Rect2(np + Vector2(1, -4), Vector2(1, 4)), Color(acc, a))
+			"azrahel":
+				for side7 in [-1.0, 1.0]:
+					var root7 := Vector2(cx + side7 * (BW / 2.0 + 8.0), BY + BH / 2.0)
+					UIKit.wing(self, root7, side7, 20.0, Color(0.35, 0.2, 0.5, 0.95), 0.85 + 0.15 * sin(_t * 2.0))
+				var hc7 := Vector2(cx, BY - 27)
+				draw_arc(hc7, 15.0 + sin(_t * 2.0), 0, TAU, 32, Color(glow, 0.3), 4.0)
+				draw_arc(hc7, 15.0 + sin(_t * 2.0), 0, TAU, 32, Color(acc, 0.85), 1.0)
+				for k7 in 5:
+					var cp7 := hc7 + Vector2.from_angle(-PI / 2.0 + (k7 - 2) * 0.35) * 16.0
+					draw_colored_polygon(PackedVector2Array([cp7 + Vector2(-2, 0), cp7 + Vector2(0, -5), cp7 + Vector2(2, 0)]), acc)
+			"orrun":
+				for side8 in [-1.0, 1.0]:
+					var ap := Vector2(cx + side8 * (BW / 2.0 + 6.0), BY + BH / 2.0)
+					draw_line(ap, ap + Vector2(side8 * 8, -10), UIKit.INK, 3.0)
+					draw_line(ap, ap + Vector2(side8 * 8, -10), fr, 1.0)
+					draw_line(ap + Vector2(side8 * 4, -5), ap + Vector2(side8 * 12, -6), fr, 1.0)
+					draw_line(ap + Vector2(side8 * 8, -10), ap + Vector2(side8 * 6, -16), fr, 1.0)
 			"seravel":
 				# plumas de oro a los lados y aureola sobre el nombre
 				for side3 in [-1.0, 1.0]:

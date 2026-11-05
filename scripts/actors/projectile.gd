@@ -47,6 +47,10 @@ func _ready() -> void:
 		"wave":
 			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.95, 0.7); _spr.scale = Vector2(1.6, 2.6)
 			_spr.material = Fx.add_material()
+		"halo":
+			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.55, 0.2); _spr.scale = Vector2(1.5, 1.5)
+			_spr.modulate = Color(1, 0.6, 0.25)
+			_spr.material = Fx.add_material()
 		"verdict":
 			_spr.texture = Fx.tex("fx_soft"); col = Color(1, 0.25, 0.35); _spr.scale = Vector2(1.8, 3.0)
 			_spr.modulate = Color(1, 0.3, 0.4)
@@ -76,6 +80,13 @@ func _physics_process(delta: float) -> void:
 				rotation = vel.angle()
 			Audio.sfx("enemy_shot", -6.0)
 		return
+	if has_meta("boomerang") and not has_meta("returning") and vel.length() < 30.0:
+		# las aureolas de Vulkaris se frenan y vuelven hacia él
+		set_meta("returning", true)
+		accel = 0.0
+		var home: Vector2 = get_meta("boomerang")
+		vel = (home - global_position).normalized() * 250.0
+		_hit.clear()
 	if accel != 0.0:
 		vel += vel.normalized() * accel * delta
 	if homing > 0.0 and team == "enemy":
@@ -152,6 +163,13 @@ func _check_hits() -> void:
 func _draw() -> void:
 	if kind == "wave":
 		return
+	if kind == "halo":
+		# anillo al rojo que gira
+		draw_set_transform(Vector2.ZERO, -rotation + _t * 9.0, Vector2(1.0, 0.55))
+		draw_arc(Vector2.ZERO, 7.0, 0, TAU, 18, Color(0.6, 0.15, 0.05), 4.0)
+		draw_arc(Vector2.ZERO, 7.0, 0, TAU, 18, Color(1, 0.6, 0.2), 2.0)
+		draw_arc(Vector2.ZERO, 7.0, 0.3, 1.4, 6, Color(1, 0.95, 0.7), 2.0)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var n := _trail.size()
 	for i in range(1, n):
 		var a := 1.0 - float(i) / n

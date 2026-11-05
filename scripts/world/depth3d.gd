@@ -173,7 +173,7 @@ class Abyss extends Node2D:
 		for li in 3:
 			var f: float = [0.86, 0.72, 0.56][li]
 			var items := []
-			var n: int = [70, 55, 40][li]
+			var n: int = int([70, 55, 40][li] * W / 1536.0)
 			for i in n:
 				var p := Vector2(rng.randf_range(-200, W + 200), rng.randf_range(-200, H + 200))
 				var kind := rng.randi_range(0, 10)
