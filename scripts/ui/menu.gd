@@ -1325,7 +1325,7 @@ func _build_quests() -> void:
 	bar.position = Vector2(12, 18)
 	content.add_child(bar)
 	var fx := 8.0
-	for f in [["all", G.L(["TODO", "ALL"])], ["main", G.L(["TRAMA", "PLOT"])], ["side", G.L(["ENCARGO", "TASKS"])], ["bounty", G.L(["CAZA", "HUNT"])], ["done", G.L(["HECHO", "DONE"])]]:
+	for f in [["all", G.L(["TODO", "ALL"])], ["main", G.L(["TRAMA", "PLOT"])], ["side", G.L(["TAREA", "TASKS"])], ["bounty", G.L(["CAZA", "HUNT"])], ["done", G.L(["HECHO", "DONE"])]]:
 		var fb := Button.new()
 		fb.text = f[1]
 		fb.theme = UIKit.button_theme(6)
