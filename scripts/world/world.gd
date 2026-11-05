@@ -40,6 +40,8 @@ const ROOMS_I := [
 	{"id": "cadalso", "rect": Rect2i(77, 86, 15, 9)},
 	{"id": "cor_link", "rect": Rect2i(31, 77, 3, 5)},
 	{"id": "cornisa", "rect": Rect2i(13, 63, 21, 14)},
+	# La Cuna de Ceniza: sala de entrenamiento del prólogo, sin salida al resto del mapa
+	{"id": "prologo", "rect": Rect2i(6, 8, 22, 16)},
 ]
 const AREAS_I := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_chains", "hall2": "area_chains", "east": "area_gallery",
 	"gallery": "area_gallery", "yard": "area_yard", "alcove": "area_yard", "alc_link": "area_yard", "circle": "area_circle", "mirador": "area_mirador", "mir_link": "area_sanct",
@@ -47,7 +49,7 @@ const AREAS_I := {"sanct": "area_sanct", "hall1": "area_sanct", "chains": "area_
 	"celdas": "area_celdas", "cel_link": "area_celdas", "cel_up": "area_celdas", "atrio": "area_atrio", "atr_link": "area_atrio",
 	"esc_link": "area_juicio", "escala": "area_juicio", "antesala": "area_juicio", "jui_link": "area_juicio",
 	"cap_link": "area_capilla", "capilla": "area_capilla", "cad_link": "area_cadalso", "cadalso": "area_cadalso",
-	"cor_link": "area_cornisa", "cornisa": "area_cornisa"}
+	"cor_link": "area_cornisa", "cornisa": "area_cornisa", "prologo": "area_prologo"}
 const PEACE_AREAS_I := ["area_sanct", "area_mirador", "area_nimbo", "area_capilla"]
 var ROOMS: Array = ROOMS_I + Strata.ROOMS
 var AREAS: Dictionary = AREAS_I.merged(Strata.AREAS)
@@ -157,7 +159,8 @@ func _ready() -> void:
 		_apply_world_flags(true)
 		Audio.play_music("explore")
 		if _game_mode == "new":
-			Prog.start_quest("main1")
+			if not G.get_meta("prologue", false):
+				Prog.start_quest("main1")
 			_play_intro()
 		else:
 			_after_load()
@@ -405,7 +408,7 @@ const AREA_COLORS_I := {"area_sanct": Color(1, 0.7, 0.4), "area_chains": Color(0
 	"area_yard": Color(1, 0.5, 0.4), "area_circle": Color(1, 0.3, 0.4), "area_mirador": Color(0.6, 0.9, 1.0),
 	"area_nimbo": Color(1, 0.88, 0.5), "area_choir": Color(0.78, 0.55, 1.0), "area_celdas": Color(0.85, 0.45, 0.35),
 	"area_atrio": Color(0.6, 0.5, 0.95), "area_juicio": Color(1, 0.85, 0.55), "area_capilla": Color(0.7, 1.0, 0.85),
-	"area_cadalso": Color(1, 0.35, 0.4), "area_cornisa": Color(0.55, 0.95, 1.0)}
+	"area_cadalso": Color(1, 0.35, 0.4), "area_cornisa": Color(0.55, 0.95, 1.0), "area_prologo": Color(1, 0.85, 0.55)}
 var _map_tex: ImageTexture
 var _map_seen := -1
 
@@ -1223,7 +1226,12 @@ func _process(delta: float) -> void:
 	_v04_tick(delta, lp)
 	_trial_tick(delta)
 	if lp:
-		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * 22.0
+		var target: Vector2 = lp.global_position + Vector2(0, -10) + lp.aim * (70.0 if G.combat_mode == 2 else 22.0)
+		var want_mouse := Input.MOUSE_MODE_VISIBLE
+		if G.combat_mode == 2 and G.autotest == "" and not is_menu_open() and not G.photo_mode and lp.is_alive():
+			want_mouse = Input.MOUSE_MODE_CAPTURED
+		if Input.mouse_mode != want_mouse:
+			Input.mouse_mode = want_mouse
 		if active_boss and active_boss.is_alive() and active_boss.active:
 			if active_boss.has_method("cam_point"):
 				target = target.lerp(active_boss.cam_point(), 0.42)
@@ -1271,6 +1279,9 @@ func _near_any_player(pos: Vector2, r: float) -> bool:
 			return true
 	return false
 
+func _exit_tree() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("photo") and not menu.visible and not dialog.is_open():
 		_toggle_photo()
@@ -1291,7 +1302,7 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ping") and not menu.visible and not dialog.is_open():
 		var lp := local_player()
 		if lp and lp.is_alive():
-			bcast("_ping", [Net.my_id(), get_global_mouse_position()])
+			bcast("_ping", [Net.my_id(), get_global_mouse_position() if G.combat_mode == 0 else lp.global_position + lp.aim * 120.0])
 	elif event.is_action_pressed("pause") and not dialog.is_open():
 		if menu.visible:
 			menu.close()
@@ -1304,7 +1315,7 @@ func _on_shake(amount: float, duration: float) -> void:
 
 func _check_area(lp: Player) -> void:
 	var r := room_at(lp.global_position)
-	if r == "" or not AREAS.has(r):
+	if r == "" or not AREAS.has(r) or r == "prologo":
 		return
 	if not Prog.flags.get("seen_" + r, false):
 		Prog.flags["seen_" + r] = true
@@ -1312,7 +1323,7 @@ func _check_area(lp: Player) -> void:
 		for rr in ROOMS:
 			if Prog.flags.get("seen_" + rr.id, false):
 				seen += 1
-		Ach.set_goal("cartographer", ROOMS.size())
+		Ach.set_goal("cartographer", ROOMS.size() - 1)  # la Cuna del prólogo no cuenta
 		Ach.set_max("rooms", seen)
 	var a: String = AREAS[r]
 	if a != _area:
@@ -1491,7 +1502,7 @@ func _room_lock(rid: String, total: int, sleeping: Array) -> void:
 		if i < enemies.size():
 			enemies[i].modulate = Color(0.45, 0.42, 0.55)
 	seal_arena(rid, "coro" if rid in ["atrio", "atr_link", "choir_link"] else ("luz" if Strata.stratum_of_room(rid) % 2 == 0 else "celda"), false)
-	hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), 0, total)
+	hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), 0, total, true)
 	if not Prog.flags.get("seen_room_lock", false):
 		Prog.flags["seen_room_lock"] = true
 		G.toast(G.L(["Las salidas se cierran: acaba con todos para seguir.", "The exits seal shut: defeat them all to go on."]), Color(1, 0.75, 0.55))
@@ -1505,7 +1516,7 @@ func bcast_lock_count(n: int) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func _room_lock_count(n: int) -> void:
 	if room_lock != "":
-		hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), _lock_total - n, _lock_total)
+		hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), _lock_total - n, _lock_total, true)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _enemy_wake(i: int) -> void:
@@ -1583,6 +1594,8 @@ func try_interact(p: Player) -> void:
 		"brasa":
 			if not it.used:
 				_pay_brasa(p, it)
+				if Prog.has_skill("p7"):
+					Prog.add_ecos(400)
 				bcast("_light_brasa", [it.id])
 			else:
 				_rest_at(it.id)
@@ -1597,7 +1610,10 @@ func try_interact(p: Player) -> void:
 		"altar":
 			_altar(it)
 		"rift":
-			_rift(it)
+			if it.id == "prologue_rift" and _prologue:
+				_prologue.finish()
+			else:
+				_rift(it)
 		"lore":
 			Prog.flags["read_" + it.id] = true
 			_count_lore()
@@ -1797,21 +1813,21 @@ func _enemy_hurt(idx: int, hp: float, dmg: float, dir: Vector2, crit: bool, brok
 		if enemies[idx].type == "carcelero" and hp < enemies[idx].max_hp * 0.5:
 			enemies[idx].phase = 2
 
-func request_parry_enemy(idx: int) -> void:
+func request_parry_enemy(idx: int, perfect := true) -> void:
 	if multiplayer.is_server():
-		bcast("_enemy_parried", [idx])
+		bcast("_enemy_parried", [idx, perfect])
 	else:
-		_rpc_parry.rpc_id(1, idx)
+		_rpc_parry.rpc_id(1, idx, perfect)
 
 @rpc("any_peer", "call_remote", "reliable")
-func _rpc_parry(idx: int) -> void:
+func _rpc_parry(idx: int, perfect: bool) -> void:
 	if multiplayer.is_server():
-		bcast("_enemy_parried", [idx])
+		bcast("_enemy_parried", [idx, perfect])
 
 @rpc("any_peer", "call_remote", "reliable")
-func _enemy_parried(idx: int) -> void:
+func _enemy_parried(idx: int, perfect: bool) -> void:
 	if idx < enemies.size():
-		enemies[idx].on_parried()
+		enemies[idx].on_parried(perfect)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _enemy_die(idx: int) -> void:
@@ -1824,6 +1840,8 @@ func _enemy_die(idx: int) -> void:
 	var lpk := local_player()
 	if lpk and lpk.is_alive() and lpk.global_position.distance_to(e.global_position) < 280.0:
 		Prog.record_kill(e.type)
+		if Prog.has_skill("l10"):
+			lpk.light = minf(Prog.max_light(), lpk.light + 6.0)
 	if e.type == "sombra":
 		if int(e.get_meta("owner", -1)) == Net.my_id():
 			Prog.ecos += int(e.get_meta("amount", 0))
@@ -1849,8 +1867,9 @@ func _enemy_die(idx: int) -> void:
 		if back > 0:
 			get_tree().create_timer(2.5).timeout.connect(_feathers_back.bind(back))
 	Prog.add_ecos(e.cfg.ecos)
-	Fx.text(e.global_position + Vector2(0, 26), "+%d %s" % [int(e.cfg.ecos * Prog.ecos_mult()), G.T("ecos")], Color(0.6, 0.85, 1.0), 8)
-	Fx.souls(e.global_position + Vector2(0, -8), local_player(), 5 if not e.is_boss else 24)
+	var res_txt: String = "  x%.1f" % Prog.resonance_mult() if Prog.resonance > 0 else ""
+	Fx.text(e.global_position + Vector2(0, 26), "+%d%s" % [int(e.cfg.ecos * Prog.ecos_mult()), res_txt], Color(0.6, 0.9, 1.0) if Prog.resonance == 0 else UIKit.GOLD, 9)
+	Fx.souls(e.global_position + Vector2(0, -8), local_player(), clampi(int(e.cfg.ecos) / 12, 4, 10) if not e.is_boss else 30)
 	if e.is_boss:
 		_boss_feats(e)
 	if e.is_boss and not asc_fight.is_empty() and asc_fight.boss == e.type:
@@ -2229,6 +2248,7 @@ func _talk(id: String) -> void:
 					Prog.start_quest("feathers")
 					Prog.start_quest("jailer_hunt")
 					Prog.quest_step("main1", "talk_brenna")
+					Prog.grant_ability("art")
 					menu.open("weapons", {"forge": true})
 				dialog.play(lines, done)
 			else:
@@ -2714,6 +2734,11 @@ func _rpc_reset_request() -> void:
 # ====================================================================== intro
 func _play_intro() -> void:
 	var lp := local_player()
+	var with_prologue: bool = G.get_meta("prologue", false)
+	if with_prologue:
+		lp.respawn_at(tile_pos(17, 19))
+		camera.position = lp.global_position
+		Prog.flags["seen_prologo"] = true
 	lp.cutscene = true
 	lp.state = "downed"
 	hud.letterbox(true)
@@ -2735,13 +2760,15 @@ func _play_intro() -> void:
 		_cam_focus = null
 		hud.letterbox(false)
 		lp.revive(1.0)
-		hud.show_area(G.T("stratum1"), G.T("area_sanct"))
-		if G.get_meta("prologue", false):
+		if with_prologue:
 			G.set_meta("prologue", false)
+			hud.show_area(G.L(["PRÓLOGO", "PROLOGUE"]), G.T("area_prologo"))
 			var pr := preload("res://scripts/world/prologue.gd").new()
 			pr.world = self
+			_prologue = pr
 			add_child(pr)
 		else:
+			hud.show_area(G.T("stratum1"), G.T("area_sanct"))
 			get_tree().create_timer(4.5).timeout.connect(G.toast.bind(G.controls_text(), Color(0.85, 0.85, 0.9)))
 	dialog.play(lines, done, true)
 

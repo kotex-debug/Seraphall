@@ -11,6 +11,10 @@ var content: Control
 var tab := "char"
 var ctx := {}
 var _sel_skill := "f1"
+var _sel_branch := "filo"
+var _weapon_page := 0
+var _quest_filter := "all"
+var _quest_page := 0
 var _sel_weapon := ""
 var _sel_item := ""
 var _inv_filter := "all"
@@ -338,58 +342,91 @@ func _on_buy(k: String) -> void:
 			lp.hp = Prog.max_hp()
 
 # ------------------------------------------------------------------ habilidades: sigilo radial
-const SIGIL_C := Vector2(300, 140)
-const DIRS := {"filo": Vector2(0, -1), "ala": Vector2(1, 0), "luz": Vector2(0, 1), "ceniza": Vector2(-1, 0)}
+const SIGIL_C := Vector2(262, 148)
+const BRANCH_ORDER := ["filo", "ala", "luz", "ceniza", "pluma", "arconte"]
 
 func skill_pos(id: String) -> Vector2:
 	var s: Dictionary = Prog.SKILLS[id]
-	if s.branch == "arconte":
-		return SIGIL_C + Vector2(150, -96)
-	var d: Vector2 = DIRS[s.branch]
-	var tiers := [34.0, 62.0, 90.0, 118.0]
-	var r: float = tiers[s.pos.y]
-	var scale := Vector2(1.75, 1.0)
-	var side := float(s.pos.x - 1)
-	var perp := Vector2(-d.y, d.x) * side * 24.0
-	return (SIGIL_C + d * r * scale + perp).round()
+	var col: int = s.pos.x
+	# los seis primeros nodos de cada rama vienen de la disposición antigua, de tres columnas
+	if s.branch in ["filo", "ala", "luz", "ceniza"] and int(id.substr(1)) <= 6:
+		col += 1
+	return Vector2(134.0 + col * 64.0, 30.0 + s.pos.y * 47.0)
 
 func _build_skills() -> void:
+	if not Prog.SKILLS.has(_sel_skill) or Prog.SKILLS[_sel_skill].branch != _sel_branch:
+		_sel_skill = ""
+		for k in Prog.SKILLS:
+			if Prog.SKILLS[k].branch == _sel_branch:
+				_sel_skill = k
+				break
+	_panel(Rect2(0, 0, 96, 296), UIKit.PURPLE)
+	var by := 8.0
+	for b in BRANCH_ORDER:
+		var bt := BranchTab.new()
+		bt.branch = b
+		bt.selected = b == _sel_branch
+		bt.position = Vector2(5, by)
+		bt.size = Vector2(86, 40)
+		bt.pressed.connect(_on_branch.bind(b))
+		content.add_child(bt)
+		by += 47.0
 	var sig := SigilView.new()
 	sig.menu = self
+	sig.position = Vector2.ZERO
 	sig.size = Vector2(600, 296)
 	content.add_child(sig)
-	var sp := UIKit.pixel_text("%s %d" % [G.L(["PUNTOS", "POINTS"]), Prog.skill_points], 16, "head", UIKit.GOLD)
-	sp.position = Vector2(6, 6)
-	content.add_child(sp)
-	for b in ["filo", "ala", "luz", "ceniza", "arconte"]:
-		var bd: Dictionary = Prog.BRANCHES[b]
-		var pos: Vector2
-		match b:
-			"filo": pos = SIGIL_C + Vector2(-30, -146)
-			"ala": pos = SIGIL_C + Vector2(226, -8)
-			"luz": pos = SIGIL_C + Vector2(-30, 134)
-			"ceniza": pos = SIGIL_C + Vector2(-292, -8)
-			_: pos = SIGIL_C + Vector2(122, -124)
-		var hl := UIKit.label(G.L(bd.name).to_upper(), 8, bd.color, "head", 3)
-		hl.position = pos
-		hl.size = Vector2(60, 10)
-		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		content.add_child(hl)
 	for id in Prog.SKILLS:
+		if Prog.SKILLS[id].branch != _sel_branch:
+			continue
+		var cap: bool = Prog.SKILLS[id].get("cap", false)
 		var nb := SkillNode.new()
 		nb.id = id
 		nb.menu = self
-		nb.position = skill_pos(id) - Vector2(11, 11)
-		nb.size = Vector2(22, 22)
+		var sz := Vector2(30, 30) if cap else Vector2(24, 24)
+		nb.position = skill_pos(id) - sz / 2.0
+		nb.size = sz
 		nb.pressed.connect(_on_skill_sel.bind(id))
 		nb.mouse_entered.connect(_on_skill_hover.bind(id))
 		content.add_child(nb)
+	# columna derecha: puntos, lema, maestría y ficha
+	_panel(Rect2(432, 0, 168, 296), Prog.BRANCHES[_sel_branch].color.darkened(0.25))
+	var sp := UIKit.pixel_text("%d" % Prog.skill_points, 24, "head", UIKit.GOLD)
+	sp.position = Vector2(442, 8)
+	sp.size = Vector2(40, 26)
+	content.add_child(sp)
+	_lbl(G.L(["PUNTOS DE\nHABILIDAD", "SKILL\nPOINTS"]), Vector2(478, 9), 8, UIKit.WHITE, 0.0, "head")
+	var bi: Dictionary = Prog.BRANCH_INFO[_sel_branch]
+	_lbl(G.L(Prog.BRANCHES[_sel_branch].name).to_upper(), Vector2(442, 40), 8, Prog.BRANCHES[_sel_branch].color, 0.0, "head")
+	var mt := _lbl("«" + G.L(bi.motto) + "»", Vector2(442, 52), 10, Color(0.85, 0.8, 0.92), 150, "title")
+	mt.modulate.a = 0.9
+	if _sel_branch != "arconte":
+		var m := Prog.mastery(_sel_branch)
+		_lbl(G.L(["MAESTRÍA %d/3", "MASTERY %d/3"]) % m, Vector2(442, 82), 8, UIKit.GOLD if m > 0 else UIKit.TEXT_DIM, 0.0, "head")
+		_lbl(G.L(["Cada 4 nodos: %s", "Every 4 nodes: %s"]) % G.L(bi.bonus), Vector2(442, 94), 10, UIKit.TEXT_DIM, 150, "title")
 	_info = InfoCard.new()
-	_info.position = Vector2(404, 196)
-	_info.size = Vector2(196, 100)
+	_info.position = Vector2(438, 118)
+	_info.size = Vector2(156, 136)
 	content.add_child(_info)
 	_show_skill_info(_sel_skill)
+	if ctx.get("brasa", false) and not Prog.skills.is_empty():
+		_btn(G.L(["OLVIDAR (%d)", "RESPEC (%d)"]) % Prog.respec_cost(), Vector2(442, 262), _on_respec, Prog.ecos >= Prog.respec_cost(), 148)
+	else:
+		_lbl(G.L(["Cambiar de habilidades: descansa en una Brasa.", "Respec your skills: rest at an Ember."]), Vector2(442, 260), 10, UIKit.TEXT_DIM, 150, "title")
 
+func _on_branch(b: String) -> void:
+	_sel_branch = b
+	Audio.sfx("ui_move")
+	_rebuild(false)
+
+func _on_respec() -> void:
+	if Prog.respec():
+		Audio.sfx("nova", -6.0)
+		G.flash(Color(1, 0.7, 0.4, 0.3), 0.2)
+		var lp: Player = world.local_player()
+		if lp:
+			lp.refresh_stats(false)
+		_rebuild(false)
 func _on_skill_hover(id: String) -> void:
 	_show_skill_info(id)
 
@@ -410,13 +447,15 @@ func _show_skill_info(id: String) -> void:
 	if Prog.has_skill(id):
 		status = G.T("unlocked").to_upper()
 	elif s.has("archon") and not Prog.flags.get(s.archon + "_dead", false):
-		status = G.T("locked_archon")
+		status = G.L(["Requiere derrotar a ese jefe", "Requires defeating that boss"])
+	elif s.has("excl") and Prog.has_skill(s.excl):
+		status = G.L(["Elegiste la otra opción", "You chose the other path"])
 	else:
 		var missing := false
 		for r in s.req:
 			if not Prog.has_skill(r):
 				missing = true
-		status = (G.T("locked_req") if missing else (G.T("cost") % s.cost) + (" - " + G.L(["clic para desbloquear", "click to unlock"]) if Prog.can_unlock(id) else ""))
+		status = (G.T("locked_req") if missing else (G.T("cost") % s.cost) + (" - " + G.L(["clic: desbloquear", "click: unlock"]) if Prog.can_unlock(id) else ""))
 	_info.set_content(G.L(s.name).to_upper(), G.L(s.desc), status, col, Fx.tex("icon_" + Prog.BRANCHES[s.branch].icon))
 
 func _on_unlock() -> void:
@@ -566,79 +605,122 @@ func _on_unequip(id: String) -> void:
 	Audio.sfx("ui_move")
 
 # ------------------------------------------------------------------ armas / forja
+const WEAPONS_PER_PAGE := 6
+
 func _build_weapons() -> void:
 	var forge: bool = ctx.get("forge", false)
 	if _sel_weapon == "" or not Prog.weapons.has(_sel_weapon):
 		_sel_weapon = Prog.equipped
-	_panel(Rect2(0, 0, 230, 296))
-	var y := 10.0
-	var i := 0
-	var locked_list: Array = []
+	# --- arsenal: primero lo que tienes, luego siluetas con la pista de dónde están
+	_panel(Rect2(0, 0, 212, 296))
+	_lbl(G.L(["ARSENAL  %d/%d", "ARSENAL  %d/%d"]) % [Prog.weapons.size(), Prog.WEAPONS.size()], Vector2(10, 8), 8, UIKit.GOLD, 0.0, "head")
+	var ids: Array = []
 	for id in Prog.WEAPONS:
-		if not Prog.weapons.has(id):
-			locked_list.append(id)
-			continue
-		var card := WeaponCard.new()
-		card.id = id
-		card.selected = id == _sel_weapon
-		card.position = Vector2(8, y)
-		card.size = Vector2(214, 40)
-		card.delay = i * 0.05
-		card.pressed.connect(_on_weapon_sel.bind(id))
-		content.add_child(card)
-		y += 46.0
-		i += 1
-	# armas aún por encontrar: silueta y una pista de dónde están
-	for lid in locked_list:
-		if y > 250.0:
-			break
-		var lc := LockedWeaponCard.new()
-		lc.id = lid
-		lc.position = Vector2(8, y)
-		lc.size = Vector2(214, 40)
-		content.add_child(lc)
-		y += 46.0
-	_lbl(G.L(["ARSENAL %d/%d", "ARSENAL %d/%d"]) % [Prog.weapons.size(), Prog.WEAPONS.size()], Vector2(12, 282), 8, UIKit.TEXT_DIM, 0.0, "head")
-	var w2: Dictionary = Prog.WEAPONS[_sel_weapon]
-	_panel(Rect2(240, 0, 360, 296), UIKit.RED)
+		if Prog.weapons.has(id):
+			ids.append(id)
+	for id2 in Prog.WEAPONS:
+		if not Prog.weapons.has(id2):
+			ids.append(id2)
+	var pages: int = ceili(float(ids.size()) / WEAPONS_PER_PAGE)
+	_weapon_page = clampi(_weapon_page, 0, pages - 1)
+	var y := 22.0
+	var from := _weapon_page * WEAPONS_PER_PAGE
+	for i in range(from, mini(from + WEAPONS_PER_PAGE, ids.size())):
+		var wid: String = ids[i]
+		if Prog.weapons.has(wid):
+			var card := WeaponCard.new()
+			card.id = wid
+			card.selected = wid == _sel_weapon
+			card.position = Vector2(6, y)
+			card.size = Vector2(200, 38)
+			card.delay = (i - from) * 0.04
+			card.pressed.connect(_on_weapon_sel.bind(wid))
+			content.add_child(card)
+		else:
+			var lc := LockedWeaponCard.new()
+			lc.id = wid
+			lc.position = Vector2(6, y)
+			lc.size = Vector2(200, 38)
+			content.add_child(lc)
+		y += 41.0
+	if pages > 1:
+		_btn("<", Vector2(8, 272), _on_weapon_page.bind(-1), _weapon_page > 0, 34)
+		_lbl("%d / %d" % [_weapon_page + 1, pages], Vector2(44, 276), 8, UIKit.TEXT_DIM, 124, "head").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_btn(">", Vector2(170, 272), _on_weapon_page.bind(1), _weapon_page < pages - 1, 34)
+	# --- ficha del arma
+	var w2: Dictionary = Prog.weapon_data(_sel_weapon)
+	var lv: int = Prog.weapons[_sel_weapon]
+	var tier := Prog.weapon_tier(_sel_weapon)
+	var tcol: Color = [UIKit.RED, UIKit.GOLD, UIKit.GOLD, Color(1, 0.55, 0.95)][tier]
+	_panel(Rect2(220, 0, 380, 296), tcol)
 	var show := WeaponShowcase.new()
 	show.tex = Fx.tex("weapon_" + w2.sprite)
-	show.position = Vector2(420, 52)
+	show.tier = tier
+	show.position = Vector2(410, 30)
 	content.add_child(show)
-	var lv: int = Prog.weapons[_sel_weapon]
 	var nm := UIKit.pixel_text(G.L(w2.name).to_upper() + ("  +%d" % lv if lv > 0 else ""), 8, "head", UIKit.GOLD)
 	nm.align = 1
-	nm.size = Vector2(360, 10)
-	nm.position = Vector2(240, 96)
+	nm.size = Vector2(380, 10)
+	nm.position = Vector2(220, 60)
 	content.add_child(nm)
-	var d := _lbl(G.L(w2.desc), Vector2(256, 110), 15, UIKit.TEXT_DIM, 330)
+	var tag: String = [G.L(["ARMA", "WEAPON"]), G.L(["ARTE AFILADA", "HONED ART"]), G.L(["DESPERTADA", "AWAKENED"]), G.L(["ASCENDIDA", "ASCENDED"])][tier]
+	_lbl(tag, Vector2(228, 8), 8, tcol, 0.0, "head")
+	var d := _lbl(G.L(w2.desc), Vector2(232, 72), 10, UIKit.TEXT_DIM, 356, "title")
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var stats := [[G.T("damage"), Prog.weapon_damage(_sel_weapon), 60.0], [G.T("speed"), w2.speed, 1.6], [G.T("reach"), w2.range, 50.0], [G.L(["Postura", "Poise"]), w2.poise, 30.0]]
-	var yy := 140.0
+	# estadísticas, con lo que ganarías en la forja
+	var cur_dmg := Prog.weapon_damage(_sel_weapon)
+	var next_dmg := cur_dmg
+	if lv < 10:
+		next_dmg = cur_dmg / ((1.0 + 0.09 * lv) * (1.2 if lv >= 10 else 1.0)) * (1.0 + 0.09 * (lv + 1)) * (1.2 if lv + 1 >= 10 else 1.0)
+	var stats := [[G.T("damage"), cur_dmg, 90.0], [G.T("speed"), float(w2.speed), 1.8], [G.T("reach"), float(w2.range), 60.0], [G.L(["Postura", "Poise"]), float(w2.poise), 40.0]]
+	var yy := 100.0
 	for s in stats:
-		_lbl(str(s[0]).to_upper(), Vector2(258, yy), 8, UIKit.WHITE, 0.0, "head")
+		_lbl(str(s[0]).to_upper(), Vector2(232, yy), 8, UIKit.WHITE, 0.0, "head")
 		var sb := StatBar.new()
 		sb.value = clamp(float(s[1]) / s[2], 0.0, 1.0)
-		sb.position = Vector2(340, yy + 1)
+		sb.position = Vector2(308, yy + 1)
 		content.add_child(sb)
-		_lbl(("%.1f" % s[1]) if s[1] is float and s[1] < 5.0 else str(int(s[1])), Vector2(552, yy - 4), 15, UIKit.GOLD)
-		yy += 18.0
-	_lbl("%s  %s %s %s" % [G.T("scaling").to_upper(), _grade(w2.fue, "FUE"), _grade(w2.des, "DES"), _grade(w2.fe, "FE")], Vector2(258, yy + 2), 10, UIKit.CYAN, 0.0, "title")
+		_lbl(("%.1f" % s[1]) if s[1] < 5.0 else str(int(s[1])), Vector2(516, yy - 3), 10, UIKit.GOLD, 0.0, "title")
+		if forge and lv < 10 and str(s[0]) == G.T("damage"):
+			_lbl("+%d" % int(next_dmg - cur_dmg), Vector2(544, yy - 3), 10, Color(0.6, 1, 0.65), 0.0, "title")
+		yy += 13.0
+	_lbl("%s  %s %s %s" % [G.T("scaling").to_upper(), _grade(w2.fue, "FUE"), _grade(w2.des, "DES"), _grade(w2.fe, "FE")], Vector2(232, yy), 10, UIKit.CYAN, 0.0, "title")
+	# Arte y Despertar
+	var art: Dictionary = Prog.WEAPON_ARTS[_sel_weapon]
+	_lbl(G.L(["ARTE", "ART"]) + " [" + G.key_label("art") + "]  " + G.L(art.name).to_upper() + "  (%ds)" % int(Prog.art_cooldown(_sel_weapon)), Vector2(232, 168), 8, UIKit.GOLD, 0.0, "head")
+	_lbl(G.L(art.desc), Vector2(232, 180), 10, Color(0.88, 0.85, 0.95), 356, "title")
+	var aw: Dictionary = Prog.WEAPON_AWAKE[_sel_weapon]
+	_lbl(("+5  " + G.L(["DESPERTAR", "AWAKENING"])), Vector2(232, 206), 8, UIKit.GOLD if tier >= 2 else UIKit.TEXT_DIM, 0.0, "head")
+	_lbl(G.L(aw.desc), Vector2(330, 204), 10, (Color(0.9, 0.95, 0.8) if tier >= 2 else UIKit.TEXT_DIM), 262, "title")
+	# camino de mejoras: +3 Arte, +5 Despertar, +10 Ascensión
+	var pips := UpgradePips.new()
+	pips.level = lv
+	pips.position = Vector2(232, 222)
+	pips.size = Vector2(356, 16)
+	content.add_child(pips)
 	var eq := _sel_weapon == Prog.equipped
-	_btn(G.T("equipped") if eq else G.T("equip"), Vector2(258, 232), _on_equip, not eq, 100)
+	_btn(G.T("equipped") if eq else G.T("equip"), Vector2(232, 270), _on_equip, not eq, 90)
 	if lv >= 10:
-		_lbl(G.T("max_level"), Vector2(380, 236), 8, UIKit.GOLD, 0.0, "head")
+		_lbl(G.T("max_level"), Vector2(340, 272), 8, UIKit.GOLD, 0.0, "head")
 	elif forge:
 		var c := Prog.upgrade_cost(_sel_weapon)
-		var txt := G.T("upgrade_cost") % [lv + 1, c[0], c[1]]
+		var can: bool = Prog.free_upgrades > 0 or (Prog.ecos >= c[0] and Prog.feathers >= c[1] and Prog.item_count("iron") >= c[2] and Prog.item_count("tear") >= c[3])
 		if Prog.free_upgrades > 0:
-			txt = G.L(["¡Mejora gratuita! (+%d)", "Free upgrade! (+%d)"]) % (lv + 1)
-		_lbl(txt, Vector2(258, 258), 10, UIKit.GOLD, 330, "title")
-		var can = Prog.free_upgrades > 0 or (Prog.ecos >= c[0] and Prog.feathers >= c[1])
-		_btn(G.T("upgrade").to_upper(), Vector2(380, 232), _on_upgrade, can, 110)
+			_lbl(G.L(["¡Mejora gratuita! (+%d)", "Free upgrade! (+%d)"]) % (lv + 1), Vector2(232, 246), 10, UIKit.GOLD, 0.0, "title")
+		else:
+			var chips := CostChips.new()
+			chips.cost = c
+			chips.position = Vector2(232, 248)
+			chips.size = Vector2(356, 20)
+			content.add_child(chips)
+		_btn(G.L(["MEJORAR A +%d", "UPGRADE TO +%d"]) % (lv + 1), Vector2(336, 270), _on_upgrade, can, 150)
 	else:
-		_lbl(G.T("upgrade_at_forge"), Vector2(258, 258), 10, UIKit.TEXT_DIM, 330, "title")
+		_lbl(G.T("upgrade_at_forge"), Vector2(330, 272), 10, UIKit.TEXT_DIM, 260, "title")
 
+func _on_weapon_page(d: int) -> void:
+	_weapon_page += d
+	Audio.sfx("ui_move")
+	_rebuild(false)
 func _on_weapon_sel(id: String) -> void:
 	_sel_weapon = id
 	Audio.sfx("ui_move")
@@ -676,7 +758,8 @@ func _grade(v: float, n: String) -> String:
 var _rebinding := ""
 const ACTION_NAMES := {"up": ["Arriba", "Up"], "down": ["Abajo", "Down"], "left": ["Izquierda", "Left"], "right": ["Derecha", "Right"],
 	"attack": ["Ataque", "Attack"], "heavy": ["Ataque cargado", "Heavy attack"], "dash": ["Esquivar", "Dash"], "parry": ["Desviar (parry)", "Parry"],
-	"spell1": ["Lanza de Luz", "Lance of Light"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
+	"spell1": ["Pluma Dorada", "Golden Feather"], "spell2": ["Nova de Ceniza", "Ash Nova"], "wrath": ["Ira Seráfica", "Seraphic Wrath"],
+	"art": ["Arte de arma", "Weapon Art"],
 	"heal": ["Curarse", "Heal"], "item": ["Objeto rápido", "Quick item"], "interact": ["Interactuar", "Interact"], "menu": ["Menú", "Menu"],
 	"map": ["Mapa", "Map"], "photo": ["Modo foto", "Photo mode"], "ping": ["Marcar (coop.)", "Ping (co-op)"]}
 
@@ -898,10 +981,17 @@ func _build_controls() -> void:
 	_lbl(G.L(["CONTROLES  -  pulsa una acción y luego la tecla o el botón nuevo", "CONTROLS  -  click an action, then press the new key or button"]), Vector2(14, 10), 8, UIKit.CYAN, 0.0, "head")
 	var i := 0
 	for a in G.REBINDABLE:
-		var col := i / 9
-		var row := i % 9
+		var col := i / 10
+		var row := i % 10
 		var x := 16.0 + col * 296.0
-		var y := 32.0 + row * 27.0
+		var y := 28.0 + row * 23.5
+		# las teclas de los ataques aparecen al desbloquear el ataque
+		var lock: Array = G.ACTION_LOCKS.get(a, [])
+		if not lock.is_empty() and not Prog.ability(lock[0]):
+			_lbl("? ? ?", Vector2(x, y + 1), 15, Color(0.45, 0.4, 0.5))
+			_lbl(G.L(lock[1]), Vector2(x + 44, y + 4), 10, Color(0.6, 0.52, 0.65), 226, "title")
+			i += 1
+			continue
 		_lbl(G.L(ACTION_NAMES[a]), Vector2(x, y + 1), 15, UIKit.WHITE)
 		var txt := G.L(["...pulsa una tecla...", "...press a key..."]) if _rebinding == a else G.key_label(a)
 		var b := _btn(txt, Vector2(x + 150, y), _on_rebind.bind(a), true, 120)
@@ -1197,46 +1287,66 @@ const QUEST_LORE := {
 	"hymns": ["Tres páginas del Himno de la Vigilia andan dispersas por el Estrato. Juntas quizá expliquen para qué servían las campanas.", "Three pages of the Hymn of the Vigil lie scattered across the Stratum. Together they might explain what the bells were for."],
 	"jailer_hunt": ["Brenna quiere ver con sus propios ojos la llave del Carcelero. Dice que no es hierro de la Espiral.", "Brenna wants to see the Jailer's key with her own eyes. She says it isn't Spiral iron."],
 }
-const GIVERS := {"brenna": ["Brenna", "Brenna"], "carto": ["El Cartógrafo", "The Cartographer"], "velaria": ["Sor Velaria", "Sister Velaria"]}
+const GIVERS := {"brenna": ["Brenna", "Brenna"], "carto": ["El Cartógrafo", "The Cartographer"], "velaria": ["Sor Velaria", "Sister Velaria"],
+	"oso": ["Hermano Oso", "Brother Bear"], "archivero": ["El Archivero", "The Archivist"], "lirio": ["Lirio", "Lirio"]}
+
+const QUEST_PER_PAGE := 6
 
 func _build_quests() -> void:
-	# --- diario: lista por categorías
+	# --- diario: pestañas por tipo, páginas y seguimiento
 	_panel(Rect2(0, 0, 222, 296), UIKit.RED)
-	_lbl(G.L(["DIARIO", "JOURNAL"]), Vector2(12, 8), 8, UIKit.GOLD, 0.0, "head")
-	var order := []
+	var total := Prog.QUESTS.size()
+	var n_done := 0
+	for qid in Prog.QUESTS:
+		if Prog.quest_done(qid):
+			n_done += 1
+	_lbl(G.L(["DIARIO", "JOURNAL"]), Vector2(12, 7), 8, UIKit.GOLD, 0.0, "head")
+	_lbl("%d / %d" % [n_done, total], Vector2(160, 7), 8, UIKit.TEXT_DIM, 54, "head").horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var bar := StatBar.new()
+	bar.value = float(n_done) / maxf(1.0, float(total))
+	bar.position = Vector2(12, 18)
+	content.add_child(bar)
+	var fx := 8.0
+	for f in [["all", G.L(["TODO", "ALL"])], ["main", G.L(["TRAMA", "PLOT"])], ["side", G.L(["ENCARGO", "TASKS"])], ["bounty", G.L(["CAZA", "HUNT"])], ["done", G.L(["HECHO", "DONE"])]]:
+		var fb := Button.new()
+		fb.text = f[1]
+		fb.theme = UIKit.button_theme(6)
+		fb.position = Vector2(fx, 25)
+		fb.custom_minimum_size = Vector2(39, 18)
+		fb.size = Vector2(39, 18)
+		fb.add_theme_color_override("font_color", UIKit.GOLD if _quest_filter == f[0] else UIKit.TEXT_DIM)
+		fb.pressed.connect(_on_quest_filter.bind(f[0]))
+		content.add_child(fb)
+		fx += 41.0
+	var list := []
 	for cat in ["main", "side", "bounty"]:
 		for id in Prog.QUESTS:
-			if Prog.QUESTS[id].type == cat and Prog.quest_active(id):
-				order.append(id)
-	var done := []
-	for id in Prog.QUESTS:
-		if Prog.quest_done(id):
-			done.append(id)
-	if _quest_sel == "" or not (Prog.quest_active(_quest_sel) or Prog.quest_done(_quest_sel)):
-		_quest_sel = order[0] if not order.is_empty() else (done[0] if not done.is_empty() else "")
-	var y := 24.0
-	var cur_cat := ""
-	var i := 0
-	for id in order + done:
-		var q: Dictionary = Prog.QUESTS[id]
-		var cat: String = "done" if Prog.quest_done(id) else str(q.type)
-		if cat != cur_cat:
-			cur_cat = cat
-			var hdr: String = {"main": G.L(["PRINCIPAL", "MAIN"]), "side": G.L(["ENCARGOS", "ERRANDS"]), "bounty": G.L(["CAZAS", "HUNTS"]), "done": G.L(["COMPLETADAS", "COMPLETED"])}[cat]
-			_lbl(hdr, Vector2(14, y + 2), 8, UIKit.TEXT_DIM, 0.0, "head")
-			y += 14.0
+			if Prog.QUESTS[id].type == cat and Prog.quest_active(id) and (_quest_filter == "all" or _quest_filter == cat):
+				list.append(id)
+	if _quest_filter == "all" or _quest_filter == "done":
+		for id in Prog.QUESTS:
+			if Prog.quest_done(id):
+				list.append(id)
+	if _quest_sel == "" or _quest_sel not in list:
+		_quest_sel = list[0] if not list.is_empty() else ""
+	var pages: int = maxi(1, ceili(float(list.size()) / QUEST_PER_PAGE))
+	_quest_page = clampi(_quest_page, 0, pages - 1)
+	var y := 46.0
+	var from := _quest_page * QUEST_PER_PAGE
+	for i in range(from, mini(from + QUEST_PER_PAGE, list.size())):
 		var row := QuestRow.new()
-		row.id = id
+		row.id = list[i]
 		row.menu = self
-		row.selected = id == _quest_sel
+		row.selected = list[i] == _quest_sel
 		row.position = Vector2(8, y)
 		row.size = Vector2(206, 20)
-		row.delay = i * 0.04
+		row.delay = (i - from) * 0.04
 		content.add_child(row)
-		y += 22.0
-		i += 1
-		if y > 186.0:
-			break
+		y += 21.0
+	if pages > 1:
+		_btn("<", Vector2(8, 172), _on_quest_page.bind(-1), _quest_page > 0, 28)
+		_lbl("%d / %d" % [_quest_page + 1, pages], Vector2(36, 176), 8, UIKit.TEXT_DIM, 150, "head").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_btn(">", Vector2(186, 172), _on_quest_page.bind(1), _quest_page < pages - 1, 28)
 	var dv := DestinyScale.new()
 	dv.position = Vector2(11, 196)
 	dv.size = Vector2(200, 100)
@@ -1244,7 +1354,7 @@ func _build_quests() -> void:
 	# --- detalle de la misión elegida
 	_panel(Rect2(232, 0, 368, 296), UIKit.PURPLE)
 	if _quest_sel == "":
-		_lbl(G.L(["No tienes misiones.", "You have no quests."]), Vector2(250, 20), 15, UIKit.TEXT_DIM)
+		_lbl(G.L(["Aquí no hay misiones.", "No quests here."]), Vector2(250, 20), 15, UIKit.TEXT_DIM)
 		return
 	var det := QuestDetail.new()
 	det.id = _quest_sel
@@ -1270,7 +1380,27 @@ func _build_quests() -> void:
 	else:
 		_lbl(Prog.quest_text(_quest_sel), Vector2(250, sy), 15, UIKit.WHITE, 330)
 	_lbl(G.T("reward").to_upper(), Vector2(246, 248), 8, UIKit.GOLD, 0.0, "head")
+	if Prog.quest_active(_quest_sel):
+		var on := Prog.tracked == _quest_sel
+		_btn(G.L(["SIGUIENDO", "TRACKING"]) if on else G.L(["SEGUIR", "TRACK"]), Vector2(474, 240), _on_quest_track, true, 76).add_theme_color_override("font_color", UIKit.GOLD if on else UIKit.WHITE)
+		_btn(G.L(["MAPA", "MAP"]), Vector2(552, 240), switch_tab.bind("map"), true, 42)
 
+func _on_quest_filter(f: String) -> void:
+	_quest_filter = f
+	_quest_page = 0
+	Audio.sfx("ui_move", -8.0)
+	_rebuild(false)
+
+func _on_quest_page(d: int) -> void:
+	_quest_page += d
+	Audio.sfx("ui_move", -8.0)
+	_rebuild(false)
+
+func _on_quest_track() -> void:
+	Prog.tracked = "" if Prog.tracked == _quest_sel else _quest_sel
+	Audio.sfx("ui_ok", -8.0)
+	Prog.changed.emit()
+	_rebuild(false)
 func _on_quest(id: String) -> void:
 	_quest_sel = id
 	Audio.sfx("ui_move", -10.0)
@@ -1394,12 +1524,34 @@ func _build_options() -> void:
 	content.add_child(fl)
 	_lbl(G.T("tele_opt"), Vector2(480, 106), 10, UIKit.WHITE, 110, "title")
 	_btn(G.T("on") if G.tele_boost else G.T("off"), Vector2(480, 124), _on_tele, true, 60)
-	_lbl(G.L(["[P] Modo foto\n[M] Mapa", "[P] Photo mode\n[M] Map"]), Vector2(480, 160), 10, UIKit.TEXT_DIM, 110, "title")
+	_lbl(G.L(["COMBATE", "COMBAT"]), Vector2(480, 150), 8, UIKit.GOLD, 0.0, "head")
+	_btn([G.L(["PUNTERO", "POINTER"]), G.L(["MOVIMIENTO", "MOVEMENT"]), G.L(["CÁMARA", "CAMERA"])][G.combat_mode], Vector2(480, 162), _on_combat_mode, true, 110)
+	var sn := HSlider.new()
+	_style_slider(sn)
+	sn.position = Vector2(480, 190); sn.size = Vector2(110, 14)
+	sn.min_value = 0.3; sn.max_value = 2.5; sn.step = 0.1; sn.value = G.mouse_sens
+	sn.value_changed.connect(_on_mouse_sens)
+	sn.visible = G.combat_mode == 2
+	content.add_child(sn)
 	var dd: Dictionary = world.diff() if world else Prog.diff()
 	_lbl(G.T("difficulty").to_upper(), Vector2(480, 214), 8, UIKit.WHITE, 0.0, "head")
 	_lbl(G.L(dd.name).to_upper() + (("  NG+%d" % Prog.ng) if Prog.ng > 0 else ""), Vector2(480, 228), 10, dd.color, 110, "title")
 	if Prog.oath != "":
 		_lbl(G.L(Prog.OATHS[Prog.oath].name), Vector2(480, 252), 10, Prog.OATHS[Prog.oath].color, 110, "title")
+
+func _on_combat_mode() -> void:
+	G.combat_mode = (G.combat_mode + 1) % G.COMBAT_MODES.size()
+	G.save_settings()
+	Audio.sfx("ui_ok", -8.0)
+	G.toast(G.L(G.COMBAT_MODES[G.combat_mode]), UIKit.GOLD)
+	var lp: Player = world.local_player()
+	if lp:
+		lp.heading = lp.aim.angle()
+	_rebuild(false)
+
+func _on_mouse_sens(v: float) -> void:
+	G.mouse_sens = v
+	G.save_settings()
 
 func _on_access(v: float, which: String) -> void:
 	if which == "shake":
@@ -1735,8 +1887,41 @@ class StatBar extends Control:
 		if sx < (size.x - 2) * v:
 			draw_rect(Rect2(Vector2(sx, 1), Vector2(3, size.y - 2)), Color(1, 1, 1, 0.35))
 
+class BranchTab extends Button:
+	## Medallón de una rama del árbol
+	var branch := ""
+	var selected := false
+	var t := 0.0
+	func _ready() -> void:
+		flat = true
+		var e := StyleBoxEmpty.new()
+		for st in ["normal", "hover", "pressed", "focus", "hover_pressed", "disabled"]:
+			add_theme_stylebox_override(st, e)
+		UIKit.juicy(self)
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var bd: Dictionary = Prog.BRANCHES[branch]
+		var c: Color = bd.color
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), c if selected else Color(0.3, 0.18, 0.36), Color(0.1, 0.04, 0.14, 0.95), 3.0, t if selected else -1.0)
+		var ic := Vector2(16, size.y / 2.0)
+		UIKit.diamond(self, ic, 12.0, UIKit.INK)
+		UIKit.diamond(self, ic, 10.0, c.darkened(0.3) if selected else Color(0.2, 0.12, 0.25))
+		draw_texture(Fx.tex("icon_" + bd.icon), ic - Vector2(8, 8))
+		var f := UIKit.font("head")
+		f.draw_string(get_canvas_item(), Vector2(30, 16), G.L(bd.name).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 32, 8, c if selected else UIKit.WHITE)
+		var total := 0
+		for k in Prog.SKILLS:
+			if Prog.SKILLS[k].branch == branch:
+				total += 1
+		var n := Prog.branch_count(branch)
+		UIKit.font("title").draw_string(get_canvas_item(), Vector2(30, 28), "%d / %d" % [n, total], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
+		for i in Prog.mastery(branch):
+			UIKit.diamond(self, Vector2(34 + i * 9, 34), 3.0, UIKit.GOLD)
+
 class SigilView extends Control:
-	## Dibuja el sigilo central, las conexiones y la energía que fluye por las ramas desbloqueadas.
+	## Constelación de la rama elegida: estrellas, líneas de energía y el símbolo de la rama al fondo
 	var menu: Node
 	var t := 0.0
 	func _ready() -> void:
@@ -1745,43 +1930,55 @@ class SigilView extends Control:
 		t += delta
 		queue_redraw()
 	func _draw() -> void:
-		var c: Vector2 = menu.sigil_c()
-		# anillos del sigilo
+		var board := Rect2(Vector2(102, 0), Vector2(324, 296))
+		var bc0: Color = Prog.BRANCHES[menu._sel_branch].color
+		UIKit.frame(self, board, bc0.darkened(0.35), Color(0.05, 0.02, 0.08, 0.92), 4.0, t)
+		# estrellas con paralaje
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(menu._sel_branch)
+		for i in 70:
+			var p := Vector2(rng.randf_range(board.position.x + 4, board.end.x - 4), rng.randf_range(4, 292))
+			var a := 0.2 + 0.5 * absf(sin(t * rng.randf_range(0.4, 1.6) + i))
+			draw_rect(Rect2(p.round(), Vector2(1, 1)), Color(bc0.lerp(Color.WHITE, 0.6), a))
+		# el sigilo gira al fondo
+		var c := board.get_center()
 		for k in 3:
-			var rr := 18.0 + k * 6.0
-			for i in 24:
-				var a := TAU * i / 24.0 + t * (0.6 if k % 2 == 0 else -0.4)
-				var p := (c + Vector2(cos(a), sin(a)) * rr).round()
-				draw_rect(Rect2(p, Vector2(2, 2)), Color(1, 0.8, 0.35, 0.4 + 0.3 * k))
-		# fragmentos de los 10 Arcontes alrededor del núcleo
-		for i in 10:
-			var a2 := -PI / 2 + TAU * i / 10.0
-			var p2 := (c + Vector2(cos(a2), sin(a2)) * 42.0 * Vector2(1.4, 1.0)).round()
-			var lit = i == 0 and Prog.flags.get("seravel_dead", false)
-			UIKit.diamond(self, p2, 3.0, UIKit.RED if lit else Color(0.25, 0.15, 0.3))
-		UIKit.diamond(self, c, 9.0, UIKit.INK)
-		UIKit.diamond(self, c, 7.0, UIKit.GOLD.lerp(UIKit.WHITE, 0.5 + 0.5 * sin(t * 3.0)))
+			var rr := 58.0 + k * 40.0
+			for i in 36:
+				var an := TAU * i / 36.0 + t * (0.12 if k % 2 == 0 else -0.08)
+				var pp := (c + Vector2(cos(an), sin(an)) * rr).round()
+				draw_rect(Rect2(pp, Vector2(2, 2)), Color(bc0, 0.1 + 0.05 * k))
+		draw_set_transform(c, 0.0, Vector2(6, 6))
+		var ic := Fx.tex("icon_" + Prog.BRANCHES[menu._sel_branch].icon)
+		draw_texture(ic, -ic.get_size() / 2.0, Color(1, 1, 1, 0.07))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		# conexiones
 		for id in Prog.SKILLS:
 			var s: Dictionary = Prog.SKILLS[id]
+			if s.branch != menu._sel_branch:
+				continue
 			var to: Vector2 = menu.skill_pos(id)
-			var froms: Array = []
-			if s.req.is_empty():
-				froms.append(c)
-			else:
-				for r in s.req:
-					froms.append(menu.skill_pos(r))
-			var bc: Color = Prog.BRANCHES[s.branch].color
-			for fp in froms:
-				var on := Prog.has_skill(id)
+			var bc: Color = s.color if s.has("color") else bc0
+			var reqs: Array = s.req.duplicate()
+			if s.has("any"):
+				reqs.append_array(s.any)
+			for r in reqs:
+				var fp: Vector2 = menu.skill_pos(r)
+				var on: bool = Prog.has_skill(id) and Prog.has_skill(r)
 				draw_line(fp, to, UIKit.INK, 4.0)
 				draw_line(fp, to, bc if on else Color(0.3, 0.2, 0.35), 2.0)
 				if on:
 					for k in 3:
 						var q := fmod(t * 0.8 + k / 3.0, 1.0)
-						var pp: Vector2 = fp.lerp(to, q).round()
-						draw_rect(Rect2(pp - Vector2(1, 1), Vector2(3, 3)), Color(1, 1, 1, 0.9))
-
+						var pp2: Vector2 = fp.lerp(to, q).round()
+						draw_rect(Rect2(pp2 - Vector2(1, 1), Vector2(3, 3)), Color(1, 1, 1, 0.9))
+			# las dos opciones excluyentes se miran con una línea roja discontinua
+			if s.has("excl") and str(id) < str(s.excl):
+				var o2: Vector2 = menu.skill_pos(s.excl)
+				var dn := 8
+				for k in dn:
+					if k % 2 == 0:
+						draw_line(to.lerp(o2, float(k) / dn), to.lerp(o2, float(k + 1) / dn), Color(1, 0.3, 0.3, 0.7), 1.0)
 class SkillNode extends Button:
 	var id := ""
 	var menu: Node
@@ -1807,7 +2004,13 @@ class SkillNode extends Button:
 		var can := Prog.can_unlock(id)
 		var bc: Color = Prog.BRANCHES[s.branch].color
 		var c := size / 2.0
-		var r := 10.0 + _hover * 3.0 + (sin(t * 6.0) * 1.0 if can else 0.0)
+		var cap: bool = s.get("cap", false)
+		var r := (14.0 if cap else 10.0) + _hover * 3.0 + (sin(t * 6.0) * 1.0 if can else 0.0)
+		if cap:
+			# Estigma: una corona de chispas que gira
+			for k in 8:
+				var ka := TAU * k / 8.0 + t * 1.2
+				draw_rect(Rect2((c + Vector2.from_angle(ka) * (r + 5.0)).round(), Vector2(2, 2)), bc if (owned or can) else Color(0.3, 0.2, 0.35))
 		if menu._sel_skill == id:
 			UIKit.diamond(self, c, r + 5.0, Color(1, 1, 1, 0.5 + 0.3 * sin(t * 8.0)), false)
 		UIKit.diamond(self, c + Vector2(1, 2), r + 1.0, Color(0, 0, 0, 0.6))
@@ -1950,6 +2153,61 @@ class BigIcon extends Control:
 		var bob := roundf(sin(t * 2.5) * 2.0)
 		draw_texture_rect(tex, Rect2(Vector2(0, bob), Vector2(48, 48)), false)
 
+class UpgradePips extends Control:
+	## Camino de mejoras de un arma: +1 ... +10 con sus hitos marcados
+	var level := 0
+	var t := 0.0
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var step := size.x / 10.0
+		var y := 6.0
+		draw_line(Vector2(step * 0.5, y), Vector2(size.x - step * 0.5, y), UIKit.INK, 3.0)
+		var f := UIKit.font("title")
+		for i in 10:
+			var n := i + 1
+			var p := Vector2(step * (i + 0.5), y)
+			var on := n <= level
+			var mile := n == 3 or n == 5 or n == 10
+			if on and n < 10:
+				draw_line(p, p + Vector2(step, 0), UIKit.GOLD, 1.0)
+			var r := 5.0 if mile else 3.0
+			var col := (Color(1, 0.55, 0.95) if n == 10 else UIKit.GOLD) if on else Color(0.3, 0.2, 0.36)
+			if n == level + 1:
+				col = col.lerp(UIKit.WHITE, 0.3 + 0.3 * sin(t * 6.0))
+			UIKit.diamond(self, p, r + 1.0, UIKit.INK)
+			UIKit.diamond(self, p, r, col)
+			if mile:
+				var lab := {3: G.L(["Arte", "Art"]), 5: G.L(["Despertar", "Awaken"]), 10: G.L(["Ascender", "Ascend"])}[n] as String
+				var lw := f.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+				f.draw_string(get_canvas_item(), Vector2(minf(p.x - lw / 2.0, size.x - lw), y + 17), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+
+class CostChips extends Control:
+	## Lo que pide Brenna, con iconos: en rojo lo que te falta
+	var cost: Array = []
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var f := UIKit.font("title")
+		var items := [["icon_eco", cost[0], Prog.ecos], ["icon_feather", cost[1], Prog.feathers], ["icon_iron", cost[2], Prog.item_count("iron")], ["icon_tear", cost[3], Prog.item_count("tear")]]
+		var x := 0.0
+		for it in items:
+			if int(it[1]) <= 0:
+				continue
+			var ok: bool = int(it[2]) >= int(it[1])
+			var txt := "%d/%d" % [it[2], it[1]]
+			var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var r := Rect2(Vector2(x, 0), Vector2(tw + 24, 18))
+			draw_rect(r, Color(0.08, 0.03, 0.1))
+			draw_rect(r, (UIKit.GOLD_DARK if ok else UIKit.RED), false, 1.0)
+			if ResourceLoader.exists("res://assets/sprites/%s.png" % it[0]):
+				draw_texture(Fx.tex(it[0]), Vector2(x + 2, 1))
+			f.draw_string(get_canvas_item(), Vector2(x + 20, 13), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.WHITE if ok else Color(1, 0.5, 0.5))
+			x += r.size.x + 5.0
+
 class WeaponCard extends Button:
 	var id := ""
 	var selected := false
@@ -1973,24 +2231,28 @@ class WeaponCard extends Button:
 	func _draw() -> void:
 		var w: Dictionary = Prog.WEAPONS[id]
 		var eq := id == Prog.equipped
-		UIKit.frame(self, Rect2(Vector2.ZERO, size), UIKit.RED if selected else Color(0.3, 0.18, 0.36), Color(0.1, 0.04, 0.14, 0.95), 3.0, t if selected else -1.0)
-		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(6, 8), Vector2(64, 24)), false)
+		var tier := Prog.weapon_tier(id)
+		var fc: Color = [UIKit.RED, UIKit.RED, UIKit.GOLD, Color(1, 0.55, 0.95)][tier]
+		UIKit.frame(self, Rect2(Vector2.ZERO, size), fc if selected or tier >= 2 else Color(0.3, 0.18, 0.36), Color(0.1, 0.04, 0.14, 0.95), 3.0, t if selected else -1.0)
+		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(4, 7), Vector2(64, 24)), false)
 		var f := UIKit.font("title")
 		var nm := G.L(w.name).to_upper()
-		f.draw_string_outline(get_canvas_item(), Vector2(76, 18), nm, HORIZONTAL_ALIGNMENT_LEFT, size.x - 80, 10, 3, UIKit.INK)
-		f.draw_string(get_canvas_item(), Vector2(76, 18), nm, HORIZONTAL_ALIGNMENT_LEFT, size.x - 80, 10, UIKit.GOLD if selected else UIKit.WHITE)
+		f.draw_string_outline(get_canvas_item(), Vector2(72, 15), nm, HORIZONTAL_ALIGNMENT_LEFT, size.x - 76, 10, 3, UIKit.INK)
+		f.draw_string(get_canvas_item(), Vector2(72, 15), nm, HORIZONTAL_ALIGNMENT_LEFT, size.x - 76, 10, UIKit.GOLD if selected else UIKit.WHITE)
 		var lv: int = Prog.weapons.get(id, 0)
 		for i in 10:
 			var c := UIKit.GOLD if i < lv else Color(0.25, 0.15, 0.3)
-			draw_rect(Rect2(Vector2(76 + i * 7, 26), Vector2(5, 5)), UIKit.INK)
-			draw_rect(Rect2(Vector2(77 + i * 7, 27), Vector2(3, 3)), c)
+			var mile := i == 2 or i == 4 or i == 9
+			draw_rect(Rect2(Vector2(72 + i * 7, 22), Vector2(5, 7 if mile else 5)), UIKit.INK)
+			draw_rect(Rect2(Vector2(73 + i * 7, 23), Vector2(3, 5 if mile else 3)), c)
 		if eq:
 			var b := UIKit.font("title")
-			b.draw_string_outline(get_canvas_item(), Vector2(size.x - 50, 36), G.T("equipped").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
-			b.draw_string(get_canvas_item(), Vector2(size.x - 50, 36), G.T("equipped").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.CYAN)
+			b.draw_string_outline(get_canvas_item(), Vector2(size.x - 50, 35), G.T("equipped").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
+			b.draw_string(get_canvas_item(), Vector2(size.x - 50, 35), G.T("equipped").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.CYAN)
 
 class WeaponShowcase extends Control:
 	var tex: Texture2D
+	var tier := 0
 	var t := 0.0
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1998,22 +2260,26 @@ class WeaponShowcase extends Control:
 		t += delta
 		queue_redraw()
 	func _draw() -> void:
+		var col: Color = [Color(1, 0.4, 0.5), Color(1, 0.75, 0.3), Color(1, 0.85, 0.4), Color(1, 0.55, 0.95)][tier]
 		# pedestal de luz
 		for i in 5:
-			draw_rect(Rect2(Vector2(-50 + i * 8, 30 - i * 2), Vector2(100 - i * 16, 2)), Color(1, 0.4, 0.5, 0.25 + i * 0.1))
-		for i in 6:
-			var a := TAU * i / 6.0 + t * 0.7
+			draw_rect(Rect2(Vector2(-70 + i * 10, 26 - i * 2), Vector2(140 - i * 20, 2)), Color(col, 0.25 + i * 0.1))
+		for i in (6 + tier * 3):
+			var a := TAU * i / (6.0 + tier * 3.0) + t * (0.7 + 0.2 * tier)
 			var d := Vector2.from_angle(a)
-			draw_colored_polygon(PackedVector2Array([d * 20 + d.orthogonal() * 4, d * 60, d * 20 - d.orthogonal() * 4]), Color(1, 0.75, 0.3, 0.1))
-		var bob := roundf(sin(t * 2.0) * 3.0)
-		draw_set_transform(Vector2(0, bob), sin(t * 1.3) * 0.15 - 0.2, Vector2(3, 3))
+			draw_colored_polygon(PackedVector2Array([d * 20 + d.orthogonal() * 4, d * (70.0 + tier * 6.0), d * 20 - d.orthogonal() * 4]), Color(col, 0.1 + 0.03 * tier))
+		var bob := roundf(sin(t * 2.0) * 2.0)
+		draw_set_transform(Vector2(0, bob), sin(t * 1.3) * 0.08 - 0.06, Vector2(2, 2))
 		draw_texture(tex, -tex.get_size() / 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		var sp := fmod(t * 1.5, 2.0)
 		if sp < 1.0:
-			var p := Vector2(lerpf(-40, 40, sp), bob - 4 + lerpf(8, -8, sp)).round()
+			var p := Vector2(lerpf(-56, 56, sp), bob - 4 + lerpf(8, -8, sp)).round()
 			draw_rect(Rect2(p, Vector2(3, 3)), Color.WHITE)
-
+		# partículas si está despertada
+		for i in tier * 5:
+			var k := fmod(t * 0.4 + i * 0.137, 1.0)
+			draw_rect(Rect2(Vector2(sin(i * 12.9) * 60.0, 20.0 - k * 46.0).round(), Vector2(2, 2)), Color(col, 1.0 - k))
 class QuestCard extends Control:
 	var id := ""
 	var delay := 0.0
@@ -2594,7 +2860,13 @@ class QuestDetail extends Control:
 		hf.draw_string_outline(get_canvas_item(), Vector2(18, 21), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
 		hf.draw_string(get_canvas_item(), Vector2(18, 21), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.WHITE)
 		var kind: String = {"main": G.L(["MISIÓN PRINCIPAL", "MAIN QUEST"]), "side": G.L(["ENCARGO", "ERRAND"]), "bounty": G.L(["CAZA", "HUNT"])}[str(q.type)]
+		if id.begins_with("main"):
+			kind = G.L(["CAPÍTULO %s", "CHAPTER %s"]) % ["I", "II", "III", "IV"][clampi(int(id.substr(4)) - 1, 0, 3)]
 		hf.draw_string(get_canvas_item(), Vector2(18, 40), kind, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
+		# brillo que recorre la cinta
+		var sx := 8.0 + fmod(_t * 90.0, 420.0)
+		if sx < 340.0:
+			draw_rect(Rect2(Vector2(sx, 9), Vector2(8, 16)), Color(1, 1, 1, 0.14))
 		# retrato de quien la encarga (o la orden grabada a fuego)
 		var pr := Rect2(Vector2(14, 50), Vector2(52, 52))
 		draw_rect(pr, Color(0.1, 0.04, 0.14))
@@ -2774,7 +3046,7 @@ class LockedWeaponCard extends Control:
 	func _draw() -> void:
 		var w: Dictionary = Prog.WEAPONS[id]
 		UIKit.frame(self, Rect2(Vector2.ZERO, size), Color(0.22, 0.13, 0.26), Color(0.06, 0.03, 0.08, 0.9), 3.0, -1.0)
-		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(6, 8), Vector2(64, 24)), false, Color(0.02, 0.01, 0.03, 0.95))
+		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(4, 7), Vector2(64, 24)), false, Color(0.02, 0.01, 0.03, 0.95))
 		var f := UIKit.font("title")
 		f.draw_string(get_canvas_item(), Vector2(76, 18), "???", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.TEXT_DIM)
 		f.draw_string(get_canvas_item(), Vector2(76, 32), G.L(HINTS.get(id, ["Sigue descendiendo.", "Keep descending."])), HORIZONTAL_ALIGNMENT_LEFT, size.x - 80, 10, Color(0.55, 0.45, 0.6))

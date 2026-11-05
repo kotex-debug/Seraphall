@@ -120,6 +120,7 @@ func _ready() -> void:
 	G.pickup_requested.connect(pickups.add)
 	Prog.changed.connect(_refresh_quests)
 	Prog.quest_updated.connect(_on_quest_updated)
+	Prog.reveal_requested.connect(_on_reveal)
 	G.language_changed.connect(_refresh_quests)
 	_refresh_quests()
 	# entrada animada del HUD
@@ -152,10 +153,35 @@ func _on_quest_updated(_id: String) -> void:
 		tw.tween_property(c, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
 var _beat_t := 0.0
+var _reveal_q: Array = []
+var _reveal: AbilityReveal
+
+func _on_reveal(title: String, desc: String, key: String, icon: String, color: Color, kind: String) -> void:
+	_reveal_q.append([title, desc, key, icon, color, kind])
+
+func _reveal_tick() -> void:
+	## Los anuncios esperan a que no haya menú, diálogo ni combate: nunca interrumpen
+	if _reveal_q.is_empty() or _reveal != null or world == null:
+		return
+	var lp: Player = world.local_player()
+	if lp == null or not lp.is_alive() or lp.cutscene or world.is_menu_open() or world.active_boss != null or world.room_lock != "" or world._trial != "":
+		return
+	var r: Array = _reveal_q.pop_front()
+	_reveal = AbilityReveal.new()
+	_reveal.size = Vector2(640, 360)
+	_reveal.title = r[0]
+	_reveal.desc = r[1]
+	_reveal.key_text = r[2]
+	_reveal.icon = Fx.tex(r[3])
+	_reveal.color = r[4]
+	_reveal.kind = r[5]
+	_reveal.player = lp
+	big_layer.add_child(_reveal)
 
 func _process(delta: float) -> void:
 	if _boss and (not is_instance_valid(_boss) or not _boss.is_alive()):
 		hide_boss()
+	_reveal_tick()
 	# latido con poca vida (cada vez más rápido)
 	var lp: Player = world.local_player() if world else null
 	if lp and lp.is_alive() and lp.hp / Prog.max_hp() <= 0.25:
@@ -176,7 +202,16 @@ func set_progress(v: float, text: String) -> void:
 func _refresh_quests() -> void:
 	for c in quest_box.get_children():
 		c.queue_free()
-	var order := ["main4", "main3", "main2", "main1", "roses", "names", "eggs", "feathers", "husks", "map", "choir", "jailer_hunt"]
+	# la misión que sigues va primero; luego la principal más avanzada y los encargos
+	var order := []
+	if Prog.tracked != "" and Prog.quest_active(Prog.tracked):
+		order.append(Prog.tracked)
+	for m in ["main4", "main3", "main2", "main1"]:
+		if m not in order:
+			order.append(m)
+	for q2 in Prog.QUESTS:
+		if q2 not in order:
+			order.append(q2)
 	var shown := 0
 	for id in order:
 		if not Prog.quest_active(id) or shown >= 3:
@@ -248,12 +283,13 @@ func hide_boss() -> void:
 	boss_panel.outro()
 
 var trial_banner: TrialBanner
-func show_trial(title: String, wave: int, total: int) -> void:
+func show_trial(title: String, wave: int, total: int, plain := false) -> void:
 	if trial_banner == null:
 		trial_banner = TrialBanner.new()
 		trial_banner.size = Vector2(640, 30)
 		root.add_child(trial_banner)
 		root.move_child(trial_banner, boss_panel.get_index())
+	trial_banner.plain = plain
 	trial_banner.title = title
 	trial_banner.wave = wave
 	trial_banner.total = total
@@ -785,7 +821,7 @@ class SkillBar extends Control:
 	var _t := 0.0
 	var _pop := {}
 	var _was_ready := {}
-	const SLOTS := [["Q", "spell1"], ["E", "spell2"], ["R", "wrath"], ["X", "item"], ["C", "heal"]]
+	const SLOTS := [["Q", "spell1"], ["E", "spell2"], ["R", "wrath"], ["V", "art"], ["X", "item"], ["C", "heal"]]
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -806,14 +842,14 @@ class SkillBar extends Control:
 		var w := Prog.weapon_data()
 		var up: int = Prog.weapons.get(Prog.equipped, 0)
 		var wname := G.L(w.name).to_upper() + ("  +%d" % up if up > 0 else "")
-		draw_texture(Fx.tex("weapon_" + w.sprite), Vector2(0, -16))
+		draw_texture_rect(Fx.tex("weapon_" + w.sprite), Rect2(Vector2(0, -19), Vector2(32, 12)), false)
 		var bf := UIKit.font("title")
 		bf.draw_string_outline(get_canvas_item(), Vector2(34, -6), wname, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, UIKit.INK)
 		bf.draw_string(get_canvas_item(), Vector2(34, -6), wname, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIKit.WHITE)
 		var x := 0.0
 		for s in SLOTS:
 			var key: String = s[0]
-			var locked := (key == "Q" and not Prog.ability("lance")) or (key == "E" and not Prog.ability("nova")) or (key == "R" and not Prog.ability("wrath"))
+			var locked := (key == "Q" and not Prog.ability("lance")) or (key == "E" and not Prog.ability("nova")) or (key == "R" and not Prog.ability("wrath")) or (key == "V" and not Prog.ability("art"))
 			var ready := true
 			var fill := 1.0
 			var icon: Texture2D
@@ -826,6 +862,9 @@ class SkillBar extends Control:
 					ready = lp.light >= 28.0; fill = clamp(lp.light / 28.0, 0.0, 1.0)
 				"R":
 					icon = Fx.tex("icon_luz"); ready = lp.wrath >= 100.0; fill = lp.wrath / 100.0
+				"V":
+					icon = Fx.tex("icon_filo"); ready = lp.art_cd <= 0.0
+					fill = 1.0 - clampf(lp.art_cd / maxf(1.0, Prog.art_cooldown()), 0.0, 1.0)
 				"X":
 					var qi := Prog.quick_item
 					icon = Fx.tex("icon_" + Prog.ITEMS.get(qi, Prog.ITEMS.bomb).icon)
@@ -876,10 +915,15 @@ class SkillBar extends Control:
 			x += 30.0
 
 class EcosCounter extends Control:
+	## La moneda del juego: los Ecos saltan, muestran lo que acabas de ganar y la Resonancia (racha de bajas sin recibir golpes)
 	var _shown := 0.0
 	var _bump := 0.0
 	var _t := 0.0
 	var _last := 0
+	var _gain := 0
+	var _gain_t := 0.0
+	var _res_pop := 0.0
+	var _res_last := 0
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		size = Vector2(116, 36)
@@ -890,7 +934,17 @@ class EcosCounter extends Control:
 		if Prog.ecos != _last:
 			if Prog.ecos > _last:
 				_bump = 1.0
+				_gain += Prog.ecos - _last
+				_gain_t = 1.8
 			_last = Prog.ecos
+		_gain_t -= delta
+		if _gain_t <= 0.0:
+			_gain = 0
+		if Prog.resonance != _res_last:
+			if Prog.resonance > _res_last:
+				_res_pop = 1.0
+			_res_last = Prog.resonance
+		_res_pop = maxf(0.0, _res_pop - delta * 3.0)
 		_shown = lerpf(_shown, float(Prog.ecos), clamp(delta * 7.0, 0.0, 1.0))
 		if absf(_shown - Prog.ecos) < 1.0:
 			_shown = Prog.ecos
@@ -904,15 +958,44 @@ class EcosCounter extends Control:
 		var x := size.x - w
 		var y := 16.0 - roundf(_bump * 4.0)
 		var col := UIKit.CYAN.lerp(UIKit.WHITE, _bump)
+		if Prog.resonance > 0:
+			col = col.lerp(UIKit.GOLD, 0.15 * Prog.resonance)
+		# placa de fondo
+		var plate := Rect2(Vector2(x - 24, -3), Vector2(w + 28, 22))
+		UIKit.slash_band(self, plate.grow(1), UIKit.INK, 5.0)
+		UIKit.slash_band(self, plate, Color(0.06, 0.1, 0.2, 0.82), 5.0)
+		UIKit.slash_band(self, Rect2(plate.position, Vector2(plate.size.x, 1)), col.darkened(0.2), 5.0)
 		f.draw_string_outline(get_canvas_item(), Vector2(x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, UIKit.INK)
 		f.draw_string(get_canvas_item(), Vector2(x, y + 1), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIKit.CYAN_DARK)
 		f.draw_string(get_canvas_item(), Vector2(x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
-		# orbe que gira
+		# moneda de alma que gira, con destellos
 		var sx := absf(cos(_t * 3.0)) * 0.8 + 0.2
 		var ic := Fx.tex("icon_eco")
-		draw_set_transform(Vector2(x - 12, 9), 0.0, Vector2(sx, 1.0))
+		draw_set_transform(Vector2(x - 12, 8), 0.0, Vector2(sx * (1.0 + _bump * 0.35), 1.0 + _bump * 0.35))
 		draw_texture(ic, Vector2(-8, -8))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		if fmod(_t, 2.2) < 0.25:
+			var sp := Vector2(x - 8, 3)
+			draw_rect(Rect2(sp - Vector2(0, 2), Vector2(1, 5)), Color.WHITE)
+			draw_rect(Rect2(sp - Vector2(2, 0), Vector2(5, 1)), Color.WHITE)
+		# lo que acabas de ganar
+		if _gain > 0:
+			var gt := "+%d" % _gain
+			var gw := f.get_string_size(gt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+			var ga := clampf(_gain_t * 2.0, 0.0, 1.0)
+			var gp := Vector2(size.x - gw, -7.0 - (1.8 - _gain_t) * 3.0)
+			f.draw_string_outline(get_canvas_item(), gp, gt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, Color(UIKit.INK, ga))
+			f.draw_string(get_canvas_item(), gp, gt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, ga))
+		# Resonancia: rombos que se encienden con cada baja
+		if Prog.resonance > 0:
+			var rm := Prog.resonance_max()
+			var rx := size.x - 8.0 * rm - 34.0
+			var rt := "x%.1f" % Prog.resonance_mult()
+			f.draw_string_outline(get_canvas_item(), Vector2(rx - 26, 31), rt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+			f.draw_string(get_canvas_item(), Vector2(rx - 26, 31), rt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, UIKit.GOLD.lerp(UIKit.WHITE, _res_pop))
+			for i in rm:
+				var on: bool = i < Prog.resonance
+				UIKit.diamond(self, Vector2(rx + i * 8.0, 27), 3.0 + (1.0 if on and i == Prog.resonance - 1 else 0.0) * _res_pop * 2.0, UIKit.GOLD if on else Color(0.2, 0.18, 0.28))
 		# plumas
 		var ft := str(Prog.feathers)
 		var fw := f.get_string_size(ft, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
@@ -1449,6 +1532,7 @@ class TrialBanner extends Control:
 	var _t := 0.0
 	var _in := 0.0
 	var _hide := false
+	var plain := false
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _process(delta: float) -> void:
@@ -1459,7 +1543,7 @@ class TrialBanner extends Control:
 		queue_redraw()
 	func _draw() -> void:
 		var f := UIKit.font("head")
-		var lab := G.T("trial_label") + " · " + title
+		var lab := title if plain else G.T("trial_label") + " · " + title
 		var w := f.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 24 + total * 10
 		var y := -20.0 + 26.0 * _in
 		var r := Rect2(Vector2(size.x / 2.0 - w / 2.0, y), Vector2(w, 16))
@@ -1476,6 +1560,105 @@ class TrialBanner extends Control:
 				UIKit.diamond(self, dp, 3.0, UIKit.RED.lerp(UIKit.GOLD, 0.5 + 0.5 * sin(_t * 8.0)))
 			else:
 				UIKit.diamond(self, dp, 2.0, Color(0.4, 0.3, 0.35))
+
+class AbilityReveal extends Control:
+	## Anuncio épico: el mundo se apaga, la habilidad se alza entre rayos y se dice qué tecla la usa
+	var title := ""
+	var desc := ""
+	var key_text := ""
+	var kind := ""
+	var icon: Texture2D
+	var color := Color.WHITE
+	var player: Player
+	var t := 0.0
+	var _pt: UIKit.PixelText
+	var _parts: Array = []
+	const DUR := 4.4
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		if player:
+			player.cutscene = true
+		_pt = UIKit.pixel_text(title, 30 if title.length() < 22 else 20, "logo", color)
+		_pt.align = 1
+		_pt.size = Vector2(640, 36)
+		_pt.position = Vector2(0, 176)
+		_pt.appear = 0.0
+		_pt.extrude = 4
+		_pt.extrude_color = color.darkened(0.6)
+		_pt.outline = 6
+		add_child(_pt)
+		var tw := create_tween()
+		tw.tween_interval(0.5)
+		tw.tween_property(_pt, "appear", float(title.length()) + 1.0, 0.6)
+		tw.tween_callback(_impact)
+		Audio.sfx("gate", -4.0, 0.0)
+		Audio.sfx("levelup", 0.0, 0.0)
+		G.flash(Color(color, 0.5), 0.3)
+		G.shake(5.0, 0.4)
+		G.chroma(1.4, 0.5)
+		for i in 60:
+			_parts.append([Vector2(randf_range(0, 640), randf_range(0, 360)), randf_range(14, 50), randf_range(1, 3)])
+	func _impact() -> void:
+		_pt.flash = 1.0
+		_pt.shake = 3.0
+		create_tween().tween_property(_pt, "shake", 0.0, 0.5)
+		Audio.sfx("slam", -6.0, 0.0)
+		G.shake(3.0, 0.2)
+	func _input(event: InputEvent) -> void:
+		if t > 1.4 and t < DUR - 0.5 and (event.is_action_pressed("attack") or event.is_action_pressed("interact") or event.is_action_pressed("pause")):
+			t = DUR - 0.5
+	func _process(delta: float) -> void:
+		t += delta
+		for p in _parts:
+			p[0].y -= p[1] * delta
+			if p[0].y < -4.0:
+				p[0].y = 364.0
+		queue_redraw()
+		if t >= DUR or G.autotest != "" and t > 1.6:
+			if player and is_instance_valid(player):
+				player.cutscene = false
+			queue_free()
+	func _draw() -> void:
+		var a := clampf(t * 3.0, 0.0, 1.0) * clampf((DUR - t) * 2.5, 0.0, 1.0)
+		modulate.a = a
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.0, 0.04, 0.82))
+		var c := Vector2(320, 118)
+		# rayos que giran
+		for i in 14:
+			var ang := TAU * i / 14.0 + t * 0.35
+			var d := Vector2.from_angle(ang)
+			var o := d.orthogonal()
+			draw_colored_polygon(PackedVector2Array([c + d * 18.0 + o * 3.0, c + d * 420.0 + o * 26.0, c + d * 420.0 - o * 26.0, c + d * 18.0 - o * 3.0]), Color(color, 0.09 + 0.04 * sin(t * 3.0 + i)))
+		# chispas que suben
+		for p in _parts:
+			draw_rect(Rect2((p[0] as Vector2).round(), Vector2(p[2], p[2])), Color(color.lerp(Color.WHITE, 0.4), 0.55))
+		# aro y objeto
+		var grow := clampf((t - 0.15) * 2.5, 0.0, 1.0)
+		draw_arc(c, 44.0 * grow, 0.0, TAU, 48, Color(UIKit.INK, 0.9), 5.0)
+		draw_arc(c, 44.0 * grow, t, t + TAU * 0.85, 48, color, 2.0)
+		draw_arc(c, 38.0 * grow, -t * 1.4, -t * 1.4 + TAU * 0.6, 40, Color(1, 1, 1, 0.7), 1.0)
+		if icon:
+			var ts := icon.get_size()
+			var sc := (3.5 if ts.x <= 16 else (72.0 / ts.x)) * grow * (1.0 + 0.04 * sin(t * 4.0))
+			draw_set_transform(c + Vector2(0, sin(t * 2.0) * 2.0), 0.0, Vector2(sc, sc))
+			draw_texture(icon, -ts / 2.0)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var hf := UIKit.font("head")
+		var kw := hf.get_string_size(kind, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		hf.draw_string_outline(get_canvas_item(), Vector2(320 - kw / 2.0, 172), kind, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, UIKit.INK)
+		hf.draw_string(get_canvas_item(), Vector2(320 - kw / 2.0, 172), kind, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 0.9, 0.7))
+		UIKit.slash_band(self, Rect2(Vector2(320 - 170.0 * grow, 216), Vector2(340.0 * grow, 3)), color, 3.0)
+		if t > 0.9:
+			var bf := UIKit.font("body")
+			var pa := clampf((t - 0.9) * 3.0, 0.0, 1.0)
+			bf.draw_multiline_string_outline(get_canvas_item(), Vector2(130, 240), desc, HORIZONTAL_ALIGNMENT_CENTER, 380, 15, 3, 4, Color(UIKit.INK, pa))
+			bf.draw_multiline_string(get_canvas_item(), Vector2(130, 240), desc, HORIZONTAL_ALIGNMENT_CENTER, 380, 15, 3, Color(1, 1, 1, pa))
+			if key_text != "":
+				var kl := G.L(["Se usa con", "Use it with"]) + "  [" + key_text + "]"
+				var kw2 := hf.get_string_size(kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+				hf.draw_string_outline(get_canvas_item(), Vector2(320 - kw2 / 2.0, 306), kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 3, Color(UIKit.INK, pa))
+				hf.draw_string(get_canvas_item(), Vector2(320 - kw2 / 2.0, 306), kl, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, pa))
 
 class FloatingPrompt extends Control:
 	## Tecla [F] flotante sobre el objeto interactuable.

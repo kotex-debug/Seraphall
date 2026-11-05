@@ -46,6 +46,56 @@ const WEAPONS := {
 	"bow": {"name": ["Arco de Pluma", "Feather Bow"], "sprite": "bow", "dmg": 12.0, "speed": 1.05, "range": 24.0,
 		"arc": 60.0, "combo": 3, "stam": 7.0, "poise": 5.0, "fue": 0.1, "des": 0.9, "fe": 0.0, "ranged": true, "bow": true,
 		"desc": ["Flechas de pluma a distancia; la tercera se abre en abanico. Cargado: una flecha que atraviesa a todos en línea.", "Feather arrows at range; the third fans out. Charged: an arrow that pierces everything in a line."]},
+	# --- v0.9: armas de los Arcontes y del hierro de las celdas
+	"mangual": {"name": ["Mangual del Carcelero", "Jailer's Flail"], "sprite": "mangual", "dmg": 21.0, "speed": 0.8, "range": 46.0,
+		"arc": 200.0, "combo": 3, "stam": 15.0, "poise": 20.0, "fue": 0.9, "des": 0.2, "fe": 0.0,
+		"desc": ["Una bola de hierro y una cadena. Barre a todo lo que tengas delante con mucho alcance.", "An iron ball on a chain. Sweeps everything in front of you with long reach."]},
+	"yunque": {"name": ["Maza del Gran Yunque", "Great Anvil Mace"], "sprite": "yunque", "dmg": 30.0, "speed": 0.62, "range": 34.0,
+		"arc": 150.0, "combo": 2, "stam": 21.0, "poise": 32.0, "fue": 1.1, "des": 0.0, "fe": 0.2, "burn": 0.25,
+		"desc": ["Forjada por Vulkaris, sigue al rojo. Lenta y demoledora: cada golpe quema a quien lo recibe.", "Forged by Vulkaris and still white-hot. Slow and crushing: every hit burns its target."]},
+	"astas": {"name": ["Astas de Orrun", "Orrun's Antlers"], "sprite": "astas", "dmg": 16.0, "speed": 1.15, "range": 48.0,
+		"arc": 70.0, "combo": 4, "stam": 11.0, "poise": 11.0, "fue": 0.2, "des": 0.7, "fe": 0.3, "lunge": 1.6,
+		"desc": ["Un glaive de hueso con fuego azul. Estocadas larguísimas que te lanzan hacia delante.", "A bone glaive with blue fire. Very long thrusts that carry you forward."]},
+	"corona": {"name": ["Cetro del Rey Vacío", "Scepter of the Empty King"], "sprite": "corona", "dmg": 26.0, "speed": 0.95, "range": 40.0,
+		"arc": 150.0, "combo": 3, "stam": 13.0, "poise": 18.0, "fue": 0.4, "des": 0.3, "fe": 0.9, "wave": true,
+		"desc": ["La corona que nadie quiso, clavada en un asta. Quien la empuña manda... y paga por ello.", "The crown no one wanted, on a staff. Whoever wields it commands... and pays for it."]},
+}
+
+## Arte de arma: habilidad única de cada arma [V]. cd = segundos de recarga
+const WEAPON_ARTS := {
+	"sword": {"cd": 9.0, "name": ["Corte Lunar", "Lunar Cut"], "desc": ["Te lanzas atravesando a tus enemigos y remata una media luna a tu alrededor.", "You dash through your foes and finish with a crescent all around you."]},
+	"spear": {"cd": 9.0, "name": ["Mil Estocadas", "Thousand Thrusts"], "desc": ["Seis estocadas relámpago en línea recta con un alcance enorme.", "Six lightning thrusts in a straight line with huge reach."]},
+	"scythe": {"cd": 10.0, "name": ["Torbellino de Luz", "Whirl of Light"], "desc": ["Giras con las dos guadañas segando todo lo que haya alrededor.", "You spin with both scythes, reaping everything around you."]},
+	"hammer": {"cd": 12.0, "name": ["Terremoto", "Earthquake"], "desc": ["Tres ondas sísmicas cada vez más grandes que rompen la postura.", "Three ever larger seismic waves that break posture."]},
+	"choir": {"cd": 10.0, "name": ["Aria Hueca", "Hollow Aria"], "desc": ["Una nota imposible: dieciséis ondas en todas direcciones que frenan a quien tocan.", "An impossible note: sixteen waves in every direction that slow what they touch."]},
+	"seravel": {"cd": 12.0, "name": ["Juicio de las Puertas", "Judgement of the Gates"], "desc": ["Cinco espadas de luz caen en línea delante de ti.", "Five swords of light fall in a line in front of you."]},
+	"reaper": {"cd": 11.0, "name": ["La Cosecha", "The Harvest"], "desc": ["Un barrido total que atrae a todos hacia la hoja y te devuelve vida por cada uno.", "A total sweep that pulls everyone toward the blade and heals you for each."]},
+	"staff": {"cd": 14.0, "name": ["Amanecer", "Daybreak"], "desc": ["Un sol estalla: círculo de curación enorme y doce orbes en todas direcciones.", "A sun bursts: a huge healing circle and twelve orbs in every direction."]},
+	"fists": {"cd": 9.0, "name": ["Cien Puños", "Hundred Fists"], "desc": ["Una ráfaga imparable de diez puñetazos y un gancho final.", "An unstoppable barrage of ten punches and a final uppercut."]},
+	"verdugo": {"cd": 12.0, "name": ["Sentencia Final", "Final Sentence"], "desc": ["Tres medias lunas carmesí que atraviesan todo.", "Three crimson crescents that pierce everything."]},
+	"bow": {"cd": 11.0, "name": ["Lluvia de Plumas", "Feather Rain"], "desc": ["Una lluvia de flechas cae sobre la zona a la que apuntas.", "A rain of arrows falls on the area you aim at."]},
+	"mangual": {"cd": 10.0, "name": ["Cadena Rota", "Broken Chain"], "desc": ["Haces girar la bola tres veces a tu alrededor y atraes a los enemigos.", "You whirl the ball around you three times and drag enemies in."]},
+	"yunque": {"cd": 13.0, "name": ["Campanada del Yunque", "Anvil Toll"], "desc": ["Un único golpe que hace temblar la sala, quema y aturde a todos.", "A single blow that shakes the room, burning and stunning everyone."]},
+	"astas": {"cd": 10.0, "name": ["Embestida del Ciervo", "Stag's Charge"], "desc": ["Cargas en línea recta dejando columnas de fuego azul a tu paso.", "You charge in a straight line, leaving pillars of blue fire behind."]},
+	"corona": {"cd": 13.0, "name": ["Decreto Real", "Royal Decree"], "desc": ["Una orden que nadie puede desobedecer: daño enorme y rompe la postura de todos.", "An order no one can disobey: huge damage and breaks everyone's posture."]},
+}
+## Despertar del arma al llegar a +5: un poder propio que cambia cómo pelea
+const WEAPON_AWAKE := {
+	"sword": {"mods": {"wave": true}, "desc": ["El remate lanza una onda de luz.", "The finisher fires a wave of light."]},
+	"spear": {"mods": {"range": 54.0}, "desc": ["Alcance mucho mayor.", "Much longer reach."]},
+	"scythe": {"mods": {"bleed_ch": 0.7}, "desc": ["El sangrado de luz casi siempre se activa.", "Light-bleed triggers almost every time."]},
+	"hammer": {"mods": {"arc": 180.0, "poise": 36.0}, "desc": ["Barridos más amplios y aún más castigo a la postura.", "Wider sweeps and even more posture damage."]},
+	"choir": {"mods": {"notes_n": 5}, "desc": ["El remate lanza cinco notas.", "The finisher releases five notes."]},
+	"seravel": {"mods": {"wave_mult": 1.6}, "desc": ["La onda de luz golpea un 60% más fuerte.", "The wave of light hits 60% harder."]},
+	"reaper": {"mods": {"drain": 0.11}, "desc": ["Bebe casi el doble de vida.", "Drains almost twice the life."]},
+	"staff": {"mods": {"orb_pierce": 2, "speed": 1.2}, "desc": ["Los orbes atraviesan y disparas más rápido.", "Orbs pierce and you fire faster."]},
+	"fists": {"mods": {"combo": 6}, "desc": ["Ráfagas de seis golpes.", "Six-hit flurries."]},
+	"verdugo": {"mods": {"sentence2": true}, "desc": ["La Sentencia lanza dos medias lunas.", "The Sentence hurls two crescents."]},
+	"bow": {"mods": {"fan": 5}, "desc": ["El tercer disparo se abre en cinco flechas.", "The third shot fans into five arrows."]},
+	"mangual": {"mods": {"pull": true}, "desc": ["El último golpe atrae a todos.", "The last hit pulls everyone in."]},
+	"yunque": {"mods": {"burn": 0.45}, "desc": ["La quemadura casi se duplica.", "The burn nearly doubles."]},
+	"astas": {"mods": {"drain": 0.04, "lunge": 2.2}, "desc": ["Estocadas aún más largas que roban vida.", "Even longer thrusts that steal life."]},
+	"corona": {"mods": {"notes": true}, "desc": ["El remate lanza además notas que atraviesan.", "The finisher also releases piercing notes."]},
 }
 
 # ------------------------------------------------------------------ objetos
@@ -165,16 +215,68 @@ func ability(id: String) -> bool:
 		"lance": return flags.get("ab_lance", false)
 		"nova": return flags.get("ab_lance", false) and has_skill("l2")
 		"wrath": return flags.get("ab_wrath", false)
+		"art": return flags.get("ab_art", false)
 	return true
 
 func grant_ability(id: String) -> void:
 	if flags.get("ab_" + id, false):
 		return
 	flags["ab_" + id] = true
-	var names := {"lance": ["LANZA DE LUZ", "LANCE OF LIGHT"], "wrath": ["IRA SERÁFICA", "SERAPHIC WRATH"]}
-	G.toast(G.L(["NUEVA HABILIDAD: ", "NEW ABILITY: "]) + G.L(names.get(id, ["?", "?"])) + "  [" + G.key_label({"lance": "spell1", "wrath": "wrath"}.get(id, "spell1")) + "]", Color(1, 0.85, 0.4))
-	Audio.sfx("levelup", -4.0)
+	reveal_ability(id)
 	changed.emit()
+
+## Datos del anuncio épico de cada habilidad
+const ABILITY_INFO := {
+	"lance": {"name": ["PLUMA DORADA", "GOLDEN FEATHER"], "key": "spell1", "icon": "icon_lance", "color": Color(1, 0.85, 0.4),
+		"desc": ["Lanzas una pluma de oro que atraviesa a tus enemigos, se clava estallando en esquirlas y vuelve a tu mano.", "You hurl a golden feather that pierces your foes, bursts into shards and returns to your hand."]},
+	"nova": {"name": ["NOVA DE CENIZA", "ASH NOVA"], "key": "spell2", "icon": "icon_nova", "color": Color(1, 0.6, 0.3),
+		"desc": ["Una explosión de ceniza ardiente a tu alrededor.", "A burst of burning ash all around you."]},
+	"wrath": {"name": ["IRA SERÁFICA", "SERAPHIC WRATH"], "key": "wrath", "icon": "icon_luz", "color": Color(1, 0.35, 0.35),
+		"desc": ["Golpea y desvía para llenar el anillo de Ira. Cuando esté lleno, desata la furia de un serafín.", "Strike and parry to fill the Wrath ring. When full, unleash the fury of a seraph."]},
+	"art": {"name": ["ARTE DE ARMA", "WEAPON ART"], "key": "art", "icon": "icon_filo", "color": Color(0.7, 0.9, 1.0),
+		"desc": ["Cada arma guarda una técnica única. Úsala, espera a que se recargue y descubre la de todas.", "Every weapon holds a unique technique. Use it, wait for it to recharge and discover them all."]},
+}
+signal reveal_requested(title: String, desc: String, key: String, icon: String, color: Color, kind: String)
+
+func reveal_ability(id: String) -> void:
+	var a: Dictionary = ABILITY_INFO.get(id, {})
+	if not a.is_empty():
+		reveal_requested.emit(G.L(a.name), G.L(a.desc), G.key_label(a.key), a.icon, a.color, G.L(["NUEVA HABILIDAD", "NEW ABILITY"]))
+
+# ------------------------------------------------------------------ armas: niveles y Artes
+func weapon_tier(id: String) -> int:
+	## 0: normal · 1: Arte afilada (+3) · 2: Despertada (+5) · 3: Ascendida (+10)
+	var lv: int = weapons.get(id, 0)
+	return 3 if lv >= 10 else (2 if lv >= 5 else (1 if lv >= 3 else 0))
+
+func art_cooldown(id := "") -> float:
+	if id == "":
+		id = equipped
+	var cd: float = WEAPON_ARTS.get(id, {"cd": 10.0}).cd
+	return cd * (0.8 if weapon_tier(id) >= 1 else 1.0)
+
+func art_power(id := "") -> float:
+	if id == "":
+		id = equipped
+	return 1.0 + 0.1 * int(weapons.get(id, 0)) + (0.4 if weapon_tier(id) >= 3 else 0.0)
+
+# ------------------------------------------------------------------ Resonancia: racha de bajas sin recibir golpes = más Ecos
+var resonance := 0
+var res_t := 0.0
+
+func resonance_max() -> int:
+	return 8 if has_skill("p4") else 5
+
+func resonance_mult() -> float:
+	return 1.0 + 0.1 * resonance
+
+func resonance_add() -> void:
+	resonance = mini(resonance + 1, resonance_max())
+	res_t = 22.0 if has_skill("p4") else 15.0
+
+func resonance_break() -> void:
+	resonance = 0
+	res_t = 0.0
 
 func desplume() -> float:
 	return float(WING_MAX - wing_feathers) / float(WING_MAX)
@@ -194,6 +296,7 @@ const BESTIARY := ["hueco", "acolito", "planidera", "penitente", "bestia", "guar
 	"cortesano", "caballero", "doncella", "sabueso", "ysolde"]
 func record_kill(etype: String) -> void:
 	Ach.add("kills")
+	resonance_add()
 	if etype in BESTIARY:
 		flags["slain_" + etype] = true
 		var n := 0
@@ -304,15 +407,97 @@ const SKILLS := {
 	"c4": {"branch": "ceniza", "pos": Vector2i(0, 2), "cost": 2, "req": ["c2"], "name": ["Represalia", "Retribution"], "desc": ["Un parry perfecto lanza una onda que daña.", "A perfect parry releases a damaging wave."]},
 	"c5": {"branch": "ceniza", "pos": Vector2i(2, 2), "cost": 2, "req": ["c3"], "name": ["Vínculo", "Bond"], "desc": ["Revives al compañero el doble de rápido y regeneras vida cerca de él.", "Revive your partner twice as fast, regenerate near them."]},
 	"c6": {"branch": "ceniza", "pos": Vector2i(1, 3), "cost": 3, "req": ["c4", "c5"], "name": ["Último Aliento", "Last Breath"], "desc": ["Una vez por descanso, sobrevives a un golpe mortal.", "Once per rest, survive a lethal blow."]},
-	"k1": {"branch": "arconte", "pos": Vector2i(0, 0), "cost": 2, "req": [], "archon": "seravel", "name": ["Espadas Orbitantes", "Orbiting Blades"], "desc": ["Poder de Seravel: tres espadas de luz giran a tu alrededor.", "Seravel's power: three blades of light orbit you."]},
+	# --- Filo: ampliación
+	"f7": {"branch": "filo", "pos": Vector2i(0, 3), "cost": 2, "req": ["f4"], "name": ["Doble Filo", "Double Edge"], "desc": ["+8% de probabilidad de crítico.", "+8% critical chance."]},
+	"f8": {"branch": "filo", "pos": Vector2i(4, 3), "cost": 2, "req": ["f5"], "name": ["Romper Guardia", "Guard Breaker"], "desc": ["+25% de daño a la postura.", "+25% posture damage."]},
+	"f9": {"branch": "filo", "pos": Vector2i(0, 4), "cost": 3, "req": ["f7"], "name": ["Golpe Maestro", "Master Stroke"], "desc": ["Tus críticos hacen x2,3 en lugar de x1,8.", "Your criticals deal x2.3 instead of x1.8."]},
+	"f10": {"branch": "filo", "pos": Vector2i(4, 4), "cost": 3, "req": ["f8"], "name": ["Hoja Cantora", "Singing Blade"], "desc": ["Cada quinto golpe que aciertas lanza una onda cortante.", "Every fifth hit you land fires a cutting wave."]},
+	"f11": {"branch": "filo", "pos": Vector2i(1, 4), "cost": 2, "req": ["f6"], "excl": "f12", "name": ["Furia", "Fury"], "desc": ["ELIGE UNA: con menos de un 35% de vida, +30% de daño.", "CHOOSE ONE: below 35% health, +30% damage."]},
+	"f12": {"branch": "filo", "pos": Vector2i(3, 4), "cost": 2, "req": ["f6"], "excl": "f11", "name": ["Templanza", "Temperance"], "desc": ["ELIGE UNA: con más de un 80% de vida, +18% de daño.", "CHOOSE ONE: above 80% health, +18% damage."]},
+	"f13": {"branch": "filo", "pos": Vector2i(2, 5), "cost": 4, "req": ["f9", "f10"], "any": ["f11", "f12"], "cap": true, "name": ["ESTIGMA: Mil Cortes", "STIGMA: Thousand Cuts"], "desc": ["Tras cada remate, el aire se abre en un segundo tajo que golpea a todos alrededor.", "After each finisher, the air splits in a second slash that strikes everyone around."]},
+	# --- Ala: ampliación
+	"a7": {"branch": "ala", "pos": Vector2i(0, 3), "cost": 2, "req": ["a4"], "name": ["Segundo Aire", "Second Wind"], "desc": ["La esquiva perfecta rellena tu aguante y tus esquivas.", "A perfect dodge refills your stamina and dashes."]},
+	"a8": {"branch": "ala", "pos": Vector2i(4, 3), "cost": 2, "req": ["a5"], "name": ["Danza", "Dance"], "desc": ["Durante 2 s tras esquivar, atacas un 20% más rápido.", "For 2 s after a dash, you attack 20% faster."]},
+	"a9": {"branch": "ala", "pos": Vector2i(0, 4), "cost": 3, "req": ["a7"], "name": ["Tercer Ala", "Third Wing"], "desc": ["Puedes encadenar tres esquivas.", "You can chain three dashes."]},
+	"a10": {"branch": "ala", "pos": Vector2i(4, 4), "cost": 3, "req": ["a8"], "name": ["Golpe Alado", "Winged Strike"], "desc": ["Atacar justo después de esquivar hace +35% de daño.", "Attacking right after a dash deals +35% damage."]},
+	"a11": {"branch": "ala", "pos": Vector2i(1, 4), "cost": 2, "req": ["a6"], "excl": "a12", "name": ["Plumaje Pesado", "Heavy Plumage"], "desc": ["ELIGE UNA: -8% de velocidad y -12% de daño recibido.", "CHOOSE ONE: -8% speed and -12% damage taken."]},
+	"a12": {"branch": "ala", "pos": Vector2i(3, 4), "cost": 2, "req": ["a6"], "excl": "a11", "name": ["Plumaje Ligero", "Light Plumage"], "desc": ["ELIGE UNA: +8% de velocidad y esquivar cuesta un 20% menos.", "CHOOSE ONE: +8% speed and dashing costs 20% less."]},
+	"a13": {"branch": "ala", "pos": Vector2i(2, 5), "cost": 4, "req": ["a9", "a10"], "any": ["a11", "a12"], "cap": true, "name": ["ESTIGMA: Vuelo del Serafín", "STIGMA: Seraph's Flight"], "desc": ["Las esquivas se recargan un 40% antes y cada esquiva perfecta dispara una corona de plumas.", "Dashes recharge 40% sooner and every perfect dodge fires a crown of feathers."]},
+	# --- Luz: ampliación
+	"l7": {"branch": "luz", "pos": Vector2i(0, 3), "cost": 2, "req": ["l4"], "name": ["Pluma Certera", "True Feather"], "desc": ["La Pluma Dorada atraviesa a dos enemigos más y busca mejor a sus objetivos.", "The Golden Feather pierces two more enemies and seeks targets better."]},
+	"l8": {"branch": "luz", "pos": Vector2i(4, 3), "cost": 2, "req": ["l5"], "name": ["Reserva de Luz", "Light Reserve"], "desc": ["+25 de Luz máxima.", "+25 max Light."]},
+	"l9": {"branch": "luz", "pos": Vector2i(0, 4), "cost": 3, "req": ["l7"], "name": ["Nova Cicatrizante", "Healing Nova"], "desc": ["La Nova te cura un 8% de tu vida.", "The Nova heals you for 8% of your health."]},
+	"l10": {"branch": "luz", "pos": Vector2i(4, 4), "cost": 3, "req": ["l8"], "name": ["Sobrecarga", "Overcharge"], "desc": ["Cada baja te devuelve 6 de Luz.", "Every kill restores 6 Light."]},
+	"l11": {"branch": "luz", "pos": Vector2i(1, 4), "cost": 2, "req": ["l6"], "excl": "l12", "name": ["Sol Negro", "Black Sun"], "desc": ["ELIGE UNA: los hechizos dañan un 30% más y cuestan un 20% más.", "CHOOSE ONE: spells deal 30% more and cost 20% more."]},
+	"l12": {"branch": "luz", "pos": Vector2i(3, 4), "cost": 2, "req": ["l6"], "excl": "l11", "name": ["Alba Serena", "Serene Dawn"], "desc": ["ELIGE UNA: los hechizos cuestan un 25% menos.", "CHOOSE ONE: spells cost 25% less."]},
+	"l13": {"branch": "luz", "pos": Vector2i(2, 5), "cost": 4, "req": ["l9", "l10"], "any": ["l11", "l12"], "cap": true, "name": ["ESTIGMA: Coro de Plumas", "STIGMA: Feather Choir"], "desc": ["Tras lanzar la Pluma Dorada, otras dos salen solas hacia los enemigos más cercanos.", "After casting the Golden Feather, two more fly by themselves at the nearest enemies."]},
+	# --- Ceniza: ampliación
+	"c7": {"branch": "ceniza", "pos": Vector2i(0, 3), "cost": 2, "req": ["c4"], "name": ["Cadena de Parries", "Parry Chain"], "desc": ["Cada parry perfecto seguido aumenta un 15% el daño de tu réplica y llena más Ira.", "Each perfect parry in a row raises your riposte's damage by 15% and builds more Wrath."]},
+	"c8": {"branch": "ceniza", "pos": Vector2i(4, 3), "cost": 2, "req": ["c5"], "name": ["Manto de Ceniza", "Ash Mantle"], "desc": ["+15% de vida máxima.", "+15% max health."]},
+	"c9": {"branch": "ceniza", "pos": Vector2i(0, 4), "cost": 3, "req": ["c7"], "name": ["Lágrima Potente", "Potent Tear"], "desc": ["Las Lágrimas curan un 12% más de tu vida.", "Tears heal 12% more of your health."]},
+	"c10": {"branch": "ceniza", "pos": Vector2i(4, 4), "cost": 3, "req": ["c8"], "name": ["Ceniza Viva", "Living Ash"], "desc": ["Regeneras vida poco a poco si llevas 6 s sin recibir golpes.", "Slowly regenerate health after 6 s without being hit."]},
+	"c11": {"branch": "ceniza", "pos": Vector2i(1, 4), "cost": 2, "req": ["c6"], "excl": "c12", "name": ["Espinas", "Thorns"], "desc": ["ELIGE UNA: quien te golpee de cerca recibe un 30% del daño.", "CHOOSE ONE: whoever hits you up close takes 30% of the damage."]},
+	"c12": {"branch": "ceniza", "pos": Vector2i(3, 4), "cost": 2, "req": ["c6"], "excl": "c11", "name": ["Égida", "Aegis"], "desc": ["ELIGE UNA: tras 10 s sin recibir golpes, el siguiente hace la mitad.", "CHOOSE ONE: after 10 s unhit, the next blow deals half."]},
+	"c13": {"branch": "ceniza", "pos": Vector2i(2, 5), "cost": 4, "req": ["c9", "c10"], "any": ["c11", "c12"], "cap": true, "name": ["ESTIGMA: Fénix de Ceniza", "STIGMA: Ash Phoenix"], "desc": ["Una vez por descanso, al caer renaces con la mitad de tu vida en una explosión.", "Once per rest, when you fall you are reborn at half health in an explosion."]},
+	# --- Pluma: la rama de tus alas
+	"p1": {"branch": "pluma", "pos": Vector2i(2, 0), "cost": 1, "req": [], "name": ["Pluma Afilada", "Sharpened Feather"], "desc": ["Con 7 plumas o menos, +10% de daño.", "With 7 feathers or fewer, +10% damage."]},
+	"p2": {"branch": "pluma", "pos": Vector2i(1, 1), "cost": 1, "req": ["p1"], "name": ["Plumón Protector", "Guarding Down"], "desc": ["Con 7 plumas o más, -10% de daño recibido.", "With 7 feathers or more, -10% damage taken."]},
+	"p3": {"branch": "pluma", "pos": Vector2i(3, 1), "cost": 1, "req": ["p1"], "name": ["Recolector", "Gatherer"], "desc": ["+20% de Ecos.", "+20% Echoes."]},
+	"p4": {"branch": "pluma", "pos": Vector2i(3, 2), "cost": 2, "req": ["p3"], "name": ["Resonancia Alta", "High Resonance"], "desc": ["La Resonancia sube hasta x1,8 y tarda más en apagarse.", "Resonance rises to x1.8 and takes longer to fade."]},
+	"p5": {"branch": "pluma", "pos": Vector2i(1, 2), "cost": 2, "req": ["p2"], "name": ["Lluvia de Plumas", "Feather Shower"], "desc": ["El ataque cargado lanza un abanico de plumas.", "The heavy attack throws a fan of feathers."]},
+	"p6": {"branch": "pluma", "pos": Vector2i(0, 3), "cost": 2, "req": ["p5"], "name": ["Ala Rota", "Broken Wing"], "desc": ["Perder plumas te quita la mitad de vida máxima que antes.", "Losing feathers costs half as much max health."]},
+	"p7": {"branch": "pluma", "pos": Vector2i(4, 3), "cost": 2, "req": ["p4"], "name": ["Ofrenda", "Offering"], "desc": ["Cada Brasa que enciendes te recompensa con 400 Ecos.", "Each Ember you kindle rewards you with 400 Echoes."]},
+	"p8": {"branch": "pluma", "pos": Vector2i(2, 4), "cost": 4, "req": ["p6", "p7"], "cap": true, "name": ["ESTIGMA: El Desplumado", "STIGMA: The Featherless"], "desc": ["Cada pluma que te falta da +2% de crítico. Con 3 o menos, además robas vida.", "Each missing feather grants +2% crit. With 3 or fewer, you also steal life."]},
+	# --- Arconte: un poder por cada caído
+	"k1": {"branch": "arconte", "pos": Vector2i(1, 2), "cost": 2, "req": [], "archon": "seravel", "name": ["Espadas Orbitantes", "Orbiting Blades"], "desc": ["Poder de Seravel: tres espadas de luz giran a tu alrededor.", "Seravel's power: three blades of light orbit you."]},
+	"k2": {"branch": "arconte", "pos": Vector2i(1, 0), "cost": 1, "req": [], "archon": "carcelero", "name": ["Cadenas del Carcelero", "Jailer's Chains"], "desc": ["Poder del Carcelero: el parry perfecto golpea la postura de quien esté cerca.", "The Jailer's power: a perfect parry strikes the posture of those nearby."]},
+	"k3": {"branch": "arconte", "pos": Vector2i(3, 0), "cost": 1, "req": [], "archon": "choir", "name": ["Voz del Coro", "Voice of the Choir"], "desc": ["Poder del Coro: la Pluma Dorada y la Nova frenan a sus objetivos.", "The Choir's power: the Golden Feather and Nova slow their targets."]},
+	"k4": {"branch": "arconte", "pos": Vector2i(3, 2), "cost": 2, "req": [], "archon": "orrun", "name": ["Astas de Orrun", "Orrun's Antlers"], "desc": ["Poder de Orrun: tus esquivas embisten y dañan a quien atraviesas.", "Orrun's power: your dashes ram and hurt whoever you pass through."]},
+	"k5": {"branch": "arconte", "pos": Vector2i(1, 4), "cost": 3, "req": [], "archon": "vulkaris", "name": ["Yunque de Vulkaris", "Vulkaris's Anvil"], "desc": ["Poder de Vulkaris: todos tus golpes queman.", "Vulkaris's power: all your blows burn."]},
+	"k6": {"branch": "arconte", "pos": Vector2i(3, 4), "cost": 4, "req": [], "archon": "azrahel", "name": ["Decreto de Azrahel", "Azrahel's Decree"], "desc": ["Poder de Azrahel: la Ira se llena antes y desatarla te cura un 30%.", "Azrahel's power: Wrath fills faster and unleashing it heals you 30%."]},
 }
 const BRANCHES := {
 	"filo": {"name": ["Filo", "Edge"], "icon": "filo", "color": Color(1.0, 0.45, 0.4)},
 	"ala": {"name": ["Ala", "Wing"], "icon": "ala", "color": Color(0.6, 0.85, 1.0)},
 	"luz": {"name": ["Luz", "Light"], "icon": "luz", "color": Color(1.0, 0.9, 0.5)},
 	"ceniza": {"name": ["Ceniza", "Ash"], "icon": "ceniza", "color": Color(0.85, 0.6, 0.4)},
+	"pluma": {"name": ["Pluma", "Feather"], "icon": "feather", "color": Color(1.0, 0.82, 0.92)},
 	"arconte": {"name": ["Arconte", "Archon"], "icon": "arconte", "color": Color(1.0, 0.35, 0.45)},
 }
+## Lema de cada rama (cabecera del árbol) y bonus de maestría por cada 4 nodos
+const BRANCH_INFO := {
+	"filo": {"motto": ["Golpear primero. Golpear último.", "Strike first. Strike last."], "bonus": ["+4% de daño", "+4% damage"]},
+	"ala": {"motto": ["Lo que no te toca no te mata.", "What can't touch you can't kill you."], "bonus": ["+3% de velocidad", "+3% speed"]},
+	"luz": {"motto": ["Arde la vela que te guía.", "The candle that guides you burns."], "bonus": ["+6% de daño de hechizos", "+6% spell damage"]},
+	"ceniza": {"motto": ["Caer es la primera lección.", "Falling is the first lesson."], "bonus": ["+5% de vida máxima", "+5% max health"]},
+	"pluma": {"motto": ["Cada pluma que pierdes te enseña algo.", "Every feather you lose teaches you something."], "bonus": ["+5% de Ecos", "+5% Echoes"]},
+	"arconte": {"motto": ["Lo que les arrancas, lo llevas contigo.", "What you tear from them, you carry with you."], "bonus": ["-", "-"]},
+}
+
+func branch_count(b: String) -> int:
+	var n := 0
+	for id in skills:
+		if SKILLS.has(id) and SKILLS[id].branch == b:
+			n += 1
+	return n
+
+func mastery(b: String) -> int:
+	return mini(branch_count(b) / 4, 3)
+
+func respec_cost() -> int:
+	return 150 + 40 * skills.size()
+
+func respec() -> bool:
+	var c := respec_cost()
+	if ecos < c or skills.is_empty():
+		return false
+	ecos -= c
+	for id in skills:
+		if SKILLS.has(id):
+			skill_points += int(SKILLS[id].cost)
+	skills = {}
+	changed.emit()
+	return true
 
 # ------------------------------------------------------------------ misiones
 const QUESTS := {
@@ -428,9 +613,14 @@ var infusions := {}            # arma -> grabado
 var flask_level := 0           # potencia de las Lágrimas (Madre Ilse)
 var shop_bought := {}          # objeto -> comprados
 var ascension := {}            # jefe -> nivel máximo superado
+var tracked := ""              # misión que se sigue en pantalla
 
 func _process(delta: float) -> void:
 	playtime += delta
+	if res_t > 0.0:
+		res_t -= delta
+		if res_t <= 0.0:
+			resonance = 0
 	for k in buffs.keys():
 		buffs[k] -= delta
 		if buffs[k] <= 0.0:
@@ -447,6 +637,7 @@ func reset() -> void:
 	infusions = {}; flask_level = 0; shop_bought = {}; ascension = {}
 	wing_feathers = WING_MAX; deaths = 0; boss_deaths = {}; unrecovered = 0; shadow = {}; weapon_kills = {}
 	oath = ""; spared = {}; synergies = {}; ng = 0; spark = false
+	resonance = 0; res_t = 0.0; tracked = ""
 	changed.emit()
 
 # ------------------------------------------------------------------ estadísticas derivadas
@@ -454,7 +645,8 @@ func has_skill(id: String) -> bool:
 	return skills.has(id)
 
 func max_hp() -> float:
-	var hp = (100.0 + (attr.vigor - 1) * 14.0) * (1.0 - 0.3 * desplume())
+	var hp = (100.0 + (attr.vigor - 1) * 14.0) * (1.0 - (0.15 if has_skill("p6") else 0.3) * desplume())
+	hp *= (1.15 if has_skill("c8") else 1.0) * (1.0 + 0.05 * mastery("ceniza"))
 	if oath == "choir":
 		hp *= 0.85
 	if flags.get("colossus_heart", false):
@@ -470,10 +662,10 @@ func infusion(wid := "") -> String:
 	return infusions.get(wid, "")
 
 func heal_ratio() -> float:
-	return 0.45 + 0.07 * flask_level
+	return 0.45 + 0.07 * flask_level + (0.12 if has_skill("c9") else 0.0)
 
 func spell_cost_mult() -> float:
-	return (0.75 if has_amulet("choir_heart") else 1.0) * (0.7 if oath == "choir" else 1.0)
+	return (0.75 if has_amulet("choir_heart") else 1.0) * (0.7 if oath == "choir" else 1.0) * (1.2 if has_skill("l11") else 1.0) * (0.75 if has_skill("l12") else 1.0)
 
 func has_amulet(id: String) -> bool:
 	return id in amulets_eq
@@ -488,10 +680,10 @@ func max_stamina() -> float:
 	return 100.0 + (attr.aguante - 1) * 7.0
 
 func max_light() -> float:
-	return 60.0 + (attr.fe - 1) * 6.0
+	return 60.0 + (attr.fe - 1) * 6.0 + (25.0 if has_skill("l8") else 0.0)
 
 func move_speed() -> float:
-	return 118.0 * (1.12 if has_skill("a5") else 1.0) * (1.0 + 0.15 * desplume()) * (0.92 if oath == "carcelero" else 1.0)
+	return 118.0 * (1.12 if has_skill("a5") else 1.0) * (1.0 + 0.15 * desplume()) * (0.92 if oath == "carcelero" else 1.0) * (0.92 if has_skill("a11") else 1.0) * (1.08 if has_skill("a12") else 1.0) * (1.0 + 0.03 * mastery("ala"))
 
 func flask_count() -> int:
 	return flasks_max + (1 if has_skill("c3") else 0)
@@ -499,7 +691,14 @@ func flask_count() -> int:
 func weapon_data(id := "") -> Dictionary:
 	if id == "":
 		id = equipped
-	return WEAPONS.get(id, WEAPONS["sword"])
+	var w: Dictionary = WEAPONS.get(id, WEAPONS["sword"])
+	# al llegar a +5 el arma despierta: su poder propio cambia cómo pelea
+	if int(weapons.get(id, 0)) >= 5 and WEAPON_AWAKE.has(id):
+		return w.merged(WEAPON_AWAKE[id].mods, true)
+	return w
+
+func dash_max() -> int:
+	return 3 if has_skill("a9") else (2 if has_skill("a2") else 1)
 
 func weapon_damage(id := "") -> float:
 	if id == "":
@@ -508,32 +707,36 @@ func weapon_damage(id := "") -> float:
 	var up: int = weapons.get(id, 0)
 	var fe_s: float = w.fe + (0.6 if infusion(id) == "nimbo" else 0.0)
 	var scale: float = 1.0 + 0.045 * ((attr.fuerza - 1) * w.fue + (attr.destreza - 1) * w.des + (attr.fe - 1) * fe_s)
-	var dmg: float = w.dmg * scale * (1.0 + 0.09 * up)
+	var dmg: float = w.dmg * scale * (1.0 + 0.09 * up) * (1.2 if up >= 10 else 1.0)
 	if has_skill("f1"):
 		dmg *= 1.12
+	dmg *= 1.0 + 0.04 * mastery("filo")
+	if has_skill("p1") and wing_feathers <= 7:
+		dmg *= 1.1
 	dmg *= 1.0 + 0.3 * desplume() + (0.1 if is_desplumado() else 0.0)
 	if oath == "carcelero":
 		dmg *= 1.1
 	return dmg * buff_damage_mult()
 
 func spell_damage(base: float) -> float:
-	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0) * buff_damage_mult() * (1.2 if oath == "choir" else 1.0)
+	return base * (1.0 + 0.06 * (attr.fe - 1)) * (1.25 if has_skill("l1") else 1.0) * buff_damage_mult() * (1.2 if oath == "choir" else 1.0) * (1.3 if has_skill("l11") else 1.0) * (1.0 + 0.06 * mastery("luz"))
 
 func crit_chance() -> float:
-	return 0.05 + 0.012 * (attr.destreza - 1) + (0.1 if has_amulet("amulet_eye") else 0.0)
+	return 0.05 + 0.012 * (attr.destreza - 1) + (0.1 if has_amulet("amulet_eye") else 0.0) + (0.08 if has_skill("f7") else 0.0) + (0.02 * (WING_MAX - wing_feathers) if has_skill("p8") else 0.0)
 
 func damage_taken_mult() -> float:
-	return (0.88 if has_skill("c2") else 1.0) * (0.65 if buffs.has("ointment") else 1.0)
+	return (0.88 if has_skill("c2") else 1.0) * (0.65 if buffs.has("ointment") else 1.0) * (0.88 if has_skill("a11") else 1.0) * (0.9 if has_skill("p2") and wing_feathers >= 7 else 1.0)
 
 func ecos_mult() -> float:
-	return (1.0 + 0.03 * (attr.arcano - 1)) * diff().ecos * event_ecos * (1.0 + 0.25 * ng)
+	return (1.0 + 0.03 * (attr.arcano - 1)) * diff().ecos * event_ecos * (1.0 + 0.25 * ng) * resonance_mult() * (1.2 if has_skill("p3") else 1.0) * (1.0 + 0.05 * mastery("pluma"))
 
 func level_cost() -> int:
 	return int(90 + 55 * level + 6 * level * level)
 
 func upgrade_cost(id: String) -> Array:
 	var lv: int = weapons.get(id, 0)
-	return [180 * (lv + 1), lv + 1, 1 if lv >= 4 else 0]  # [ecos, plumas, esquirlas de nimbo]
+	# [ecos, fragmentos, esquirlas de nimbo, lágrimas]: despertar (+5) y ascender (+10) piden una Lágrima
+	return [180 * (lv + 1) + 40 * lv * lv, lv + 1, 1 if lv >= 3 else 0, 1 if lv == 4 or lv == 9 else 0]
 
 # ------------------------------------------------------------------ acciones
 func add_ecos(n: int) -> void:
@@ -564,8 +767,17 @@ func can_unlock(id: String) -> bool:
 	var s: Dictionary = SKILLS[id]
 	if s.has("archon") and not flags.get(s.archon + "_dead", false):
 		return false
+	if s.has("excl") and has_skill(s.excl):
+		return false
 	for r in s.req:
 		if not has_skill(r):
+			return false
+	if s.has("any"):
+		var ok := false
+		for r2 in s.any:
+			if has_skill(r2):
+				ok = true
+		if not ok:
 			return false
 	return skill_points >= s.cost
 
@@ -574,6 +786,10 @@ func unlock(id: String) -> bool:
 		return false
 	skill_points -= SKILLS[id].cost
 	skills[id] = true
+	if id == "l2":
+		reveal_ability("nova")
+	elif SKILLS[id].get("cap", false):
+		reveal_requested.emit(G.L(SKILLS[id].name), G.L(SKILLS[id].desc), "", "icon_" + BRANCHES[SKILLS[id].branch].icon, BRANCHES[SKILLS[id].branch].color, G.L(["ESTIGMA GRABADO", "STIGMA ENGRAVED"]))
 	changed.emit()
 	return true
 
@@ -581,7 +797,7 @@ func add_weapon(id: String) -> void:
 	if not weapons.has(id):
 		weapons[id] = 0
 		Ach.set_max("weapons", weapons.size())
-		G.pickup("weapon_" + WEAPONS[id].sprite, G.T("new_weapon") % G.L(WEAPONS[id].name), Color(1, 0.8, 0.4))
+		reveal_requested.emit(G.L(WEAPONS[id].name).to_upper(), G.L(WEAPONS[id].desc), "", "weapon_" + WEAPONS[id].sprite, Color(1, 0.8, 0.4), G.L(["NUEVA ARMA", "NEW WEAPON"]))
 	changed.emit()
 
 func upgrade_weapon(id: String) -> bool:
@@ -592,14 +808,20 @@ func upgrade_weapon(id: String) -> bool:
 		free_upgrades -= 1
 	else:
 		var c := upgrade_cost(id)
-		if ecos < c[0] or feathers < c[1] or item_count("iron") < c[2]:
+		if ecos < c[0] or feathers < c[1] or item_count("iron") < c[2] or item_count("tear") < c[3]:
 			return false
 		ecos -= c[0]
 		feathers -= c[1]
 		if c[2] > 0:
 			remove_item("iron", c[2])
+		if c[3] > 0:
+			remove_item("tear", c[3])
 	weapons[id] = lv + 1
 	Ach.set_max("upgrade", lv + 1)
+	if lv + 1 == 5:
+		reveal_requested.emit(G.L(WEAPONS[id].name).to_upper(), G.L(WEAPON_AWAKE[id].desc), "", "weapon_" + WEAPONS[id].sprite, Color(1, 0.8, 0.4), G.L(["ARMA DESPERTADA", "WEAPON AWAKENED"]))
+	elif lv + 1 == 10:
+		reveal_requested.emit(G.L(WEAPONS[id].name).to_upper(), G.L(["+20% de daño y su Arte alcanza todo su poder.", "+20% damage and its Art reaches full power."]), "", "weapon_" + WEAPONS[id].sprite, Color(1, 0.55, 0.9), G.L(["ARMA ASCENDIDA", "WEAPON ASCENDED"]))
 	changed.emit()
 	return true
 
@@ -827,7 +1049,7 @@ func to_dict() -> Dictionary:
 		"amulets_eq": amulets_eq, "quick_item": quick_item, "memories": memories, "difficulty": difficulty,
 		"infusions": infusions, "flask_level": flask_level, "shop_bought": shop_bought, "ascension": ascension,
 		"wing_feathers": wing_feathers, "deaths": deaths, "boss_deaths": boss_deaths, "unrecovered": unrecovered, "shadow": shadow,
-		"weapon_kills": weapon_kills, "oath": oath, "spared": spared, "synergies": synergies, "ng": ng, "spark": spark, "look": G.look}
+		"weapon_kills": weapon_kills, "oath": oath, "spared": spared, "synergies": synergies, "ng": ng, "spark": spark, "look": G.look, "tracked": tracked}
 
 func from_dict(d: Dictionary) -> void:
 	level = int(d.get("level", 1)); ecos = int(d.get("ecos", 0)); feathers = int(d.get("feathers", 0))
@@ -868,6 +1090,11 @@ func from_dict(d: Dictionary) -> void:
 		flags["ab_lance"] = true
 	if flags.get("carcelero_dead", false):
 		flags["ab_wrath"] = true
+	tracked = str(d.get("tracked", ""))
+	if not weapons.has(equipped):
+		equipped = "sword"
+	if quests.has("feathers"):
+		flags["ab_art"] = true  # partidas antiguas: ya hablaste con Brenna
 	infusions = d.get("infusions", {})
 	flask_level = int(d.get("flask_level", 0))
 	shop_bought = d.get("shop_bought", {})

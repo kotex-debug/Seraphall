@@ -23,7 +23,13 @@ var tele_boost := false   # telegráficos más gruesos y visibles
 var photo_mode := false
 var bindings := {}        # acción -> "k:<keycode>" | "m:<botón>" (personalizadas por el jugador)
 const REBINDABLE := ["up", "down", "left", "right", "attack", "heavy", "dash", "parry", "spell1", "spell2", "wrath",
-	"heal", "item", "interact", "menu", "map", "photo", "ping"]
+	"heal", "item", "art", "interact", "menu", "map", "photo", "ping"]
+## Acción -> habilidad que la desbloquea: su tecla no se puede cambiar ni usar hasta conseguirla
+const ACTION_LOCKS := {"spell1": ["lance", ["Enciende la Brasa del Santuario", "Kindle the Sanctuary Ember"]], "spell2": ["nova", ["Aprende la Nova en el árbol", "Learn Nova in the skill tree"]],
+	"wrath": ["wrath", ["Vence al Carcelero", "Defeat the Jailer"]], "art": ["art", ["Habla con Brenna, la herrera", "Talk to Brenna, the smith"]]}
+var combat_mode := 0      # 0 puntero · 1 movimiento (WASD apunta) · 2 cámara con ratón
+var mouse_sens := 1.0
+const COMBAT_MODES := [["Puntero: apuntas con el ratón", "Pointer: aim with the mouse"], ["Movimiento: atacas hacia donde caminas", "Movement: attack where you walk"], ["Cámara: el ratón gira tu dirección y la vista", "Camera: the mouse turns your heading and view"]]
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -128,6 +134,9 @@ const TXT := {
 	"route_throne_d": ["Ocupar el trono del Arquitecto y reinar sobre la Espiral.", "Take the Architect's throne and rule the Spiral."],
 	"route_hint": ["Perdonar, recordar y conservar tus plumas te acerca a las Alas. Ejecutar, jurar y perder plumas, al Trono.", "Sparing, remembering and keeping your feathers lean towards the Wings. Executing, swearing oaths and losing feathers, towards the Throne."],
 	"area_sanct": ["Santuario de la Última Brasa", "Sanctuary of the Last Ember"],
+	"area_prologo": ["La Cuna de Ceniza", "The Ash Cradle"],
+	"boss_eco_tutor": ["EL ECO DEL INSTRUCTOR", "THE INSTRUCTOR'S ECHO"],
+	"sub_eco_tutor": ["Prólogo · Lo último que queda de quien te enseñó", "Prologue · All that remains of your teacher"],
 	"area_chains": ["Pasillo de las Cadenas", "Hall of Chains"],
 	"area_gallery": ["Galería Rota", "Broken Gallery"],
 	"area_yard": ["Patio del Carcelero", "Jailer's Yard"],
@@ -204,7 +213,7 @@ const TXT := {
 	"key_got": ["Obtienes la Llave del Vestíbulo", "You obtain the Vestibule Key"],
 	"skip": ["[Espacio] saltar", "[Space] skip"],
 	"resume": ["Continuar", "Resume"],
-	"lance": ["Lanza de Luz", "Lance of Light"], "nova": ["Nova de Ceniza", "Ash Nova"], "orbit": ["Espadas Orbitantes", "Orbiting Blades"],
+	"lance": ["Pluma Dorada", "Golden Feather"], "nova": ["Nova de Ceniza", "Ash Nova"], "orbit": ["Espadas Orbitantes", "Orbiting Blades"],
 	"wrath": ["Ira Seráfica", "Seraphic Wrath"],
 	"boss_seravel": ["SERAVEL, GUARDIANA DE LAS PUERTAS", "SERAVEL, WARDEN OF THE GATES"],
 	"boss_verdugo": ["EL VERDUGO", "THE EXECUTIONER"],
@@ -339,6 +348,8 @@ func load_settings() -> void:
 		tele_boost = cf.get_value("access", "tele", false)
 		bindings = cf.get_value("controls", "bindings", {})
 		fullscreen = cf.get_value("video", "fullscreen", false)
+		combat_mode = int(cf.get_value("controls", "combat_mode", 0))
+		mouse_sens = float(cf.get_value("controls", "mouse_sens", 1.0))
 	else:
 		lang = "es"
 
@@ -353,13 +364,15 @@ func save_settings() -> void:
 	cf.set_value("access", "tele", tele_boost)
 	cf.set_value("controls", "bindings", bindings)
 	cf.set_value("video", "fullscreen", fullscreen)
+	cf.set_value("controls", "combat_mode", combat_mode)
+	cf.set_value("controls", "mouse_sens", mouse_sens)
 	cf.save(SETTINGS_PATH)
 
 func _setup_input() -> void:
 	var keys := {
 		"up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN], "left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SHIFT], "heavy": [KEY_SPACE], "spell1": [KEY_Q], "spell2": [KEY_E], "wrath": [KEY_R],
-		"heal": [KEY_C], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
+		"heal": [KEY_C], "art": [KEY_V], "interact": [KEY_F], "menu": [KEY_TAB, KEY_I], "pause": [KEY_ESCAPE], "item": [KEY_X],
 		"map": [KEY_M], "photo": [KEY_P], "shot": [KEY_F12], "ping": [KEY_G],
 	}
 	for action in keys:
@@ -379,7 +392,7 @@ func _setup_input() -> void:
 	# mando
 	var pad := {"dash": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "heavy": JOY_BUTTON_Y, "parry": JOY_BUTTON_LEFT_SHOULDER,
 		"spell1": JOY_BUTTON_RIGHT_SHOULDER, "interact": JOY_BUTTON_B, "menu": JOY_BUTTON_BACK, "pause": JOY_BUTTON_START,
-		"heal": JOY_BUTTON_DPAD_UP, "wrath": JOY_BUTTON_RIGHT_STICK, "spell2": JOY_BUTTON_DPAD_RIGHT, "item": JOY_BUTTON_DPAD_DOWN}
+		"heal": JOY_BUTTON_DPAD_UP, "wrath": JOY_BUTTON_RIGHT_STICK, "spell2": JOY_BUTTON_DPAD_RIGHT, "item": JOY_BUTTON_DPAD_DOWN, "art": JOY_BUTTON_LEFT_STICK}
 	for action in pad:
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = pad[action]

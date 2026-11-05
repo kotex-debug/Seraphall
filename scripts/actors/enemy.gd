@@ -25,6 +25,9 @@ const TYPES := {
 	"custodio": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 560.0, "speed": 60.0, "radius": 12.0, "dmg": 24.0, "poise": 120.0,
 		"ecos": 650, "aggro": 260.0, "range": 150.0, "cd": 1.25, "off": -20.0, "elite": true, "title": "custodio_title",
 		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
+	"eco_tutor": {"sheet": "enemy_custodio", "fw": 48, "fh": 48, "hp": 420.0, "speed": 60.0, "radius": 12.0, "dmg": 18.0, "poise": 99999.0,
+		"ecos": 120, "aggro": 400.0, "range": 60.0, "cd": 1.5, "off": -20.0, "boss": true, "title": "boss_eco_tutor",
+		"anims": {"idle": [0, 4, 5.0], "walk": [1, 4, 7.0], "attack": [2, 3, 7.0], "dead": [3, 1]}},
 	"carcelero": {"sheet": "enemy_carcelero", "fw": 40, "fh": 40, "hp": 680.0, "speed": 46.0, "radius": 14.0, "dmg": 28.0, "poise": 130.0,
 		"ecos": 650, "aggro": 170.0, "range": 70.0, "cd": 1.4, "off": -18.0, "boss": true, "title": "boss_carcelero",
 		"anims": {"idle": [0, 4, 4.0], "walk": [1, 4, 6.0], "attack": [2, 3, 6.0], "dead": [3, 1]}},
@@ -210,13 +213,18 @@ func _ready() -> void:
 			_hp_bar.position = Vector2(0, cfg.off * 2 - 6)
 			_hp_bar.visible = false
 			add_child(_hp_bar)
+	if not is_boss and type != "sombra" and world:
+		home_room = world.room_at(spawn_pos)
 	reset_state()
 
 func reset_state() -> void:
 	var d: Dictionary = world.diff() if world else Prog.diff()
-	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0) * d.hp * (1.0 + 0.35 * asc) * (1.0 + 0.5 * Prog.ng)
-	dmg_mult = d.dmg * (1.0 + 0.25 * asc) * (1.0 + 0.3 * Prog.ng)
-	cd_mult = d.cd * (1.0 - 0.1 * asc)
+	# dificultad progresiva: las primeras salas de cada zona perdonan más
+	var ramp: Array = world.room_ramp(world.room_at(spawn_pos)) if world else [1.0, 1.0, 1.0]
+	max_hp = cfg.hp * (1.35 if Net.is_online() else 1.0) * d.hp * (1.0 + 0.35 * asc) * (1.0 + 0.5 * Prog.ng) * float(ramp[0])
+	dmg_mult = d.dmg * (1.0 + 0.25 * asc) * (1.0 + 0.3 * Prog.ng) * float(ramp[1])
+	cd_mult = d.cd * (1.0 - 0.1 * asc) * float(ramp[2])
+	_last_ok = spawn_pos
 	slow_t = 0.0
 	hp = max_hp
 	max_poise = cfg.poise
@@ -495,7 +503,7 @@ func perform(act: String, tpos: Vector2, seed: int) -> void:
 				rng.seed = seed
 				for tries in 8:
 					var p := tpos + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(100.0, 140.0)
-					if not world.is_wall_at(p) and not world.is_wall_at(p + Vector2(0, -8)):
+					if not world.is_wall_at(p) and not world.is_wall_at(p + Vector2(0, -8)) and (home_room == "" or world.room_at(p) == home_room):
 						position = p
 						_net_pos = p
 						break
@@ -702,11 +710,20 @@ func _start_stagger() -> void:
 	Fx.ring(global_position + Vector2(0, cfg.off * 0.6), 4.0, 26.0, Color(1, 0.8, 0.3), 0.3, 3.0)
 	Audio.sfx("parry", -6.0)
 
-func on_parried() -> void:
+func on_parried(perfect := true) -> void:
 	if state == "dead":
 		return
+	if not perfect:
+		# un desvío normal cancela el ataque, pero solo un parry perfecto aturde
+		if is_boss:
+			poise += max_poise * 0.12
+		else:
+			_attack_id += 1
+			state = "chase"
+			cooldown = 0.8
+		return
 	if is_boss:
-		poise += max_poise * 0.35
+		poise += max_poise * 0.4
 		if poise >= max_poise:
 			poise = 0.0
 			_start_stagger()

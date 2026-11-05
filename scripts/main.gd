@@ -18,6 +18,10 @@ func _ready() -> void:
 	match G.autotest:
 		"", "none":
 			_build_title()
+		"prologue":
+			Prog.reset()
+			G.set_meta("prologue", true)
+			start_game("new")
 		"host":
 			Net.host()
 			start_game("new")
@@ -277,8 +281,8 @@ class PrologueAsk extends Control:
 		title.size = Vector2(640, 30)
 		title.position = Vector2(0, 112)
 		add_child(title)
-		var d := UIKit.label(G.L(["Un recorrido guiado por el Santuario para aprender a moverte, combatir, curarte y usar el menú y el mapa antes de enfrentarte al Carcelero.",
-			"A guided walk through the Sanctuary to learn how to move, fight, heal and use the menu and map before facing the Jailer."]), 15, UIKit.TEXT_DIM)
+		var d := UIKit.label(G.L(["Un entrenamiento en una sala aparte: un jefe sencillo te enseña paso a paso a desviar, atacar, esquivar y curarte, deteniendo el juego cuando tengas que reaccionar. Terminas llegando al Santuario.",
+			"Training in a separate room: a simple boss teaches you step by step to parry, attack, dodge and heal, pausing the game when you need to react. It ends with you arriving at the Sanctuary."]), 15, UIKit.TEXT_DIM)
 		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		d.position = Vector2(120, 150)
@@ -298,7 +302,7 @@ class PrologueAsk extends Control:
 			row.add_child(b)
 		row.get_child(0).grab_focus.call_deferred()
 		if G.autotest != "":
-			_pick.call_deferred(true)
+			_pick.call_deferred(G.autotest == "prologue")
 	func _pick(v: bool) -> void:
 		Audio.sfx("ui_ok", -6.0)
 		chosen.emit(v)
@@ -369,6 +373,7 @@ func start_game(mode: String) -> void:
 	title = null
 	world = preload("res://scripts/world/world.gd").new()
 	world.setup(self, mode)
+	world.process_mode = Node.PROCESS_MODE_PAUSABLE  # el tutorial detiene el mundo sin detener la interfaz raíz
 	add_child(world)
 	if Net.is_host:
 		Net.announce_world_ready()
@@ -1902,6 +1907,187 @@ func _run_autotest() -> void:
 			await get_tree().create_timer(14.0).timeout
 			print("seravel_dead=", Prog.flags.get("seravel_dead"), " main1=", Prog.quests.get("main1"), " k1 can=", Prog.can_unlock("k1"), " weapons=", Prog.weapons.keys())
 			print("AUTOTEST_FLOW_OK")
+			get_tree().quit()
+		"prologue":
+			# recorre el tutorial entero pulsando lo que pide; comprueba que acaba en el Santuario y con el jefe vencido
+			var lp_p: Player = w.local_player()
+			var waited := 0.0
+			while w._prologue == null and waited < 8.0:
+				await get_tree().create_timer(0.1).timeout
+				waited += 0.1
+			var pr: Node = w._prologue
+			print("PROLOGUE room=", w.room_at(lp_p.global_position), " prologue=", pr != null)
+			var log_steps := []
+			var t_all := 0.0
+			var shot_n := 0
+			while is_instance_valid(pr) and not pr.done and t_all < 150.0:
+				await get_tree().create_timer(0.25, true).timeout
+				t_all += 0.25
+				var act: String = pr.expect()
+				if act != "" and (log_steps.is_empty() or log_steps[-1] != act):
+					log_steps.append(act)
+				if pr.is_frozen() and shot_n < 4 and out != "":
+					shot_n += 1
+					await _shot(out + "/pr%d_%s.png" % [shot_n, act])
+				match act:
+					"":
+						pass
+					"_move":
+						lp_p.position += Vector2(30, 0) if int(t_all * 4.0) % 2 == 0 else Vector2(-30, 0)
+					"menu":
+						w.menu.open("char", {})
+						await get_tree().create_timer(0.3, true).timeout
+						w.menu.close()
+					"map":
+						w.menu.open("map", {})
+						await get_tree().create_timer(0.3, true).timeout
+						w.menu.close()
+					"heavy":
+						var evp := InputEventAction.new()
+						evp.action = "heavy"
+						evp.pressed = true
+						Input.parse_input_event(evp)
+						await get_tree().create_timer(0.3, true).timeout
+						var evr := InputEventAction.new()
+						evr.action = "heavy"
+						evr.pressed = false
+						Input.parse_input_event(evr)
+					_:
+						var ev := InputEventAction.new()
+						ev.action = act
+						ev.pressed = true
+						Input.parse_input_event(ev)
+						await get_tree().process_frame
+						var ev2 := InputEventAction.new()
+						ev2.action = act
+						ev2.pressed = false
+						Input.parse_input_event(ev2)
+			print("PROLOGUE pasos=", log_steps, " t=", t_all, " done=", pr.done if is_instance_valid(pr) else "freed", " hp=", lp_p.hp, " ira=", lp_p.wrath)
+			await _shot(out + "/pr9_salida.png")
+			var it: Interactable = w.interactables.get("prologue_rift")
+			if it:
+				lp_p.position = it.position + Vector2(0, 10)
+				await get_tree().create_timer(0.2).timeout
+				w.try_interact(lp_p)
+			await get_tree().create_timer(3.5).timeout
+			var r_end: String = w.room_at(lp_p.global_position)
+			print("PROLOGUE fin room=", r_end, " boss_vivo=", w.active_boss != null, " main1=", Prog.quests.get("main1"), " paused=", get_tree().paused)
+			await _shot(out + "/pr10_santuario.png")
+			var ok_p: bool = r_end == "sanct" and w._prologue == null and Prog.quest_active("main1") and not get_tree().paused
+			print("AUTOTEST_PROLOGUE_OK" if ok_p else "AUTOTEST_PROLOGUE_FAIL")
+			get_tree().quit()
+		"v9":
+			# recorre lo nuevo: Artes de todas las armas, Pluma Dorada, parry, anuncios, menús y modos de combate
+			var lp9: Player = w.local_player()
+			lp9.respawn_at(w.tile_pos(46, 62))
+			await get_tree().create_timer(0.6).timeout
+			print("V9 sala=", w.room_at(lp9.global_position), " cerrada=", w.room_lock, " activos=", w.enemies_alive().filter(func(e): return e.active and e.home_room == "chains").size())
+			await _shot(out + "/v01_sala_cerrada.png")
+			Prog.flags["ab_lance"] = true
+			Prog.flags["ab_wrath"] = true
+			Prog.flags["ab_art"] = true
+			for wid in Prog.WEAPONS:
+				Prog.weapons[wid] = 0
+			lp9.light = 60.0
+			lp9.aim = Vector2.RIGHT
+			lp9._cast_lance()
+			await get_tree().create_timer(0.3).timeout
+			await _shot(out + "/v02_pluma_dorada.png")
+			await get_tree().create_timer(1.2).timeout
+			var n_art := 0
+			for wid2 in Prog.WEAPONS:
+				Prog.equipped = wid2
+				lp9.art_cd = 0.0
+				lp9.state = "move"
+				lp9.cutscene = false
+				lp9.hp = Prog.max_hp()
+				lp9._update_weapon_sprite()
+				lp9._cast_art()
+				n_art += 1
+				await get_tree().create_timer(0.45).timeout
+				if wid2 in ["yunque", "reaper", "seravel"]:
+					await _shot(out + "/v03_arte_%s.png" % wid2)
+				await get_tree().create_timer(1.0).timeout
+			print("V9 artes=", n_art)
+			Prog.equipped = "sword"
+			lp9.state = "move"
+			# parry perfecto y normal contra un golpe real
+			lp9.stamina = 100.0
+			lp9._start_parry()
+			var r1: String = lp9.take_hit(5.0, Vector2.RIGHT, -1)
+			var p1: bool = lp9.last_parry_perfect
+			await get_tree().create_timer(0.6).timeout
+			lp9.state = "move"
+			lp9.iframes = 0.0
+			lp9._start_parry()
+			lp9.parry_window = lp9.parry_total - lp9.parry_perfect - 0.02
+			var r2: String = lp9.take_hit(5.0, Vector2.RIGHT, -1)
+			var p2: bool = lp9.last_parry_perfect
+			print("V9 parry1=", r1, " perfecto=", p1, " parry2=", r2, " perfecto=", p2)
+			await get_tree().create_timer(0.5).timeout
+			# modos de combate
+			for md in [1, 2, 0]:
+				G.combat_mode = md
+				await get_tree().create_timer(0.3).timeout
+				if md == 2:
+					await _shot(out + "/v04_modo_camara.png")
+			w._reset_enemies(true)
+			await get_tree().create_timer(0.3).timeout
+			lp9.respawn_at(w.tile_pos(49, 88))
+			await get_tree().create_timer(0.5).timeout
+			# anuncio épico
+			lp9.cutscene = false
+			Prog.reveal_ability("wrath")
+			await get_tree().create_timer(0.35).timeout
+			var was_auto := G.autotest
+			await get_tree().create_timer(0.6).timeout
+			await _shot(out + "/v05_anuncio.png")
+			await get_tree().create_timer(1.2).timeout
+			print("V9 autotest=", was_auto, " cutscene=", lp9.cutscene)
+			# menús
+			Prog.ecos = 90000
+			Prog.feathers = 40
+			Prog.skill_points = 40
+			Prog.add_item("iron", 9, true)
+			Prog.add_item("tear", 9, true)
+			for fl in ["carcelero_dead", "choir_dead", "seravel_dead", "orrun_dead"]:
+				Prog.flags[fl] = true
+			for sk in ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f11", "a1", "a2", "p1", "p3", "k1", "k2", "l1", "l2"]:
+				Prog.unlock(sk)
+			w.menu.open("skills", {"brasa": true})
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v06_arbol_filo.png")
+			for br in ["pluma", "arconte", "luz"]:
+				w.menu._on_branch(br)
+				await get_tree().create_timer(0.35).timeout
+				await _shot(out + "/v07_arbol_%s.png" % br)
+			print("V9 nodos=", Prog.SKILLS.size(), " ramas filo=", Prog.branch_count("filo"), " maestria=", Prog.mastery("filo"))
+			Prog.upgrade_weapon("sword"); Prog.upgrade_weapon("sword"); Prog.upgrade_weapon("sword")
+			w.menu.tab = "weapons"; w.menu.ctx = {"forge": true}; w.menu._sel_weapon = "sword"; w.menu._rebuild()
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v08_armas.png")
+			Prog.weapons["reaper"] = 5
+			w.menu._sel_weapon = "reaper"; w.menu._weapon_page = 1; w.menu._rebuild()
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v09_armas2.png")
+			w.menu.tab = "quests"; w.menu.ctx = {}; w.menu._rebuild()
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v10_misiones.png")
+			Prog.flags.erase("ab_wrath")
+			w.menu.tab = "controls"; w.menu._rebuild()
+			await get_tree().create_timer(0.4).timeout
+			await _shot(out + "/v11_controles.png")
+			Prog.flags["ab_wrath"] = true
+			w.menu.tab = "options"; w.menu._rebuild()
+			await get_tree().create_timer(0.4).timeout
+			await _shot(out + "/v12_opciones.png")
+			w.menu.close()
+			Prog.ecos = 1234
+			Prog.resonance = 3
+			Prog.res_t = 15.0
+			await get_tree().create_timer(0.5).timeout
+			await _shot(out + "/v13_hud.png")
+			print("AUTOTEST_V9_OK")
 			get_tree().quit()
 		"lobby_host":
 			# el cliente sale al acabar su prueba: basta con ver una vez los dos jugadores y el daño compartido

@@ -139,7 +139,7 @@ func on_hurt(new_hp: float, dmg: float, dir: Vector2, crit: bool, broke: bool) -
 		_transitioning = true
 		world.bcast("enemy_action", [idx, "phase2", global_position, 0])
 
-func on_parried() -> void:
+func on_parried(_perfect := true) -> void:
 	pass
 
 # ====================================================================== ataques (todos los clientes)
