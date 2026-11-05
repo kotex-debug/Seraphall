@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kotex-debug.github.io/Seraphall/sitemap.xml
