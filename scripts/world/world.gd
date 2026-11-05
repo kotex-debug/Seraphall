@@ -90,6 +90,8 @@ var _interact_hold := 0.0
 var _game_mode := "new"
 var world_difficulty := 2
 var asc_fight := {}
+var _join_wait := -1.0
+var _prologue: Node = null
 
 # ====================================================================== construcción
 func setup(p_main: Node, mode: String) -> void:
@@ -141,6 +143,12 @@ func _ready() -> void:
 	Net.peer_joined.connect(_on_peer_joined_net)
 	if multiplayer.is_server():
 		wflags = Prog.flags
+		# al cargar, los jefes esperan a que entres en su sala y las salas vuelven a estar pobladas
+		wflags.erase("carcelero_intro")
+		wflags.erase("choir_intro")
+		for k in wflags.keys():
+			if str(k).begins_with("clear_"):
+				wflags.erase(k)
 		world_difficulty = Prog.difficulty
 		G.set_meta("lightwing", world_difficulty == 0)
 		for e in enemies:
@@ -154,6 +162,20 @@ func _ready() -> void:
 		else:
 			_after_load()
 	else:
+		# hasta recibir _welcome la pantalla queda en negro; se reintenta por si el mensaje se perdiera
+		hud.fade_rect.color = Color(0, 0, 0, 1)
+		_req_join.rpc_id(1, Prog.equipped)
+		_join_wait = 0.0
+
+func _join_tick(delta: float) -> void:
+	## Cliente: nunca te quedas colgado esperando al anfitrión
+	if _join_wait < 0.0:
+		return
+	_join_wait += delta
+	if _join_wait > 20.0:
+		_join_wait = -1.0
+		main.back_to_title(G.T("conn_timeout"))
+	elif int(_join_wait) % 4 == 3 and int(_join_wait - delta) % 4 != 3:
 		_req_join.rpc_id(1, Prog.equipped)
 
 func diff() -> Dictionary:
@@ -1149,6 +1171,24 @@ func local_players() -> Array:
 func players_list() -> Array:
 	return players.values()
 
+func nearest_player_in(rid: String, pos: Vector2) -> Node2D:
+	## Como nearest_player, pero solo cuenta a quien está en esa sala
+	var best: Node2D = null
+	var bd := INF
+	for p in players.values():
+		if p.is_alive() and not p.cutscene and room_at(p.global_position) == rid:
+			var d := pos.distance_to(p.global_position)
+			if d < bd:
+				bd = d
+				best = p
+	return best
+
+func room_ramp(rid: String) -> Array:
+	var tier: int = int(Strata.ROOM_TIER.get(rid, 3))
+	if int(diff().skulls) >= 3:
+		tier = mini(3, tier + 2)  # Serafín Caído apenas perdona al principio
+	return Strata.TIER_MULT[tier]
+
 func nearest_player(pos: Vector2) -> Node2D:
 	var best: Node2D = null
 	var bd := INF
@@ -1173,6 +1213,9 @@ func is_menu_open() -> bool:
 # ====================================================================== bucle
 func _process(delta: float) -> void:
 	_update_post(delta)
+	_join_tick(delta)
+	_title_tick(delta)
+	_room_lock_tick(delta)
 	var lp := local_player()
 	if G.photo_mode:
 		_photo_tick()
@@ -1214,12 +1257,19 @@ func _process(delta: float) -> void:
 		_esync_t -= delta
 		if _esync_t <= 0.0:
 			_esync_t = 0.066
+			# solo lo que un jugador puede ver: el paquete cabe en un datagrama y no se pierde troceado
 			var arr := PackedFloat32Array()
 			for e in enemies:
-				if e.is_alive():
+				if e.is_alive() and arr.size() < 200 and _near_any_player(e.global_position, 520.0):
 					arr.append_array([e.idx, e.position.x, e.position.y, e.facing, _state_code(e.state)])
 			for pid in joined_peers:
 				_esync.rpc_id(pid, arr)
+
+func _near_any_player(pos: Vector2, r: float) -> bool:
+	for p in players.values():
+		if p.global_position.distance_to(pos) < r:
+			return true
+	return false
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("photo") and not menu.visible and not dialog.is_open():
@@ -1272,7 +1322,8 @@ func _check_area(lp: Player) -> void:
 			if a == "area_nimbo" and not Prog.flags.get("nimbo_intro", false) and active_boss == null:
 				_nimbo_intro()
 			else:
-				hud.show_area("", G.T(a))
+				_title_pending = a
+				_title_pending_t = 0.0
 			if Lore.AREA_THOUGHTS.has(a) and not Prog.flags.get("thought_" + a, false):
 				_area_thoughts(a)
 		var target := Color(0.42, 0.45, 0.6) if a == "area_gallery" else (Color(0.55, 0.45, 0.5) if a == "area_circle" else Color(0.5, 0.46, 0.58))
@@ -1320,6 +1371,171 @@ func _check_area(lp: Player) -> void:
 			_boss_started = true  # evita repetir la petición
 			_request_boss.rpc_id(1)
 
+# ---------------------------------------------------------------------- títulos de zona
+var _title_pending := ""
+var _title_pending_t := 0.0
+var _title_cd := 0.0
+var _title_last := {}
+
+func _title_tick(delta: float) -> void:
+	## Evita que los títulos se pisen al ir y venir entre salas: espera a que te quedes,
+	## deja un respiro entre títulos y no repite el mismo enseguida.
+	_title_cd = maxf(0.0, _title_cd - delta)
+	if _title_pending == "":
+		return
+	_title_pending_t += delta
+	if _title_pending != _area:
+		_title_pending = ""
+		return
+	if _title_pending_t < 0.7 or _title_cd > 0.0:
+		return
+	var now := Time.get_ticks_msec()
+	if now - int(_title_last.get(_title_pending, -60000)) >= 45000:
+		hud.show_area("", G.T(_title_pending))
+		_title_last[_title_pending] = now
+		_title_cd = 6.0
+	_title_pending = ""
+
+# ---------------------------------------------------------------------- salas cerradas
+## Al entrar en una sala con enemigos, las salidas se cierran hasta acabar con todos.
+## Los enemigos despiertan por tandas: menos a la vez en las primeras salas.
+var room_lock := ""
+var _lock_check_t := 0.0
+var _lock_idle := 0.0
+var _lock_away := 0.0
+var _lock_wake_t := 0.0
+var _lock_total := 0
+
+func _room_enemies(rid: String) -> Array:
+	var out := []
+	for e in enemies:
+		if e.home_room == rid and e.is_alive() and not e.is_boss and not e.get_meta("extra", false):
+			out.append(e)
+	return out
+
+func _lock_blocked() -> bool:
+	return active_boss != null or _trial != "" or secret_fight != "" or not asc_fight.is_empty() or _prologue != null
+
+func _room_lock_tick(delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	if room_lock == "":
+		_lock_check_t -= delta
+		if _lock_check_t > 0.0 or _lock_blocked():
+			return
+		_lock_check_t = 0.12
+		for p in players.values():
+			if not p.is_alive() or p.cutscene:
+				continue
+			var r := room_at(p.global_position)
+			if r == "" or AREAS.get(r, "") in PEACE_AREAS:
+				continue
+			var list := _room_enemies(r)
+			if not list.is_empty():
+				_start_room_lock(r, list)
+				return
+		return
+	var left := _room_enemies(room_lock)
+	if left.is_empty():
+		bcast("_room_unlock", [room_lock, true])
+		return
+	# seguridad: nunca te quedas encerrado (enemigo inalcanzable, o ya no hay nadie dentro)
+	_lock_idle += delta
+	_lock_away = 0.0 if _any_player_in(room_lock) else _lock_away + delta
+	if _lock_idle > 120.0 or _lock_away > 1.5:
+		bcast("_room_unlock", [room_lock, false])
+		return
+	bcast_lock_count(left.size())
+	var awake := 0
+	var next: Enemy = null
+	for e in left:
+		if e.active:
+			awake += 1
+		elif next == null:
+			next = e
+	_lock_wake_t -= delta
+	if next and awake < _lock_cap(room_lock) and _lock_wake_t <= 0.0:
+		_lock_wake_t = 0.7
+		next.active = true
+		bcast("_enemy_wake", [next.idx])
+
+func _any_player_in(rid: String) -> bool:
+	for p in players.values():
+		if p.is_alive() and room_at(p.global_position) == rid:
+			return true
+	return false
+
+func _lock_cap(rid: String) -> int:
+	return int(room_ramp(rid)[3]) + (1 if joined_peers.size() > 0 else 0)
+
+func _start_room_lock(rid: String, list: Array) -> void:
+	# los más débiles primero
+	list.sort_custom(func(a: Enemy, b: Enemy) -> bool: return a.max_hp < b.max_hp)
+	var cap := _lock_cap(rid)
+	var sleeping := []
+	for i in list.size():
+		var e: Enemy = list[i]
+		e.active = i < cap
+		if i >= cap:
+			sleeping.append(e.idx)
+	_lock_idle = 0.0
+	_lock_away = 0.0
+	_lock_wake_t = 0.7
+	bcast("_room_lock", [rid, list.size(), sleeping])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _room_lock(rid: String, total: int, sleeping: Array) -> void:
+	room_lock = rid
+	_lock_total = total
+	for i: int in sleeping:
+		if i < enemies.size():
+			enemies[i].modulate = Color(0.45, 0.42, 0.55)
+	seal_arena(rid, "coro" if rid in ["atrio", "atr_link", "choir_link"] else ("luz" if Strata.stratum_of_room(rid) % 2 == 0 else "celda"), false)
+	hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), 0, total)
+	if not Prog.flags.get("seen_room_lock", false):
+		Prog.flags["seen_room_lock"] = true
+		G.toast(G.L(["Las salidas se cierran: acaba con todos para seguir.", "The exits seal shut: defeat them all to go on."]), Color(1, 0.75, 0.55))
+
+var _lock_shown := -1
+func bcast_lock_count(n: int) -> void:
+	if n != _lock_shown:
+		_lock_shown = n
+		bcast("_room_lock_count", [n])
+
+@rpc("any_peer", "call_remote", "reliable")
+func _room_lock_count(n: int) -> void:
+	if room_lock != "":
+		hud.show_trial(G.L(["SALA CERRADA", "ROOM SEALED"]), _lock_total - n, _lock_total)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _enemy_wake(i: int) -> void:
+	if i >= enemies.size():
+		return
+	var e: Enemy = enemies[i]
+	e.create_tween().tween_property(e, "modulate", Color.WHITE, 0.35)
+	Fx.burst(e.global_position + Vector2(0, -8), Color(0.9, 0.35, 0.3), 12, 60.0, 0.5, "fx_soft", 180.0, Vector2.UP, 0.4)
+	Fx.ring(e.global_position, 3.0, 20.0, Color(1, 0.45, 0.35), 0.3, 2.0)
+	Audio.sfx("charge", -10.0, 0.2)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _room_unlock(rid: String, cleared: bool) -> void:
+	if room_lock != rid:
+		return
+	room_lock = ""
+	_lock_shown = -1
+	unseal_arena()
+	hud.hide_trial()
+	for e in _room_enemies(rid):
+		e.active = true
+		e.modulate = Color.WHITE
+	if cleared:
+		wflags["clear_" + rid] = true
+		Audio.sfx("gate", -2.0, 0.0)
+		G.pickup("icon_eco", G.L(["Sala liberada", "Room cleared"]), Color(0.7, 1.0, 0.75))
+		var lp := local_player()
+		if lp and lp.is_alive():
+			Prog.add_ecos(12 * _lock_total)
+
 func _check_interact_hold(lp: Player, delta: float) -> void:
 	## Revivir al compañero manteniendo F.
 	var target: Player = null
@@ -1366,8 +1582,7 @@ func try_interact(p: Player) -> void:
 	match it.kind:
 		"brasa":
 			if not it.used:
-				# encender una Brasa es gratis: solo la muerte arranca plumas
-				Fx.burst(it.global_position + Vector2(0, -10), Color(1, 0.7, 0.35), 14, 70.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6)
+				_pay_brasa(p, it)
 				bcast("_light_brasa", [it.id])
 			else:
 				_rest_at(it.id)
@@ -1390,6 +1605,20 @@ func try_interact(p: Player) -> void:
 			for l in it.data.lines:
 				ll.append([G.T(l[0]), l[1]])
 			dialog.play(ll, Callable())
+
+func _pay_brasa(p: Player, it: Interactable) -> void:
+	## Encender una Brasa cuesta una pluma: la arrancas tú y la echas al fuego (sin plumas, la Brasa se apiada)
+	Fx.burst(it.global_position + Vector2(0, -10), Color(1, 0.7, 0.35), 14, 70.0, 0.9, "fx_soft", 180.0, Vector2.UP, 0.6)
+	if Prog.wing_feathers <= 0:
+		return
+	Prog.lose_wing_feather()
+	send_look()
+	Audio.sfx("feather_tear", -4.0, 0.0)
+	var wc := Look.color_of(G.look, "wing")
+	Fx.burst(p.global_position + Vector2(0, -12), wc, 14, 90.0, 1.2, "fx_feather", 180.0, (it.global_position - p.global_position).normalized(), 1.2, false, Vector2(0, 30))
+	Fx.text(p.global_position + Vector2(0, -26), G.L(["-1 PLUMA", "-1 FEATHER"]), Color(1, 0.75, 0.5), 10)
+	if Prog.wing_feathers <= 3:
+		Prog.achieve("featherless")
 
 func _physics_process(_delta: float) -> void:
 	var lp := local_player()
@@ -1449,6 +1678,10 @@ func _req_join(_weapon: String) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2, host_diff: int) -> void:
+	if _join_wait < 0.0:
+		return  # respuesta repetida de un reintento
+	_join_wait = -1.0
+	hud.fade_to(0.0, 0.8)
 	Ach.unlock("coop_join")
 	wflags = flags
 	world_difficulty = host_diff
@@ -1459,6 +1692,8 @@ func _welcome(flags: Dictionary, estates: Array, host_pos: Vector2, host_diff: i
 		var e: Enemy
 		if i < enemies.size():
 			e = enemies[i]
+			# la dificultad es la del anfitrión, no la de tu partida
+			e.reset_state()
 		else:
 			e = _add_enemy(s[0], s[1], s[4])
 		e.position = s[1]
@@ -1846,18 +2081,28 @@ func _rest_at(id: String) -> void:
 	Audio.sfx("heal")
 	Fx.burst(lp.global_position + Vector2(0, -8), Color(1, 0.7, 0.4), 20, 60.0, 1.0, "fx_soft", 180.0, Vector2.UP, 0.4)
 	if multiplayer.is_server():
-		bcast("_reset_enemies", [])
+		bcast("_reset_enemies", [true])
 	Prog.save_game()
 	G.toast(G.T("game_saved"), Color(0.8, 0.8, 0.8))
 	menu.open("char", {"brasa": true})
 
+## full = true al descansar (reaparecen todos). Al morir, las salas que ya limpiaste siguen limpias.
 @rpc("any_peer", "call_remote", "reliable")
-func _reset_enemies() -> void:
+func _reset_enemies(full: bool) -> void:
 	unseal_arena()
 	secret_fight = ""
+	room_lock = ""
+	_lock_shown = -1
 	_trial_reset()
 	_bell_seq.clear()
 	_reset_urns()
+	if full:
+		for k in wflags.keys():
+			if str(k).begins_with("clear_"):
+				wflags.erase(k)
+	# los jefes vuelven a dormir: al entrar otra vez de su sala arranca el combate (sin repetir la cinemática)
+	wflags.erase("carcelero_intro")
+	wflags.erase("choir_intro")
 	for e in enemies.duplicate():
 		if e.get_meta("extra", false):
 			enemies.erase(e)
@@ -1871,14 +2116,16 @@ func _reset_enemies() -> void:
 			continue
 		if e.type in Strata.ARCHONS and wflags.get(e.type + "_dead", false):
 			continue
+		if not e.is_boss and wflags.get("clear_" + e.home_room, false):
+			continue
 		e.asc = 0
 		e.reset_state()
-		if e.is_boss:
-			e.active = (e.type == "carcelero" and wflags.get("carcelero_intro", false)) or (e.type == "choir" and wflags.get("choir_intro", false))
+		e.active = not e.is_boss
+		e.modulate = Color.WHITE
 	for i in enemies.size():
 		enemies[i].idx = i
 	_archon_started.clear()
-	if active_boss and active_boss.type == "seravel" and not wflags.get("seravel_dead", false):
+	if not wflags.get("seravel_dead", false):
 		_boss_started = false
 		set_gate(wflags.get("carcelero_dead", false), true)
 	active_boss = null
@@ -2174,7 +2421,7 @@ func _boss_intro(idx: int) -> void:
 		if lp.global_position.y > 27 * TS:
 			lp.respawn_at(tile_pos(49, 24))
 		lp.cutscene = true
-	await _play_cinematic("seravel")
+	await _cine_once("seravel")
 	if lp:
 		lp.cutscene = false
 	boss.active = true
@@ -2192,6 +2439,16 @@ func _play_cinematic(kind: String) -> void:
 	add_child(cine)
 	await cine.finished
 
+func _cine_once(kind: String) -> void:
+	## La presentación del jefe solo se ve una vez: al reintentar se pasa directo a la pelea (con su barra)
+	if Prog.flags.get("cine_" + kind, false):
+		Audio.sfx("roar", -6.0)
+		G.shake(3.0, 0.3)
+		await get_tree().create_timer(0.3).timeout
+		return
+	Prog.flags["cine_" + kind] = true
+	await _play_cinematic(kind)
+
 @rpc("any_peer", "call_remote", "reliable")
 func _carcelero_intro(idx: int) -> void:
 	if wflags.get("carcelero_intro", false):
@@ -2201,7 +2458,7 @@ func _carcelero_intro(idx: int) -> void:
 	var lp := local_player()
 	if lp:
 		lp.cutscene = true
-	await _play_cinematic("carcelero")
+	await _cine_once("carcelero")
 	if lp:
 		lp.cutscene = false
 	e.active = true
@@ -2234,7 +2491,7 @@ func _choir_intro(idx: int) -> void:
 	var lp := local_player()
 	if lp:
 		lp.cutscene = true
-	await _play_cinematic("choir")
+	await _cine_once("choir")
 	if lp:
 		lp.cutscene = false
 	e.active = true
@@ -2441,7 +2698,7 @@ func on_local_player_died(p: Player) -> void:
 		_request_shadow(true)
 	if not any_alive:
 		if multiplayer.is_server():
-			bcast("_reset_enemies", [])
+			bcast("_reset_enemies", [false])
 		else:
 			_rpc_reset_request.rpc_id(1)
 
@@ -2452,7 +2709,7 @@ func _rpc_reset_request() -> void:
 	for q in players.values():
 		if q.is_alive():
 			return
-	bcast("_reset_enemies", [])
+	bcast("_reset_enemies", [false])
 
 # ====================================================================== intro
 func _play_intro() -> void:
@@ -2757,18 +3014,25 @@ func _secret_start(kind: String) -> void:
 	e.call("summon")
 	var lp := local_player()
 	seal_arena(SECRET_ARENAS[kind][0], SECRET_ARENAS[kind][1])
+	var retry: bool = Prog.flags.get("cine_" + kind, false)
+	Prog.flags["cine_" + kind] = true
 	if lp:
 		lp.cutscene = true
 	hud.letterbox(true)
+	# la barra del jefe se ve desde el principio, también en cada reintento
+	hud.show_boss(e)
 	Audio.play_music("shadow" if kind == "verdugo" else "boss2", 0.6)
 	if kind == "verdugo":
 		_cam_focus = e.global_position + Vector2(0, -16)
 		Fx.burst(e.global_position + Vector2(0, -10), Color(1, 0.35, 0.4), 40, 120.0, 1.2, "fx_feather", 180.0, Vector2.UP, 1.2, false, Vector2(0, 30))
 		G.flash(Color(1, 0.3, 0.35, 0.35), 0.4)
 		Audio.sfx("shadow_rise", 0.0, 0.0)
-		await get_tree().create_timer(1.4).timeout
-		show_boss_line(["Empuña lo que fuiste... o vuelve a olvidarlo.", "Wield what you were... or forget it again."], "verdugo")
-		await get_tree().create_timer(1.6).timeout
+		if not retry:
+			await get_tree().create_timer(1.4).timeout
+			show_boss_line(["Empuña lo que fuiste... o vuelve a olvidarlo.", "Wield what you were... or forget it again."], "verdugo")
+			await get_tree().create_timer(1.6).timeout
+		else:
+			await get_tree().create_timer(0.4).timeout
 	else:
 		_cam_focus = Vector2(BossColoso.ARENA.position.x + 40.0, BossColoso.ANCHOR.y - 80.0)
 		e.perform("rise", e.global_position, 0)
@@ -3220,6 +3484,17 @@ func _archon_intro(aid: String) -> void:
 	if steps.size() >= 2:
 		Prog.quest_step(A.quest, steps[steps.size() - 2].id)
 	var lp := local_player()
+	if Prog.flags.get("cine_" + aid, false):
+		# reintento: sin presentación, directo a la pelea
+		Audio.sfx("roar", -6.0)
+		G.shake(3.0, 0.3)
+		e.active = true
+		e.state = "chase"
+		e.cooldown = 1.0
+		hud.show_boss(e)
+		Audio.play_music(str(A.music), 0.3)
+		return
+	Prog.flags["cine_" + aid] = true
 	if lp:
 		lp.cutscene = true
 	hud.letterbox(true)
@@ -3977,7 +4252,7 @@ func seal_for(boss_type: String) -> void:
 	if ARENAS.has(boss_type):
 		seal_arena(ARENAS[boss_type][0], ARENAS[boss_type][1])
 
-func seal_arena(room_id: String, style: String) -> void:
+func seal_arena(room_id: String, style: String, pull_far := true) -> void:
 	## Al empezar el combate, las entradas de la sala se cierran (celdas, tubos de órgano o un muro de luz)
 	unseal_arena()
 	var ri := -1
@@ -4012,10 +4287,11 @@ func seal_arena(room_id: String, style: String) -> void:
 	Audio.sfx("gate", 0.0, 0.0)
 	Audio.sfx("slam", -4.0, 0.0)
 	G.shake(4.0, 0.3)
-	# quien se haya quedado fuera entra en la sala (cooperativo)
+	# quien se haya quedado fuera entra en la sala (cooperativo); sin curarse gratis por el camino
 	var lp := local_player()
-	if lp and lp.is_alive() and room_at(lp.global_position) != room_id and inner != Vector2.ZERO:
-		lp.respawn_at(inner)
+	if lp and lp.is_alive() and room_at(lp.global_position) != room_id and inner != Vector2.ZERO and (pull_far or lp.global_position.distance_to(inner) < 420.0):
+		lp.position = inner
+		lp._net_pos = inner
 
 func unseal_arena() -> void:
 	for sl in _seals:
@@ -4761,6 +5037,7 @@ func _spawn_trial_enemy(type: String, pos: Vector2) -> void:
 	var e := _add_enemy(type, pos, true)
 	e.set_meta("trial", true)
 	e.state = "chase"
+	e.home_room = TRIALS[_trial].room if _trial != "" else e.home_room  # oleadas que asoman por la puerta siguen dentro
 	if e.cfg.get("elite", false):
 		hud.show_boss(e)
 	var col := Color(1, 0.85, 0.5) if type == "custodio" else Color(0.9, 0.3, 0.3)

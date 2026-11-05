@@ -5,6 +5,10 @@ signal changed
 signal quest_updated(id: String)
 
 const SAVE_PATH := "user://seraphall_save.json"
+## Las pruebas automáticas nunca tocan la partida real del jugador
+const SAVE_PATH_TEST := "user://seraphall_save_test.json"
+func save_path() -> String:
+	return SAVE_PATH_TEST if G.autotest != "" else SAVE_PATH
 
 # ------------------------------------------------------------------ datos de armas
 const WEAPONS := {
@@ -874,19 +878,19 @@ func from_dict(d: Dictionary) -> void:
 	changed.emit()
 
 func save_game() -> void:
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var f := FileAccess.open(save_path(), FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(to_dict(), "\t"))
 		f.close()
 
 func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
+	return FileAccess.file_exists(save_path())
 
 ## Lee la partida guardada sin cargarla (para la ficha de "Continuar" en la pantalla de inicio)
 func peek_save() -> Dictionary:
 	if not has_save():
 		return {}
-	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var f := FileAccess.open(save_path(), FileAccess.READ)
 	if f == null:
 		return {}
 	var data = JSON.parse_string(f.get_as_text())
@@ -896,7 +900,7 @@ func peek_save() -> Dictionary:
 func load_game() -> bool:
 	if not has_save():
 		return false
-	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var f := FileAccess.open(save_path(), FileAccess.READ)
 	var data = JSON.parse_string(f.get_as_text())
 	f.close()
 	if data is Dictionary:

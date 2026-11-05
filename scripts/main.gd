@@ -9,8 +9,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().paused = false
 	Net.connected_ok.connect(_on_connected)
+	Net.world_ready.connect(_on_host_world_ready)
 	Net.connect_failed.connect(_on_connect_failed)
 	Net.upnp_done.connect(_on_upnp_done)
+	Net.lobby_changed.connect(_on_lobby_changed)
+	Net.host_closed.connect(_on_lobby_host_closed)
 	G.language_changed.connect(_rebuild_title)
 	match G.autotest:
 		"", "none":
@@ -20,6 +23,25 @@ func _ready() -> void:
 			start_game("new")
 		"join":
 			Net.join_ip("127.0.0.1")
+		"lobby_host":
+			# el anfitrión se queda en la sala 8 s (el caso que antes colgaba al cliente) y luego empieza
+			Prog.reset()
+			_build_title()
+			Net.host()
+			await get_tree().create_timer(8.0).timeout
+			print("LOBBY_HOST peers_en_sala=", Net.peers())
+			start_game("new")
+		"lobby_join":
+			_build_title()
+			Net.lan_listen_start()
+			await get_tree().create_timer(3.0).timeout
+			print("LOBBY_JOIN lan_games=", Net.lan_games)
+			var found: Array = Net.lan_games.keys()
+			Net.lan_listen_stop()
+			if found.is_empty():
+				print("LOBBY_JOIN aviso: sin partidas LAN, se conecta por IP")
+			var err_j := Net.join("%s:%d" % [found[0] if found.size() > 0 else "127.0.0.1", Net.PORT])
+			print("LOBBY_JOIN join=", err_j)
 		"newgame":
 			var sd := OS.get_environment("SERAPHALL_SHOTS")
 			_build_title()
@@ -169,7 +191,7 @@ func _on_title_action(act: String, arg: String) -> void:
 			_open_new_game("new")
 		"host":
 			if Net.host() != OK:
-				title.toast(G.T("conn_failed"))
+				title.toast(G.L(["No se pudo abrir el puerto 24680: ¿hay otra partida abierta?", "Could not open port 24680: is another game running?"]))
 				return
 			title.show_panel("host")
 		"host_start":
@@ -184,7 +206,11 @@ func _on_title_action(act: String, arg: String) -> void:
 				c = Net.lan_code()
 			DisplayServer.clipboard_set(c)
 			title.toast(G.L(["Código copiado", "Code copied"]) + ": " + c)
+		"copy_lan":
+			DisplayServer.clipboard_set(Net.lan_code())
+			title.toast(G.L(["Código copiado", "Code copied"]) + ": " + Net.lan_code())
 		"join_menu":
+			Net.lan_listen_start()
 			title.show_panel("join")
 		"join":
 			var err := Net.join(arg)
@@ -195,6 +221,7 @@ func _on_title_action(act: String, arg: String) -> void:
 			G.toggle_fullscreen()
 		"back":
 			Net.close()
+			Net.lan_listen_stop()
 			title.show_main_menu()
 		"quit":
 			get_tree().quit()
@@ -212,8 +239,12 @@ func _on_new_game_done(difficulty: int, look: Dictionary, mode: String) -> void:
 	G.save_settings()
 	Prog.reset()
 	Prog.difficulty = difficulty
-	if mode == "new":
-		Net.close()
+	if mode != "new":
+		# en cooperativo tu compañero espera en la sala: se entra directo, sin corto ni prólogo
+		G.set_meta("prologue", false)
+		_transition_to_game("new")
+		return
+	Net.close()
 	# corto de introducción y, después, la pregunta del prólogo
 	var film := preload("res://scripts/ui/intro_film.gd").new()
 	film.finished.connect(_ask_prologue)
@@ -294,14 +325,37 @@ func _on_upnp_done(ok: bool, _ip: String) -> void:
 		title.set_online_code(Net.online_code(), ok)
 
 func _on_connected() -> void:
+	## Enlace correcto: el cliente espera en la sala hasta que el anfitrión entre en la partida
+	Net.lan_listen_stop()
+	if title and is_instance_valid(title):
+		title.show_waiting()
+
+func _on_host_world_ready() -> void:
+	if world or Net.is_host:
+		return
 	# el cliente usa su propio personaje guardado (o uno nuevo)
 	if not Prog.load_game():
 		Prog.reset()
 	start_game("client")
 
-func _on_connect_failed() -> void:
+func _on_connect_failed(reason: String) -> void:
+	var msg: String = G.T("conn_" + reason) if G.TXT.has("conn_" + reason) else G.T("conn_failed")
+	if world:
+		back_to_title(msg)
+		return
 	if title and is_instance_valid(title):
-		title.set_status(G.T("conn_failed"))
+		Net.lan_listen_start()
+		title.show_panel("join")
+		title.set_status(msg)
+
+func _on_lobby_changed() -> void:
+	if title and is_instance_valid(title) and Net.is_host:
+		title.refresh_lobby()
+
+func _on_lobby_host_closed() -> void:
+	if world == null and title and is_instance_valid(title):
+		title.show_main_menu()
+		title.toast(G.T("host_left"))
 
 func _toast_title(text: String) -> void:
 	if title and is_instance_valid(title):
@@ -316,6 +370,8 @@ func start_game(mode: String) -> void:
 	world = preload("res://scripts/world/world.gd").new()
 	world.setup(self, mode)
 	add_child(world)
+	if Net.is_host:
+		Net.announce_world_ready()
 	if G.autotest != "":
 		_run_autotest()
 
@@ -1846,6 +1902,29 @@ func _run_autotest() -> void:
 			await get_tree().create_timer(14.0).timeout
 			print("seravel_dead=", Prog.flags.get("seravel_dead"), " main1=", Prog.quests.get("main1"), " k1 can=", Prog.can_unlock("k1"), " weapons=", Prog.weapons.keys())
 			print("AUTOTEST_FLOW_OK")
+			get_tree().quit()
+		"lobby_host":
+			# el cliente sale al acabar su prueba: basta con ver una vez los dos jugadores y el daño compartido
+			var e0: Enemy = w.enemies[0]
+			var ok_h := false
+			for _i in 80:
+				await get_tree().create_timer(0.2).timeout
+				if w.joined_peers.size() == 1 and w.players.size() == 2 and e0.hp < e0.max_hp:
+					ok_h = true
+					print("LOBBY_HOST players=", w.players.keys(), " joined=", w.joined_peers, " enemy0_hp=", e0.hp, "/", e0.max_hp)
+					break
+			print("AUTOTEST_LOBBY_HOST_OK" if ok_h else "AUTOTEST_LOBBY_HOST_FAIL")
+			get_tree().quit()
+		"lobby_join":
+			await get_tree().create_timer(4.0).timeout
+			var me: Player = w.local_player()
+			print("LOBBY_JOIN players=", w.players.keys(), " my=", Net.my_id(), " joined=", w.joined_peers, " dif=", w.world_difficulty)
+			w.request_damage_enemy(w.enemies[0], 5.0, Vector2.RIGHT, 1.0, false)
+			await get_tree().create_timer(1.5).timeout
+			var e1: Enemy = w.enemies[0]
+			print("LOBBY_JOIN enemy0_hp=", e1.hp, "/", e1.max_hp)
+			var ok_j: bool = me != null and w.players.size() == 2 and w.joined_peers == [1] and e1.hp < e1.max_hp
+			print("AUTOTEST_LOBBY_JOIN_OK" if ok_j else "AUTOTEST_LOBBY_JOIN_FAIL")
 			get_tree().quit()
 		"host":
 			await get_tree().create_timer(20.0).timeout

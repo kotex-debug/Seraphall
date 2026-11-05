@@ -78,8 +78,20 @@ const AMBIENT := {
 	"area_trono": Color(0.45, 0.4, 0.58), "area_jardin": Color(0.62, 0.56, 0.46), "area_corte": Color(0.48, 0.4, 0.56),
 	"area_galeria_reyes": Color(0.52, 0.46, 0.6), "area_trono_vacio": Color(0.42, 0.34, 0.56),
 }
+## Dificultad progresiva. Tramo de cada sala: 0 = primeras salas ... 3 = dificultad plena (las no listadas).
+const ROOM_TIER := {
+	"hall1": 0, "hall2": 0, "chains": 0, "mir_link": 0, "nim_link": 0,
+	"east": 1, "gallery": 1, "celdas": 1, "cel_link": 1, "cel_up": 1, "alcove": 1, "alc_link": 1, "atrio": 1, "atr_link": 1,
+	"yard": 2, "choir": 2, "choir_link": 2, "esc_link": 2, "escala": 2,
+	"b_llegada": 1, "b_link1": 1, "b_sendero": 1, "b_link2": 1, "b_link3": 2, "b_cienaga": 2, "b_link4": 2, "b_arboleda": 2, "b_link5": 2, "b_madriguera": 2,
+	"f_llegada": 1, "f_link1": 1, "f_crisoles": 1, "f_link2": 1, "f_link3": 2, "f_moldes": 2, "f_link4": 2, "f_fragua": 2, "f_link5": 2, "f_archivo": 2,
+	"t_llegada": 2, "t_link1": 2, "t_jardin": 2, "t_link2": 2, "t_corte": 2, "t_link3": 2,
+}
+## [vida, daño, tiempo entre ataques, enemigos activos a la vez dentro de una sala cerrada]
+const TIER_MULT := [[0.6, 0.55, 1.5, 2], [0.78, 0.72, 1.28, 3], [0.9, 0.86, 1.12, 4], [1.0, 1.0, 1.0, 5]]
+
 ## música de exploración de cada estrato
-const MUSIC := {2: "forest", 3: "foundry", 4: "throne"}
+const MUSIC :={2: "forest", 3: "foundry", 4: "throne"}
 ## baldosas: suelos y muros de cada estrato (índices de tiles.png)
 const FLOORS := {2: [34, 35, 36, 37], 3: [40, 41, 42, 43], 4: [46, 47, 48, 49]}
 const WALLS := {2: [38, 39], 3: [44, 45], 4: [50, 51]}

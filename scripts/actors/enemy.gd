@@ -135,6 +135,10 @@ var rank := 0
 var _attack_id := 0
 var _net_pos := Vector2.ZERO
 var _frame := 0.0
+var home_room := ""       # sala de la que nunca sale (los jefes viven en su arena sellada)
+var _last_ok := Vector2.ZERO
+var scripted := false     # lo mueve un guion (jefe del prólogo): sin IA
+var hp_floor := 0.0       # guion: no baja de esta vida hasta que el tutorial lo permita
 var sprite: Sprite2D
 var shadow: Sprite2D
 var _flash_mat: ShaderMaterial
@@ -239,6 +243,11 @@ func is_staggered() -> bool:
 func _physics_process(delta: float) -> void:
 	if state == "dead":
 		return
+	if scripted:
+		velocity = velocity.lerp(Vector2.ZERO, 0.2)
+		move_and_slide()
+		_animate(delta)
+		return
 	if multiplayer.is_server():
 		_server_tick(delta)
 	else:
@@ -251,11 +260,14 @@ func _server_tick(delta: float) -> void:
 	last_hit_t += delta
 	if last_hit_t > 2.0 and poise > 0.0:
 		poise = max(0.0, poise - max_poise * 0.25 * delta)
-	var target: Node2D = world.nearest_player(global_position)
+	# los enemigos solo pelean dentro de su sala: ni te siguen ni aparecen en otra
+	var target: Node2D = world.nearest_player_in(home_room, global_position) if home_room != "" else world.nearest_player(global_position)
 	match state:
 		"idle":
 			velocity = velocity.lerp(Vector2.ZERO, 0.2)
-			if active and target and target.global_position.distance_to(global_position) < cfg.aggro:
+			if home_room != "" and target == null and global_position.distance_to(spawn_pos) > 10.0:
+				velocity = (spawn_pos - global_position).normalized() * cfg.speed * 0.8
+			if active and target and (target.global_position.distance_to(global_position) < cfg.aggro or world.room_lock == home_room):
 				state = "chase"
 				if not is_boss:
 					world.bcast("enemy_alert", [idx])
@@ -273,6 +285,13 @@ func _server_tick(delta: float) -> void:
 			if stagger_t <= 0.0:
 				state = "chase"
 	move_and_slide()
+	if home_room != "":
+		if world.room_at(global_position) == home_room:
+			_last_ok = global_position
+		else:
+			global_position = _last_ok
+			velocity = Vector2.ZERO
+			lunge = Vector2.ZERO
 
 func _chase(target: Node2D, delta: float) -> void:
 	var to := target.global_position - global_position
@@ -646,8 +665,10 @@ func server_apply_damage(dmg: float, dir: Vector2, poise_dmg: float) -> Dictiona
 		dmg *= 0.2
 		poise_dmg *= 1.6
 		world.bcast("_enemy_blocked", [idx])
-	hp -= dmg
+	hp = maxf(hp - dmg, hp_floor)
 	last_hit_t = 0.0
+	if not active and not is_boss:
+		active = true  # un enemigo en espera despierta si le golpeas
 	var broke := false
 	if state != "stagger":
 		poise += poise_dmg

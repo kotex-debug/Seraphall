@@ -46,6 +46,9 @@ const TXT := {
 	"connect": ["Conectar", "Connect"],
 	"connecting": ["Conectando...", "Connecting..."],
 	"conn_failed": ["No se pudo conectar. Revisa el código.", "Could not connect. Check the code."],
+	"conn_timeout": ["Sin respuesta. Comprueba el código y que tu compañero tenga la sala abierta. Si es por Internet, debe abrir el puerto UDP 24680 (o usad Tailscale/Radmin). Permite Seraphall en el Firewall.", "No answer. Check the code and that your partner has the lobby open. Over the Internet, they must open UDP port 24680 (or use Tailscale/Radmin). Allow Seraphall in the Firewall."],
+	"conn_version": ["Tenéis versiones distintas del juego. Actualizad los dos a la última.", "You have different game versions. Both of you must update."],
+	"upnp_cgnat": ["Tu proveedor de Internet no te da IP pública (CGNAT): el código online no funcionará. Usad el código de red local o una red virtual (Tailscale, Radmin VPN) y la IP directa.", "Your ISP gives you no public IP (CGNAT): the online code won't work. Use the LAN code or a virtual network (Tailscale, Radmin VPN) with the direct IP."],
 	"host_wait": ["Esperando a tu compañero... Comparte este código:", "Waiting for your partner... Share this code:"],
 	"code_online": ["Código online", "Online code"],
 	"code_lan": ["Código de red local", "LAN code"],
@@ -60,7 +63,7 @@ const TXT := {
 		"WASD move · Mouse aim · LMB attack · RMB heavy (hold) · Space dash · Shift parry · Q/E spells · R Wrath · C heal · X item · F interact · Tab menu · M map"],
 	"interact": ["[F] %s", "[F] %s"],
 	"rest": ["Descansar", "Rest"],
-	"light_brasa": ["Encender la Brasa", "Kindle the Ember"],
+	"light_brasa": ["Encender la Brasa (-1 pluma)", "Kindle the Ember (-1 feather)"],
 	"talk": ["Hablar", "Talk"],
 	"open": ["Abrir", "Open"],
 	"revive": ["Mantén F para reanimar", "Hold F to revive"],
@@ -460,7 +463,8 @@ func key_label(action: String) -> String:
 		var b := int(c.substr(2))
 		return L(["CLIC IZQ", "LMB"]) if b == MOUSE_BUTTON_LEFT else (L(["CLIC DER", "RMB"]) if b == MOUSE_BUTTON_RIGHT else (L(["RUEDA", "MMB"]) if b == MOUSE_BUTTON_MIDDLE else "M%d" % b))
 	var k := int(c.substr(2))
-	var s := OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k) if k > 0 else k)
+	var layout_ok := k > 0 and DisplayServer.get_name() != "headless"
+	var s := OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k) if layout_ok else k)
 	return s.to_upper().replace("SPACE", L(["ESPACIO", "SPACE"])).replace("ESCAPE", "ESC")
 
 # ------------------------------------------------------------------ "juice" global

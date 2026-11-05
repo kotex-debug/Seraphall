@@ -20,6 +20,8 @@ var _stage := "intro"   # intro | menu | panel
 var _t := 0.0
 var _mouse := Vector2.ZERO
 var _code_edit: LineEdit
+var _lan_box: VBoxContainer
+var _lobby_label: Label
 var status_label: Label
 
 func _ready() -> void:
@@ -379,6 +381,11 @@ func show_panel(kind: String) -> void:
 		lan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lan.custom_minimum_size = Vector2(300, 0)
 		box.add_child(lan)
+		_lobby_label = UIKit.label("", 15, UIKit.PINK)
+		_lobby_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_lobby_label.custom_minimum_size = Vector2(300, 0)
+		box.add_child(_lobby_label)
+		refresh_lobby()
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 10)
@@ -422,15 +429,82 @@ func show_panel(kind: String) -> void:
 		row2.add_child(bk)
 		status_label = UIKit.label("", 15, UIKit.PINK)
 		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		status_label.custom_minimum_size = Vector2(300, 0)
 		box.add_child(status_label)
+		# partidas encontradas en la red local: basta con pulsar
+		_lan_box = VBoxContainer.new()
+		_lan_box.add_theme_constant_override("separation", 2)
+		box.add_child(_lan_box)
+		_refresh_lan()
+		if not Net.lan_games_changed.is_connected(_refresh_lan):
+			Net.lan_games_changed.connect(_refresh_lan)
 		_code_edit.grab_focus.call_deferred()
 
 func _on_code_submitted(_t: String) -> void:
-	emit_signal("action", "join", _code_edit.text)
+	if _code_edit and is_instance_valid(_code_edit):
+		emit_signal("action", "join", _code_edit.text)
+
+## Lista de partidas de tu red local
+func _refresh_lan() -> void:
+	if _lan_box == null or not is_instance_valid(_lan_box):
+		return
+	for c in _lan_box.get_children():
+		c.queue_free()
+	if Net.lan_games.is_empty():
+		var w := UIKit.label(G.L(["Buscando partidas en tu red local...", "Looking for games on your local network..."]), 10, UIKit.TEXT_DIM, "title")
+		w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		w.custom_minimum_size = Vector2(300, 0)
+		_lan_box.add_child(w)
+		return
+	for ip: String in Net.lan_games:
+		if ip.begins_with("127.") and Net.lan_games.size() > 1:
+			continue  # la misma partida vista por dos vías en este PC
+		var g: Dictionary = Net.lan_games[ip]
+		var b := Button.new()
+		b.text = G.L(["Unirse a %s  (red local)", "Join %s  (local network)"]) % str(g.name)
+		b.custom_minimum_size = Vector2(300, 18)
+		b.pressed.connect(_on_button.bind("join", "%s:%d" % [ip, int(g.port)]))
+		UIKit.juicy(b)
+		_lan_box.add_child(b)
+
+## Anfitrión: ¿ha entrado alguien en la sala?
+func refresh_lobby() -> void:
+	if _lobby_label == null or not is_instance_valid(_lobby_label):
+		return
+	_lobby_label.text = G.L(["¡Compañero en la sala! Pulsa Empezar.", "Partner in the lobby! Press Start."]) if Net.has_partner() else ""
+
+## Cliente: conectado, esperando a que el anfitrión empiece
+func show_waiting() -> void:
+	_stage = "panel"
+	_clear_menu()
+	panel = OrnatePanel.new()
+	panel.position = Vector2(150, 170)
+	panel.size = Vector2(340, 110)
+	add_child(panel)
+	var box := VBoxContainer.new()
+	box.position = Vector2(20, 14)
+	box.custom_minimum_size = Vector2(300, 0)
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+	var h := UIKit.gold_label(G.L(["¡CONECTADO!", "CONNECTED!"]), 16)
+	h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	h.custom_minimum_size = Vector2(300, 0)
+	box.add_child(h)
+	status_label = UIKit.label(G.L(["Esperando a que tu compañero empiece la partida...", "Waiting for your partner to start the game..."]), 15, UIKit.TEXT_DIM)
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.custom_minimum_size = Vector2(300, 0)
+	box.add_child(status_label)
+	var bk := Button.new()
+	bk.text = G.L(["Cancelar", "Cancel"])
+	bk.pressed.connect(_on_button.bind("back", ""))
+	UIKit.juicy(bk)
+	box.add_child(bk)
+	bk.grab_focus.call_deferred()
 
 func set_online_code(code: String, ok: bool) -> void:
-	if panel == null:
+	if panel == null or not is_instance_valid(panel):
 		return
 	var code_l: Label = panel.find_child("code", true, false)
 	var kind_l: Label = panel.find_child("codekind", true, false)
@@ -439,8 +513,8 @@ func set_online_code(code: String, ok: bool) -> void:
 		kind_l.text = G.T("code_online") + " · " + G.T("upnp_ok")
 		kind_l.label_settings.font_color = Color(0.7, 1.0, 0.75)
 		status_label.text = G.T("code_lan") + ": " + Net.lan_code()
-	elif status_label:
-		status_label.text = G.T("upnp_fail")
+	elif status_label and is_instance_valid(status_label):
+		status_label.text = G.T("upnp_cgnat") if Net.upnp_note == "cgnat" else G.T("upnp_fail")
 
 func set_status(t: String) -> void:
 	if status_label and is_instance_valid(status_label):
