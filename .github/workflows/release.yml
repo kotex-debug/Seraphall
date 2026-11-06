@@ -54,7 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${{ github.event.inputs.tag || github.ref_name }}"
-          notes="Descarga **Seraphall-Windows.zip**, descomprímelo y abre Seraphall.exe. Novedades en el README."
+          notes="**Solo para PC con Windows** (no funciona en móvil, Mac ni Linux). Descarga **Seraphall-Windows.zip** desde tu ordenador, descomprímelo y abre Seraphall.exe. Novedades en el README."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" Seraphall-Windows.zip --clobber
           else

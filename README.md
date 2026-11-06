@@ -1,14 +1,16 @@
 # SERAPHALL
 ### La Caída del Serafín · *The Fall of the Seraph*
 
-**Seraphall** es un videojuego **action RPG 2D gratuito** para Windows, con vista cenital y cooperativo para 2 jugadores, inspirado en *Bloody Hell*, *Emberville*, *Dimraeth*, *Sword Art Online* y *Elden Ring*. Web del juego: **[kotex-debug.github.io/Seraphall](https://kotex-debug.github.io/Seraphall/)**.
+**Seraphall** es un videojuego **action RPG 2D gratuito** para PC con Windows, con vista cenital y cooperativo para 2 jugadores, inspirado en *Bloody Hell*, *Emberville*, *Dimraeth*, *Sword Art Online* y *Elden Ring*. Web del juego: **[kotex-debug.github.io/Seraphall](https://kotex-debug.github.io/Seraphall/)**.
 
-*Seraphall is a free top-down 2D action RPG for Windows with 2-player co-op.*
+> ⚠️ **Solo para PC con Windows.** No funciona en móvil, Mac ni Linux. Desde el móvil puedes ver esta página, la web y el tráiler, pero para jugar hay que descargarlo y abrirlo en un ordenador.
+
+*Seraphall is a free top-down 2D action RPG for Windows PC (not available on mobile) with 2-player co-op.*
 
 > Hace mil años, el Dios Arquitecto encerró a los ángeles caídos en **la Espiral**, un mundo‑prisión de 100 círculos que desciende hacia el Abismo. Tú eres un **Desplumado**. Desciende, derrota a los **Arcontes** y descubre quién es el verdadero carcelero.
 
-## ⬇️ Descargar y jugar (Windows)
-1. Ve a **[Releases](../../releases/latest)** y descarga `Seraphall-Windows.zip`.
+## ⬇️ Descargar y jugar (solo PC con Windows)
+1. Desde tu ordenador, ve a **[Releases](../../releases/latest)** y descarga `Seraphall-Windows.zip`.
 2. Descomprime y abre `Seraphall.exe`. No necesita instalación.
 3. Si Windows muestra "Windows protegió su PC": pulsa **Más información → Ejecutar de todas formas** (el juego no está firmado digitalmente).
 
