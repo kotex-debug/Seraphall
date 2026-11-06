@@ -2063,6 +2063,8 @@ class CoopOverlay extends Control:
 			if not view.has_point(sp):
 				_edge_arrow(sp, Look.color_of(mate.look, "cloak").lightened(0.3), mate.state == "downed", lp.global_position.distance_to(mate.global_position) / 16.0, true)
 		for pid in w.pings:
+			if not is_instance_valid(w.pings[pid]):
+				continue  # la marca ya caducó: asignarla a una variable con tipo daría error
 			var pm: Node2D = w.pings[pid]
 			if is_instance_valid(pm):
 				var pp := _screen(pm.global_position + Vector2(0, -20))

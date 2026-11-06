@@ -1,0 +1,31 @@
+# Cortes del acto II de la película de introducción (104 pulsos de 168 ppm = 37,14 s).
+# Si cambian, hay que ajustar "subs" y "words" en scripts/ui/intro_film.gd.
+# toma  desde(segundos)  duración(pulsos)  destello(segundos o -)  golpe(sin uso aquí)
+st1 0.0 4 0.08 -
+cine_carcelero 7.6 4 - -
+cataclismo 5.2 4 - -
+cine_choir 7.9 4 - -
+cine_seravel 8.0 4 - -
+st2 0.0 4 0.08 -
+orrun 1.0 4 - -
+orrun2 3.5 4 - -
+st3 0.0 4 0.08 -
+vulkaris 1.0 4 - -
+vulkaris2 4.7 4 - -
+st4 0.0 4 0.08 -
+azrahel 2.0 4 - -
+hook1 4.4 8 - -
+art_reaper 0.1 2 0.08 -
+art_yunque 0.1 2 - -
+art_mangual 0.1 2 - -
+art_astas 0.1 2 - -
+art_hammer 0.1 2 - -
+art_seravel 0.1 2 - -
+art_staff 0.1 2 - -
+art_corona 0.1 2 - -
+parry 0.35 4 - -
+wrath 0.1 4 - -
+coop 0.0 6 0.08 -
+coop_cross 0.35 6 - -
+seravel2 4.0 4 - -
+azrahel2 3.2 4 - -

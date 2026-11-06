@@ -1,43 +1,63 @@
 extends CanvasLayer
-## Corto de introducción de SERAPHALL: once láminas animadas con narración.
-## Cada lámina tiene su movimiento de cámara (acercamiento y paneo), capas con paralaje, partículas,
-## destellos y sonidos. El texto se escribe letra a letra con la voz del narrador.
+## Película de introducción de SERAPHALL, en tres actos:
+##   I.   El cielo y la caída: láminas animadas con narración.
+##   II.  Lo que te espera: metraje real del juego (assets/video/descenso.ogv, con su música y sonido).
+##        El vídeo no lleva texto: los títulos y la narración se dibujan encima, en el idioma del jugador.
+##   III. Despiertas: la Brasa, tus diez plumas y el título.
 ## Se puede saltar (Esc / Intro). Al terminar emite "finished".
 
 signal finished
 
+const VIDEO := "res://assets/video/descenso.ogv"
+
 const SCENES := [
-	{"kind": "garden", "dur": 8.0, "zoom": [1.0, 1.07], "pan": [Vector2(-10, 0), Vector2(10, -4)], "lines": [
+	{"kind": "garden", "dur": 6.5, "zoom": [1.0, 1.07], "pan": [Vector2(-10, 0), Vector2(10, -4)], "lines": [
 		["Antes de la Espiral había un cielo sin muros.", "Before the Spiral there was a sky without walls."],
 		["Los serafines cantaban, y el Arquitecto los escuchaba.", "The seraphim sang, and the Architect listened."]]},
-	{"kind": "choir", "dur": 7.5, "zoom": [1.08, 1.0], "pan": [Vector2(0, 8), Vector2(0, -6)], "cues": [[0.2, "bell_1", -8.0], [2.6, "bell_0", -10.0]], "lines": [
+	{"kind": "choir", "dur": 6.5, "zoom": [1.08, 1.0], "pan": [Vector2(0, 8), Vector2(0, -6)], "cues": [[0.2, "bell_1", -8.0], [2.6, "bell_0", -10.0]], "lines": [
 		["Su canto sostenía el mundo, nota a nota.", "Their song held the world together, note by note."],
 		["Y a las puertas del cielo velaba Seravel, la primera de todos.", "And at the gates of heaven stood Seravel, the first of them all."]]},
-	{"kind": "voice", "dur": 8.0, "zoom": [1.0, 1.14], "pan": [Vector2.ZERO, Vector2(0, 6)], "cues": [[0.6, "event", -10.0], [4.6, "glitch", -4.0]], "lines": [
+	{"kind": "voice", "dur": 6.5, "zoom": [1.0, 1.14], "pan": [Vector2.ZERO, Vector2(0, 6)], "cues": [[0.6, "event", -10.0], [3.7, "glitch", -4.0]], "lines": [
 		["Un día, el Arquitecto dejó de escuchar.", "One day, the Architect stopped listening."],
-		["Y empezó a dar órdenes.", "And began to give orders."]], "glitch_at": 4.6},
-	{"kind": "war", "dur": 7.5, "zoom": [1.04, 1.1], "pan": [Vector2(14, 0), Vector2(-14, 0)], "cues": [[0.4, "event", -4.0], [2.9, "slam", -10.0], [5.2, "event", -6.0]], "flash": true, "lines": [
+		["Y empezó a dar órdenes.", "And began to give orders."]], "glitch_at": 3.7,
+		"words": [[3.7, ["EL ARQUITECTO", "THE ARCHITECT"], []]]},
+	{"kind": "war", "dur": 6.0, "zoom": [1.04, 1.1], "pan": [Vector2(14, 0), Vector2(-14, 0)], "cues": [[0.4, "event", -4.0], [2.4, "slam", -10.0], [4.4, "event", -6.0]], "flash": true, "lines": [
 		["Algunos se negaron.", "Some refused."],
 		["El cielo ardió durante cien días.", "The sky burned for a hundred days."]]},
-	{"kind": "executioner", "dur": 8.5, "zoom": [1.12, 1.0], "pan": [Vector2(0, -6), Vector2(0, 4)], "cues": [[5.2, "feather_tear", -2.0]], "lines": [
+	{"kind": "executioner", "dur": 8.0, "zoom": [1.12, 1.0], "pan": [Vector2(0, -6), Vector2(0, 4)], "cues": [[5.2, "feather_tear", -2.0]], "lines": [
 		["Para castigarlos, el Arquitecto necesitaba una mano: un verdugo sin rostro.", "To punish them, the Architect needed a hand: a faceless executioner."],
 		["Nadie recuerda su nombre. Ni siquiera el propio verdugo.", "No one remembers its name. Not even the executioner itself."]]},
-	{"kind": "fall", "dur": 7.5, "zoom": [1.0, 1.12], "pan": [Vector2(0, -12), Vector2(0, 12)], "cues": [[0.3, "feather_tear", -6.0], [3.4, "feather_tear", -8.0]], "lines": [
+	{"kind": "fall", "dur": 6.0, "zoom": [1.0, 1.12], "pan": [Vector2(0, -12), Vector2(0, 12)], "cues": [[0.3, "feather_tear", -6.0], [3.0, "feather_tear", -8.0]], "lines": [
 		["Los que no obedecieron cayeron.", "Those who would not obey fell."],
 		["Les arrancaron las alas, pluma a pluma.", "Their wings were torn away, feather by feather."]]},
-	{"kind": "spiral", "dur": 8.5, "zoom": [1.0, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "cues": [[0.4, "gate", -8.0]], "lines": [
+	{"kind": "spiral", "dur": 7.5, "zoom": [1.0, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "cues": [[0.4, "gate", -8.0], [6.6, "thunder", -4.0]], "lines": [
 		["Para ellos levantó la Espiral: cien círculos de piedra que bajan hasta el Abismo.", "For them he raised the Spiral: a hundred circles of stone falling to the Abyss."],
-		["Aquí nadie muere del todo.", "Here, no one ever fully dies."]]},
-	{"kind": "archons", "dur": 9.0, "zoom": [1.0, 1.05], "pan": [Vector2(-6, 0), Vector2(6, 0)], "cues": [[2.2, "slam", -6.0], [4.4, "bell_2", -6.0], [6.6, "slam", -4.0]], "lines": [
-		["En cada círculo, un Arconte guarda el paso hacia abajo.", "In every circle, an Archon guards the way down."],
-		["El Carcelero. El Coro Hueco. Y la última de todos... Seravel.", "The Jailer. The Hollow Choir. And the last of them all... Seravel."]]},
-	{"kind": "ember", "dur": 7.0, "zoom": [1.15, 1.0], "pan": [Vector2(0, 10), Vector2.ZERO], "cues": [[0.5, "heal", -8.0]], "lines": [
+		["En cada uno, un Arconte guarda el paso hacia abajo. Hoy, uno de esos caídos eres tú.", "In each, an Archon guards the way down. Today, one of the fallen is you."]],
+		"words": [[1.2, ["LA ESPIRAL", "THE SPIRAL"], ["CIEN CÍRCULOS HACIA EL ABISMO", "A HUNDRED CIRCLES TO THE ABYSS"]]]},
+	# Acto II: metraje real. Los tiempos coinciden con los cortes de tools/make_trailer.sh
+	{"kind": "video", "dur": 37.1, "zoom": [1.0, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "lines": [["", ""]],
+		"subs": [[0.0, ["Bajarás por el Vestíbulo de Ceniza, donde el Carcelero guarda la primera llave.", "You will descend the Ash Vestibule, where the Jailer keeps the first key."]],
+			[7.14, ["Cruzarás un bosque hecho de plumas muertas.", "You will cross a forest made of dead feathers."]],
+			[11.43, ["Caminarás entre los crisoles donde se forjan las aureolas.", "You will walk among the crucibles where halos are forged."]],
+			[15.71, ["Y al final de todo, alguien te espera en un trono vacío.", "And at the very end, someone awaits you on an empty throne."]],
+			[21.43, ["Arrebátales sus armas.", "Take their weapons."]],
+			[27.14, ["Aprende a devolver cada golpe.", "Learn to return every blow."]],
+			[30.0, ["Y si no quieres caer solo... no caigas solo.", "And if you would rather not fall alone... you need not."]],
+			[34.29, ["Descubre quién es el verdadero carcelero.", "Find out who the true jailer is."]]],
+		"words": [[0.05, ["ESTRATO I", "STRATUM I"], ["VESTÍBULO DE CENIZA", "ASH VESTIBULE"]], [1.43, [], []],
+			[7.14, ["ESTRATO II", "STRATUM II"], ["BOSQUE DE PLUMAS MUERTAS", "FOREST OF DEAD FEATHERS"]], [8.57, ["ORRUN", "ORRUN"], ["EL CIERVO HUECO", "THE HOLLOW STAG"]], [10.0, [], []],
+			[11.43, ["ESTRATO III", "STRATUM III"], ["FUNDICIÓN DE HALOS", "HALO FOUNDRY"]], [12.86, ["VULKARIS", "VULKARIS"], ["HERRERO DE AUREOLAS", "THE HALO SMITH"]], [14.29, [], []],
+			[15.71, ["ESTRATO IV", "STRATUM IV"], ["EL TRONO VACÍO", "THE EMPTY THRONE"]], [17.14, ["AZRAHEL", "AZRAHEL"], ["REY DEL ABISMO", "KING OF THE ABYSS"]], [18.57, [], []],
+			[21.43, ["15 ARMAS", "15 WEAPONS"], ["CADA UNA CON SU PROPIO ARTE", "EACH WITH ITS OWN ART"]], [24.29, [], []],
+			[27.14, ["PARRY PERFECTO", "PERFECT PARRY"], ["DESVÍA · ATURDE · REPLICA", "DEFLECT · STUN · RIPOSTE"]], [28.57, ["IRA SERÁFICA", "SERAPHIC WRATH"], []],
+			[30.0, ["COOPERATIVO", "CO-OP"], ["PARA 2 JUGADORES", "FOR 2 PLAYERS"]], [32.14, ["ALAS CRUZADAS", "CROSSED WINGS"], []], [34.29, [], []]]},
+	{"kind": "ember", "dur": 6.0, "zoom": [1.15, 1.0], "pan": [Vector2(0, 10), Vector2.ZERO], "cues": [[0.5, "heal", -8.0]], "lines": [
 		["Solo las Brasas recuerdan el viejo cielo.", "Only the Embers remember the old sky."],
 		["Donde arde una, los caídos pueden volver a levantarse.", "Where one burns, the fallen can rise again."]]},
-	{"kind": "wake", "dur": 8.5, "zoom": [1.1, 1.0], "pan": [Vector2(0, 8), Vector2.ZERO], "cues": [[3.0, "levelup", -10.0]], "lines": [
+	{"kind": "wake", "dur": 8.0, "zoom": [1.1, 1.0], "pan": [Vector2(0, 8), Vector2.ZERO], "cues": [[3.0, "levelup", -10.0]], "lines": [
 		["Cada muerte te arranca una pluma. Y cada pluma, un recuerdo.", "Every death tears away a feather. And every feather, a memory."],
 		["Acabas de despertar... y todavía te quedan diez.", "You have just woken... and you still have ten."]]},
-	{"kind": "title", "dur": 5.0, "zoom": [1.06, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "lines": [["", ""]]},
+	{"kind": "title", "dur": 7.5, "zoom": [1.06, 1.0], "pan": [Vector2.ZERO, Vector2.ZERO], "cues": [[0.0, "thunder", -3.0], [0.02, "slam", -2.0], [2.8, "achieve_epic", -8.0]], "lines": [["", ""]]},
 ]
 
 ## Avance del Estrato II que se ve al terminar la demo
@@ -67,6 +87,11 @@ var _line := -1
 var _cues_done := {}
 var _blip_last := 0
 var _dbg := false
+var _video: VideoStreamPlayer
+var _words: Control
+var _words_done := {}
+var _sub_i := -1
+var _was_video := false
 
 func _ready() -> void:
 	layer = 45
@@ -78,6 +103,13 @@ func _ready() -> void:
 	_scene = FilmPlate.new()
 	_scene.size = Vector2(640, 360)
 	add_child(_scene)
+	_video = VideoStreamPlayer.new()
+	_video.size = Vector2(640, 360)
+	_video.expand = true
+	_video.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_video.visible = false
+	_video.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_video)
 	_flash = ColorRect.new()
 	_flash.color = Color(1, 1, 1, 0)
 	_flash.size = Vector2(640, 360)
@@ -89,7 +121,10 @@ func _ready() -> void:
 		bar.position = Vector2(0, y)
 		bar.size = Vector2(640, 42)
 		add_child(bar)
-	_text = UIKit.label("", 15, Color(0.95, 0.92, 0.88))
+	_words = Control.new()
+	_words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_words)
+	_text = UIKit.label("", 16, Color(0.98, 0.95, 0.9))
 	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.position = Vector2(50, 322)
@@ -110,7 +145,7 @@ func _scenes() -> Array:
 	return TEASER if mode == "teaser" else SCENES
 
 func _speed() -> float:
-	return 0.12 if G.autotest != "" and G.autotest != "film" and G.autotest != "teaser" else 1.0
+	return 0.12 if G.autotest != "" and not (G.autotest in ["film", "filmfull", "teaser"]) else 1.0
 
 func _next() -> void:
 	_i += 1
@@ -118,8 +153,11 @@ func _next() -> void:
 		_finish()
 		return
 	_enter(_i, 0.0)
+	if _scenes()[_i].kind == "video":
+		_fade.color.a = 0.0
+		return
 	var tw := create_tween()
-	tw.tween_property(_fade, "color:a", 0.0, 0.9)
+	tw.tween_property(_fade, "color:a", 0.0, 0.45)
 
 func _enter(i: int, at: float) -> void:
 	var sc: Dictionary = _scenes()[i]
@@ -127,6 +165,27 @@ func _enter(i: int, at: float) -> void:
 	_t = at
 	_line = -1
 	_cues_done = {}
+	_words_done = {}
+	_sub_i = -1
+	_show_word([], [])
+	if sc.kind == "video":
+		if not _video_ready():
+			_next.call_deferred()
+			return
+		_video.visible = true
+		_scene.visible = false
+		_was_video = true
+		Audio.stop_music(0.2)
+		_video.volume_db = linear_to_db(maxf(0.001, G.music_volume))
+		_video.play()
+		_flash.color.a = 1.0
+		create_tween().tween_property(_flash, "color:a", 0.0, 0.5)
+	elif _was_video:
+		_was_video = false
+		_video.stop()
+		_video.visible = false
+		_scene.visible = true
+		Audio.play_music("memory", 0.8)
 	_scene.kind = sc.kind
 	_scene.t = at
 	_scene.dur = sc.dur
@@ -139,6 +198,49 @@ func _enter(i: int, at: float) -> void:
 	if sc.kind == "title" or sc.kind == "title2":
 		Audio.play_music("theme", 2.0)
 		Audio.sfx("hit_heavy", -6.0, 0.0)
+
+## El vídeo solo se reproduce a velocidad real y con pantalla; si falta, la película sigue sin él
+func _video_ready() -> bool:
+	if DisplayServer.get_name() == "headless" or _speed() < 1.0 or not ResourceLoader.exists(VIDEO):
+		return false
+	if _video.stream == null:
+		_video.stream = load(VIDEO)
+	return _video.stream != null
+
+func _show_word(big: Array, sub: Array) -> void:
+	for c in _words.get_children():
+		c.queue_free()
+	if big.is_empty():
+		return
+	var p := UIKit.pixel_text(G.L(big), 40, "logo", UIKit.GOLD)
+	p.align = 1
+	p.wave = 0.0
+	p.outline = 6
+	p.extrude = 4
+	p.position = Vector2(0, 248)
+	p.size = Vector2(640, 46)
+	p.pivot_offset = p.size / 2.0
+	_words.add_child(p)
+	p.scale = Vector2.ONE * 1.7
+	p.create_tween().tween_property(p, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if not sub.is_empty():
+		var txt := G.L(sub)
+		var ww := UIKit.font("head").get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 30.0
+		var x := (640.0 - ww) / 2.0
+		var band := Polygon2D.new()
+		band.color = UIKit.RED
+		band.polygon = PackedVector2Array([Vector2(x + 6, 296), Vector2(x + ww + 6, 296), Vector2(x + ww - 6, 312), Vector2(x - 6, 312)])
+		_words.add_child(band)
+		var q := UIKit.pixel_text(txt, 8, "head", UIKit.WHITE)
+		q.align = 1
+		q.wave = 0.0
+		q.outline = 2
+		q.extrude = 0
+		q.position = Vector2(0, 299)
+		q.size = Vector2(640, 12)
+		_words.add_child(q)
+	if G.autotest == "":
+		Audio.sfx("hit_heavy", -9.0, 0.0)
 
 ## Para las pruebas: salta a una lámina concreta (fracción de su duración)
 func debug_seek(i: int, frac: float) -> void:
@@ -157,11 +259,23 @@ func _process(delta: float) -> void:
 	# narración: cada línea ocupa su parte de la lámina
 	var lines: Array = sc.lines
 	var li := clampi(int(_t / dur * lines.size()), 0, lines.size() - 1)
+	if sc.has("subs"):
+		# narración con tiempos propios, ajustada a los cortes del vídeo
+		lines = []
+		li = 0
+		for si in sc.subs.size():
+			lines.append(sc.subs[si][1])
+			if _t >= sc.subs[si][0]:
+				li = si
 	if li != _line:
 		_line = li
 		_chars = 0.0
 		_text.text = G.L(lines[li])
 		_text.visible_characters = 0
+	for wd in sc.get("words", []):
+		if _t >= wd[0] and not _words_done.has(wd[0]):
+			_words_done[wd[0]] = true
+			_show_word(wd[1], wd[2])
 	_chars += delta * 40.0 / sp
 	if _dbg:
 		_chars = 999.0
@@ -184,7 +298,7 @@ func _process(delta: float) -> void:
 	if _t >= dur:
 		_t = -999.0
 		var tw := create_tween()
-		tw.tween_property(_fade, "color:a", 1.0, 0.7 * sp)
+		tw.tween_property(_fade, "color:a", 1.0, 0.35 * sp)
 		tw.tween_callback(_next)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -198,6 +312,8 @@ func _finish() -> void:
 	if _done:
 		return
 	_done = true
+	if _video:
+		_video.stop()
 	var tw := create_tween()
 	tw.tween_property(_fade, "color:a", 1.0, 0.5)
 	tw.tween_callback(_emit)
@@ -703,25 +819,49 @@ class FilmPlate extends Control:
 
 	func _title() -> void:
 		_sky(Color(0.1, 0.03, 0.12), Color(0.38, 0.08, 0.18))
+		_shake = Vector2(randf_range(-3, 3), randf_range(-3, 3)) * clampf(1.0 - t / 0.5, 0.0, 1.0)
 		_set_cam(1.0)
 		var c := Vector2(320, 196)
-		var a2 := clampf(t / 1.2, 0.0, 1.0)
-		_rays(c + Vector2(0, -20), 24, 60.0, 340.0, Color(1, 0.6, 0.4, 0.07 * a2), t * 0.06, 0.05)
-		UIKit.wing(self, c + Vector2(-150, -20), -1.0, 46.0 * a2, Color(1, 1, 1, 0.9 * a2), 0.8 + 0.2 * sin(t * 2.0))
-		UIKit.wing(self, c + Vector2(150, -20), 1.0, 46.0 * a2, Color(1, 1, 1, 0.9 * a2), 0.8 + 0.2 * sin(t * 2.0))
-		draw_arc(c + Vector2(0, -72), 34.0, 0, TAU, 40, Color(1, 0.85, 0.45, 0.85 * a2), 2.0)
+		var open := _ease(clampf(t / 0.7, 0.0, 1.0))
+		_rays(c + Vector2(0, -20), 28, 50.0, 420.0, Color(1, 0.65, 0.4, 0.12 * open), t * 0.08, 0.05)
+		# ondas del golpe
+		for k in 4:
+			var tk: float = t - k * 0.14
+			if tk > 0.0 and tk < 1.6:
+				draw_arc(c + Vector2(0, -20), tk * 420.0, 0, TAU, 72, Color(1, 0.9, 0.7, 0.5 * (1.0 - tk / 1.6)), 5.0 - k)
+		UIKit.wing(self, c + Vector2(-150, -20), -1.0, 58.0 * open, Color(1, 1, 1, 0.92), 0.8 + 0.2 * sin(t * 2.0))
+		UIKit.wing(self, c + Vector2(150, -20), 1.0, 58.0 * open, Color(1, 1, 1, 0.92), 0.8 + 0.2 * sin(t * 2.0))
+		var halo_y := -72.0 - (1.0 - open) * 50.0
+		draw_arc(c + Vector2(0, halo_y), 34.0, 0, TAU, 40, Color(1, 0.85, 0.45, 0.2), 7.0)
+		draw_arc(c + Vector2(0, halo_y), 34.0, 0, TAU, 40, Color(1, 0.88, 0.5, 0.95), 2.0)
+		# el nombre cae de golpe
+		var slam := lerpf(1.9, 1.0, _ease(clampf(t / 0.2, 0.0, 1.0)))
+		draw_set_transform_matrix(_cam * Transform2D(0.0, Vector2(slam, slam), 0.0, c))
 		var f := UIKit.font("logo")
 		var txt := "SERAPHALL"
 		var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72).x
-		f.draw_string_outline(get_canvas_item(), c + Vector2(-w / 2.0, 10), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, 10, Color(UIKit.RED_DARK, a2))
-		f.draw_string_outline(get_canvas_item(), c + Vector2(-w / 2.0, 4), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, 10, Color(UIKit.INK, a2))
-		f.draw_string(get_canvas_item(), c + Vector2(-w / 2.0, 4), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, Color(1, 1, 1, a2))
-		var sub := G.L(["LA CAÍDA DEL SERAFÍN", "THE FALL OF THE SERAPH"])
+		f.draw_string_outline(get_canvas_item(), Vector2(-w / 2.0, 10), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, 10, UIKit.RED_DARK)
+		f.draw_string_outline(get_canvas_item(), Vector2(-w / 2.0, 4), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, 10, UIKit.INK)
+		f.draw_string(get_canvas_item(), Vector2(-w / 2.0, 4), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 72, Color(1, 0.97, 0.92))
+		_reset()
 		var hf := UIKit.font("head")
+		var sub := G.L(["LA CAÍDA DEL SERAFÍN", "THE FALL OF THE SERAPH"])
 		var sw := hf.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
-		hf.draw_string(get_canvas_item(), c + Vector2(-sw / 2.0, 30), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, clampf((t - 0.8) / 0.8, 0.0, 1.0)))
-		_motes(50, Color(1, 0.55, 0.3, 0.9), 24.0)
+		hf.draw_string(get_canvas_item(), c + Vector2(-sw / 2.0, 32), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(UIKit.GOLD, clampf((t - 0.7) / 0.5, 0.0, 1.0)))
+		var call_txt := G.L(["TU DESCENSO EMPIEZA AHORA", "YOUR DESCENT BEGINS NOW"])
+		var cw := hf.get_string_size(call_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var ca := clampf((t - 2.8) / 0.25, 0.0, 1.0)
+		hf.draw_string_outline(get_canvas_item(), c + Vector2(-cw / 2.0, 92), call_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 5, Color(UIKit.INK, ca))
+		hf.draw_string(get_canvas_item(), c + Vector2(-cw / 2.0, 92), call_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(UIKit.WHITE, ca))
+		for i in 40:
+			var s2: Array = _seed[i]
+			var fp := Vector2(s2[0] + sin(t + i) * 12.0, fmod(s2[1] + t * 42.0 * s2[3], 360.0))
+			_feather(fp, t * 1.5 * s2[3] + s2[2] * 6.0, 1.1 + s2[3] * 0.5, Color(1, 0.96, 0.92, 0.8))
+		_motes(60, Color(1, 0.6, 0.3, 0.95), 40.0)
 		_vignette(0.6)
+		if t < 0.35:
+			draw_set_transform_matrix(Transform2D())
+			draw_rect(Rect2(0, 0, 640, 360), Color(1, 1, 1, 1.0 - t / 0.35))
 
 	func _forest() -> void:
 		_sky(Color(0.16, 0.18, 0.22), Color(0.32, 0.3, 0.3))

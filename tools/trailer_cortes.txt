@@ -1,0 +1,33 @@
+# Cortes del tráiler vertical. Las tomas salen de tools/web_trailer.gd.
+# caida 6.5
+# toma  desde(segundos)  duración(pulsos de 168 ppm, o segundos con "s")  destello(segundos o -)  golpe(golpe o -)  velocidad(opcional)
+hook1 5.6 2.2s - - 0.6
+hook2 0.0 2.4s 0.1 -
+logo 0.0 1.9s 0.15 golpe
+st1 0.0 3 0.08 golpe
+st2 0.0 3 - -
+st3 0.0 3 - -
+st4 0.0 3 - -
+art_reaper 0.1 2 - -
+art_yunque 0.1 2 - -
+art_mangual 0.1 2 - -
+art_astas 0.1 2 - -
+art_hammer 0.1 2 - -
+art_corona 0.1 2 - -
+parry 0.35 4 0.08 golpe 0.6
+wrath 0.1 4 - - 0.7
+feather 0.0 3 - -
+coop 0.0 4 0.08 golpe
+coop_cross 0.35 4 - -
+coop_revive 0.6 3 - -
+cine_carcelero 5.0 3 0.08 golpe
+carcelero 0.5 3 - -
+cataclismo 5.2 3 - golpe 0.8
+cine_choir 4.6 3 - golpe
+cine_seravel 4.0 2 - -
+cine_seravel 8.0 6 0.1 golpe
+seravel2 4.0 3 - -
+orrun2 3.5 3 - golpe
+vulkaris2 4.7 3 - golpe
+azrahel2 3.2 4 - golpe 0.75
+final 0.0 7.0s 0.12 golpe

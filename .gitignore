@@ -4,5 +4,6 @@ build/
 /LEEME.txt
 /Seraphall-Windows/
 *.tmp
+/override.cfg
 tools/__pycache__/
 *.pyc

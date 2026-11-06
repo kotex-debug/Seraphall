@@ -4,14 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Seraphall - Videojuego action RPG gratis (Descargar para Windows)</title>
-<meta name="description" content="Seraphall: La Caída del Serafín es un action RPG 2D gratuito con cooperativo para 2 jugadores. Cada muerte te arranca una pluma. Descárgalo gratis para Windows.">
+<meta name="description" content="Seraphall: La Caída del Serafín. Action RPG 2D gratuito con cooperativo para 2 jugadores. Alfa Final ya disponible: 4 Estratos, jefes épicos, 15 armas y un mundo donde cada muerte te arranca una pluma.">
+<meta name="theme-color" content="#0d0513">
 <link rel="canonical" href="https://kotex-debug.github.io/Seraphall/">
-<link rel="icon" type="image/png" href="img/icon.png">
+<link rel="icon" type="image/png" href="img/sprites/app_icon.png">
+<link rel="preload" href="fonts/Jersey15-Regular.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="img/portada.webp" as="image" media="(min-width: 761px)">
+<link rel="preload" href="img/portada-960.webp" as="image" media="(max-width: 760px)">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Seraphall - La Caída del Serafín">
+<meta property="og:site_name" content="Seraphall">
+<meta property="og:title" content="Seraphall: La Caída del Serafín. Alfa Final ya disponible">
 <meta property="og:description" content="Action RPG 2D gratuito con cooperativo para 2 jugadores. Cada muerte te arranca una pluma.">
 <meta property="og:url" content="https://kotex-debug.github.io/Seraphall/">
-<meta property="og:image" content="https://kotex-debug.github.io/Seraphall/img/arte.png">
+<meta property="og:image" content="https://kotex-debug.github.io/Seraphall/img/compartir.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:video" content="https://kotex-debug.github.io/Seraphall/video/seraphall-trailer.mp4">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
@@ -21,7 +29,7 @@
   "alternateName": ["Seraphall: La Caída del Serafín", "Seraphall: The Fall of the Seraph"],
   "description": "Action RPG 2D gratuito con vista cenital y cooperativo para 2 jugadores. Cada muerte te arranca una pluma.",
   "url": "https://kotex-debug.github.io/Seraphall/",
-  "image": "https://kotex-debug.github.io/Seraphall/img/arte.png",
+  "image": "https://kotex-debug.github.io/Seraphall/img/compartir.jpg",
   "genre": ["Action RPG", "Pixel art"],
   "gamePlatform": "PC",
   "operatingSystem": "Windows",
@@ -31,92 +39,623 @@
   "inLanguage": ["es", "en"],
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
   "downloadUrl": "https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip",
-  "sameAs": ["https://github.com/kotex-debug/Seraphall"]
+  "sameAs": ["https://github.com/kotex-debug/Seraphall"],
+  "trailer": {
+    "@type": "VideoObject",
+    "name": "Seraphall: tráiler de la Alfa Final",
+    "description": "Tráiler vertical con gameplay real de Seraphall: Estratos, Arcontes, armas y cooperativo.",
+    "thumbnailUrl": "https://kotex-debug.github.io/Seraphall/img/trailer-poster.webp",
+    "uploadDate": "2026-11-06",
+    "contentUrl": "https://kotex-debug.github.io/Seraphall/video/seraphall-trailer.mp4"
+  }
 }
 </script>
-<style>
-@font-face { font-family: "Jersey"; src: url("fonts/Jersey15-Regular.ttf"); font-display: swap; }
-:root { --ink: #0d0612; --panel: #1b0d22; --line: #4a2a55; --gold: #ffd24d; --red: #ff3355; --text: #efe7f2; --dim: #b3a4bd; }
-* { box-sizing: border-box; }
-body { margin: 0; background: radial-gradient(circle at 50% -10%, #5a1d55 0, #1c0a22 45%, var(--ink) 100%) fixed; color: var(--text); font: 17px/1.55 system-ui, "Segoe UI", sans-serif; }
-main, header, footer { width: min(980px, 100% - 32px); margin: auto; }
-header { padding: 56px 0 28px; text-align: center; }
-h1, h2 { font-family: "Jersey", system-ui, sans-serif; font-weight: 400; letter-spacing: .02em; }
-h1 { font-size: clamp(64px, 14vw, 112px); line-height: .9; margin: 0; text-shadow: 0 5px 0 #7c0f2e; }
-.sub { font-family: "Jersey", system-ui, sans-serif; font-size: 28px; color: var(--gold); margin: 10px 0 18px; }
-.hook { max-width: 640px; margin: 0 auto 26px; color: var(--text); }
-.btn { display: inline-block; padding: 14px 26px; margin: 6px; background: var(--red); color: #fff; font-family: "Jersey", system-ui, sans-serif; font-size: 26px; line-height: 1; text-decoration: none; border-bottom: 5px solid #8d1231; }
-.btn.alt { background: #33203d; border-bottom-color: #1e1025; }
-.btn:hover, .btn:focus-visible { filter: brightness(1.15); }
-.note { color: var(--dim); font-size: 14px; margin-top: 10px; }
-h2 { font-size: 40px; color: var(--gold); margin: 44px 0 12px; }
-.shot { width: 100%; height: auto; display: block; border: 3px solid var(--line); background: #000; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
-figure { margin: 0; }
-figcaption { color: var(--dim); font-size: 14px; padding-top: 5px; }
-ul { padding-left: 20px; }
-li { margin-bottom: 7px; }
-strong { color: #fff; }
-a { color: var(--gold); }
-table { border-collapse: collapse; width: 100%; background: var(--panel); }
-th, td { border: 1px solid var(--line); padding: 7px 11px; text-align: left; }
-footer { padding: 44px 0 34px; color: var(--dim); font-size: 14px; text-align: center; }
-</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "¿Seraphall es gratis?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. La Alfa Final se descarga gratis y no tiene compras dentro del juego."}},
+    {"@type": "Question", "name": "¿En qué sistemas funciona?", "acceptedAnswer": {"@type": "Answer", "text": "De momento solo en Windows de 64 bits, con una tarjeta gráfica compatible con OpenGL 3.3."}},
+    {"@type": "Question", "name": "¿Se puede jugar con un amigo?", "acceptedAnswer": {"@type": "Answer", "text": "Sí, dos jugadores en cooperativo, por red local o por Internet con un código de partida."}}
+  ]
+}
+</script>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
-<header>
-  <h1>SERAPHALL</h1>
-  <p class="sub">La Caída del Serafín</p>
-  <p class="hook"><strong>Seraphall</strong> es un videojuego <strong>action RPG 2D gratuito</strong> con vista cenital y <strong>cooperativo para 2 jugadores</strong>. Eres un Desplumado, un ángel caído que desciende por la Espiral. Cada muerte te arranca una pluma.</p>
-  <a class="btn" href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip">Descargar gratis para Windows</a>
-  <a class="btn alt" href="https://github.com/kotex-debug/Seraphall">Ver en GitHub</a>
-  <p class="note">Versión alfa. No necesita instalación: descomprime y abre Seraphall.exe.</p>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<div class="bar">
+  <div class="wrap">
+    <a class="brand" href="#inicio"><img class="px" src="img/sprites/app_icon.png" width="26" height="26" alt="">SERAPHALL</a>
+    <nav aria-label="Secciones">
+      <ul>
+        <li><a href="#trailer">Tráiler</a></li>
+        <li><a href="#historia">Historia</a></li>
+        <li><a href="#plumas">Plumas</a></li>
+        <li><a href="#estratos">Estratos</a></li>
+        <li><a href="#combate">Combate</a></li>
+        <li><a href="#armas">Armas</a></li>
+        <li><a href="#coop">Cooperativo</a></li>
+        <li><a href="#preguntas">Preguntas</a></li>
+      </ul>
+    </nav>
+    <a class="btn small" href="#descargar"><span>Descargar</span></a>
+  </div>
+</div>
+
+<div class="alti" aria-hidden="true"><img class="px" src="img/sprites/icon_feather.png" alt=""><span>Círculo 1</span></div>
+
+<header class="hero" id="inicio">
+  <picture>
+    <source media="(max-width: 760px)" srcset="img/portada-960.webp">
+    <img class="hero-bg" src="img/portada.webp" width="1920" height="1080" alt="" fetchpriority="high">
+  </picture>
+  <div class="fx" aria-hidden="true"></div>
+  <div class="hero-in wrap">
+    <h1><img class="logo px" src="img/logo-alas.png" width="1420" height="335" alt="Seraphall: La Caída del Serafín"></h1>
+    <p class="hook">La muerte te arranca plumas.</p>
+    <p class="lead">Eres un Desplumado, un ángel caído en la Espiral: una cárcel de cien círculos que baja hasta el Abismo. Desciende, vence a los Arcontes y descubre quién es el verdadero carcelero.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip"><span>Descargar gratis</span></a>
+      <a class="btn alt" href="#trailer"><span>Ver el tráiler</span></a>
+    </div>
+    <p class="meta">Alfa Final <span data-version>v0.9.2</span> · Windows · <span data-size>70 MB</span> · sin instalación</p>
+  </div>
+  <div class="stats">
+    <div><b>4</b><span>Estratos</span></div>
+    <div><b>6</b><span>Jefes principales</span></div>
+    <div><b>15</b><span>Armas</span></div>
+    <div><b>66</b><span>Habilidades</span></div>
+    <div><b>2</b><span>Jugadores</span></div>
+  </div>
 </header>
-<main>
-  <img class="shot" src="img/arte.png" width="1280" height="720" alt="Combate en Seraphall: espadas de luz caen sobre el Pasillo de las Cadenas">
 
-  <h2>Qué es Seraphall</h2>
-  <p>Hace mil años, el Dios Arquitecto encerró a los ángeles caídos en la Espiral, un mundo prisión que desciende hacia el Abismo. Desciende por sus cuatro Estratos, derrota a los Arcontes que los guardan y descubre quién es el verdadero carcelero. Tus decisiones inclinan la balanza del destino.</p>
+<main id="contenido">
 
-  <h2>Características</h2>
-  <ul>
-    <li><strong>Combate exigente:</strong> combos propios de cada arma, parry perfecto con réplica, esquivas y postura.</li>
-    <li><strong>15 armas con su propio arte:</strong> guadaña, mangual, maza, arco, báculo y más, cada una con una técnica única que despierta al mejorarla.</li>
-    <li><strong>Jefes épicos en cualquier dificultad:</strong> varias fases, Furia Final y Cataclismo.</li>
-    <li><strong>Árbol de habilidades con 66 nodos</strong> en 6 ramas, con elecciones excluyentes y Estigmas.</li>
-    <li><strong>Cooperativo para 2:</strong> por red local o por Internet con un código de partida.</li>
-    <li><strong>Prólogo guiado</strong> que te enseña a pelear paso a paso, 4 dificultades, 3 huecos de partida y creador de personaje.</li>
-    <li>En <strong>español e inglés</strong>, con música original.</li>
-  </ul>
+<section class="reveal-trailer" id="trailer">
+  <div class="wrap trailer-grid">
+    <div class="phone rv">
+      <video controls playsinline preload="none" poster="img/trailer-poster.webp" width="720" height="1280" aria-label="Tráiler vertical de Seraphall con gameplay real">
+        <source src="video/seraphall-trailer.mp4" type="video/mp4">
+        Tu navegador no reproduce este vídeo. <a href="video/seraphall-trailer.mp4">Descárgalo aquí</a>.
+      </video>
+    </div>
+    <div class="rv">
+      <span class="eyebrow">Anuncio · Noviembre de 2026</span>
+      <h2>La Alfa Final ya está aquí</h2>
+      <p class="lead">El juego base completo, de principio a fin, listo para descargar. Todo lo que ves en el tráiler es el juego de verdad, grabado dentro del propio juego.</p>
+      <ul class="news">
+        <li><b>Cuatro Estratos</b> y un final: del Vestíbulo de Ceniza al Trono Vacío.</li>
+        <li><b>Película de introducción nueva</b>, con la historia y lo que te espera en la Espiral.</li>
+        <li><b>Jefes con varias fases</b>, Furia Final y Cataclismo, también en la dificultad más fácil.</li>
+        <li><b>Quince armas</b> con arte propio, cada una con su técnica y su Despertar.</li>
+        <li><b>Cooperativo renovado</b>, por red local o por Internet con un código.</li>
+        <li><b>Tres huecos de partida</b> y prólogo guiado con un jefe que te enseña a pelear.</li>
+      </ul>
+      <div class="cta left">
+        <a class="btn" href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip"><span>Descargar la Alfa Final</span></a>
+        <a class="btn alt" href="video/seraphall-trailer-1080p.mp4" download="Seraphall_trailer_1080p.mp4"><span>Descargar el tráiler</span></a>
+      </div>
+      <p class="fine">Tráiler vertical 1080×1920, 42 s, MP4. Banda sonora original compuesta sobre los temas del juego.</p>
+    </div>
+  </div>
+</section>
 
-  <h2>Capturas</h2>
-  <div class="grid">
-    <figure><img class="shot" src="img/armas.png" loading="lazy" width="1280" height="720" alt="Menú de armas de Seraphall con la Guadaña del Segador"><figcaption>El arsenal y sus mejoras</figcaption></figure>
-    <figure><img class="shot" src="img/arbol.png" loading="lazy" width="1280" height="720" alt="Árbol de habilidades de Seraphall"><figcaption>El árbol de habilidades</figcaption></figure>
-    <figure><img class="shot" src="img/prologo.png" loading="lazy" width="1280" height="720" alt="Tutorial del prólogo de Seraphall enseñando el parry"><figcaption>El prólogo te enseña a desviar</figcaption></figure>
-    <figure><img class="shot" src="img/dificultad.png" loading="lazy" width="1280" height="720" alt="Menú de elección de dificultad de Seraphall"><figcaption>Elige tu descenso</figcaption></figure>
+<section class="story" id="historia">
+  <div class="wrap head rv">
+    <span class="eyebrow">Antes de la Espiral</span>
+    <h2>Un cielo sin muros</h2>
+    <p class="lead">Hace mil años, el Dios Arquitecto dejó de escuchar a sus serafines y empezó a darles órdenes. Esta es la película con la que empieza cada partida nueva.</p>
+  </div>
+  <div class="film" tabindex="0" aria-label="Fotogramas de la película de introducción">
+    <figure><img src="img/historia-1.webp" width="1280" height="550" loading="lazy" alt="Serafines volando sobre islas flotantes bajo un sol dorado"><figcaption>Los serafines cantaban, y el Arquitecto los escuchaba.</figcaption></figure>
+    <figure><img src="img/historia-2.webp" width="1280" height="550" loading="lazy" alt="Seravel con las alas abiertas ante un pórtico dorado y un coro de ángeles"><figcaption>A las puertas del cielo velaba Seravel, la primera de todos.</figcaption></figure>
+    <figure><img src="img/historia-3.webp" width="1280" height="550" loading="lazy" alt="Un ojo gigante rodeado de rayos ante ángeles arrodillados"><figcaption>Un día, el Arquitecto dejó de escuchar. Y empezó a dar órdenes.</figcaption></figure>
+    <figure><img src="img/historia-4.webp" width="1280" height="550" loading="lazy" alt="Ángeles blancos y negros chocan en un cielo en llamas"><figcaption>Algunos se negaron. El cielo ardió durante cien días.</figcaption></figure>
+    <figure><img src="img/historia-5.webp" width="1280" height="550" loading="lazy" alt="Un verdugo sin rostro arranca una pluma a un ángel arrodillado"><figcaption>El Arquitecto necesitaba una mano: un verdugo sin rostro.</figcaption></figure>
+    <figure><img src="img/historia-6.webp" width="1280" height="550" loading="lazy" alt="Ángeles caen entre plumas sobre un cielo rojo"><figcaption>Les arrancaron las alas, pluma a pluma.</figcaption></figure>
+    <figure><img src="img/historia-7.webp" width="1280" height="550" loading="lazy" alt="Anillos de piedra que descienden hacia un abismo rojo"><figcaption>Para ellos levantó la Espiral: cien círculos de piedra.</figcaption></figure>
+    <figure><img src="img/historia-8.webp" width="1280" height="550" loading="lazy" alt="Una llama rodeada de plumas en la oscuridad"><figcaption>Solo las Brasas recuerdan el viejo cielo.</figcaption></figure>
+  </div>
+  <div class="wrap film-nav" aria-hidden="true">
+    <button type="button" data-dir="-1" tabindex="-1">&lt;</button>
+    <button type="button" data-dir="1" tabindex="-1">&gt;</button>
+  </div>
+</section>
+
+<section class="wings" id="plumas">
+  <div class="wrap wings-grid">
+    <div class="angel rv" aria-hidden="true">
+      <img class="angel-img px" src="img/angel.webp" width="640" height="640" alt="">
+    </div>
+    <div class="rv">
+      <span class="eyebrow">La mecánica que lo cambia todo</span>
+      <h2>Tienes diez plumas</h2>
+      <p class="body">Se ven en tus alas. Cada muerte te arranca una, y encender una Brasa te cuesta otra. Cuantas menos te quedan, más fuerte pegas y menos aguantas. Pruébalo:</p>
+      <div class="readout" aria-live="polite">
+        <div class="count"><b>10</b><small> / 10</small></div>
+        <p class="state">Alas Abiertas</p>
+        <p class="note">Conservar siete o más plumas inclina la balanza del destino hacia las Alas.</p>
+      </div>
+      <div class="scale" role="img" aria-label="Balanza del destino entre el Trono y las Alas"><i></i></div>
+      <div class="scale-ends"><span>El Trono</span><span>Las Alas</span></div>
+      <div class="actions" hidden>
+        <button class="btn small" type="button" data-act="lose"><span>Caer</span></button>
+        <button class="btn small alt" type="button" data-act="gain"><span>Recuperar</span></button>
+      </div>
+      <h3>Cómo recuperarlas</h3>
+      <ul class="back">
+        <li><strong>Recoge tus Ecos</strong> donde caíste: la pluma está con ellos.</li>
+        <li><strong>Vence a tu Sombra</strong>, que se alza con tu aspecto si vuelves a morir antes.</li>
+        <li><strong>Madre Ilse</strong> te cose una a cambio de una Lágrima de Serafín.</li>
+        <li><strong>Derrota a un Arconte</strong> por primera vez: te devuelve dos.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="strata" id="estratos">
+  <div class="wrap head rv">
+    <span class="eyebrow">Cuatro Estratos, cuatro Arcontes</span>
+    <h2>El descenso</h2>
+    <p class="lead">Cada Estrato es un mundo con sus salas, sus secretos y su forma de matarte. Al entrar en una sala con enemigos no sales hasta acabar con todos.</p>
   </div>
 
-  <h2>Cómo jugar</h2>
-  <ol>
-    <li><a href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip">Descarga Seraphall-Windows.zip</a> y descomprímelo.</li>
-    <li>Abre <strong>Seraphall.exe</strong>. Si Windows avisa de que protegió tu PC, pulsa <em>Más información → Ejecutar de todas formas</em>, porque el juego no está firmado digitalmente.</li>
-  </ol>
-  <table>
-    <tr><th>Acción</th><th>Teclado y ratón</th></tr>
-    <tr><td>Moverse</td><td>WASD</td></tr>
-    <tr><td>Atacar / Ataque cargado</td><td>Clic izquierdo / Espacio</td></tr>
-    <tr><td>Esquivar / Parry</td><td>Shift / Clic derecho</td></tr>
-    <tr><td>Curarse / Interactuar</td><td>C / F</td></tr>
-    <tr><td>Menú / Mapa</td><td>Tab / M</td></tr>
-  </table>
-  <p class="note">También se puede jugar con mando, y los controles se pueden cambiar en el juego.</p>
+  <article class="stratum" style="--acc:#ff7a94">
+    <img src="img/estrato-1.webp" width="1920" height="1080" loading="lazy" alt="Combate contra Seravel, con alas de luz, en el Círculo de la Guardiana">
+    <div class="wrap st-wrap"><div class="st-in rv">
+      <span class="st-num">ESTRATO I</span>
+      <h3>Vestíbulo de Ceniza</h3>
+      <p>Celdas, capillas y cadenas que ya nadie sujeta. Aquí despiertas, y aquí aprendes a perder.</p>
+      <div class="archon">
+        <img class="px" src="img/sprites/boss_seravel.png" width="72" height="112" alt="Seravel">
+        <b>Seravel, Guardiana de las Puertas</b>
+        <q>Otro Desplumado... ¿Cuántos más enviará la Voz antes de entender?</q>
+      </div>
+      <ul class="foes" aria-label="Enemigos del Estrato I">
+        <li><img class="px" src="img/sprites/enemy_hueco.png" width="32" height="32" alt="">Hueco</li>
+        <li><img class="px" src="img/sprites/enemy_acolito.png" width="32" height="32" alt="">Acólito</li>
+        <li><img class="px" src="img/sprites/enemy_planidera.png" width="32" height="32" alt="">Plañidera</li>
+        <li><img class="px" src="img/sprites/enemy_penitente.png" width="32" height="32" alt="">Penitente</li>
+        <li><img class="px" src="img/sprites/enemy_guardia.png" width="32" height="32" alt="">Guardia</li>
+      </ul>
+    </div></div>
+  </article>
 
-  <h2 lang="en">In English</h2>
-  <p lang="en"><strong>Seraphall: The Fall of the Seraph</strong> is a free top-down 2D action RPG with 2-player co-op. You play a Featherless, a fallen angel descending the Spiral, and every death tears a feather from your wings. <a href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip">Download it for free for Windows</a>.</p>
+  <article class="stratum flip" style="--acc:#7be0ff">
+    <img src="img/estrato-2.webp" width="1920" height="1080" loading="lazy" alt="Orrun, el Ciervo Hueco, rodeado de fuego azul en su santuario">
+    <div class="wrap st-wrap"><div class="st-in rv">
+      <span class="st-num">ESTRATO II</span>
+      <h3>Bosque de Plumas Muertas</h3>
+      <p>Árboles hechos con las alas de los caídos, nidos vacíos y una ciénaga entera de llanto.</p>
+      <div class="archon">
+        <img class="px" src="img/sprites/boss_orrun.png" width="64" height="64" alt="Orrun">
+        <b>Orrun, el Ciervo Hueco</b>
+        <q>Guardaba los nidos. Todos. Hasta que el Arquitecto me pidió que los vaciara.</q>
+      </div>
+      <ul class="foes" aria-label="Enemigos del Estrato II">
+        <li><img class="px" src="img/sprites/enemy_musgoso.png" width="32" height="32" alt="">Hueco Musgoso</li>
+        <li><img class="px" src="img/sprites/enemy_nidal.png" width="32" height="32" alt="">Sacerdote Nidal</li>
+        <li><img class="px" src="img/sprites/enemy_espino.png" width="32" height="32" alt="">Espina Llorona</li>
+        <li><img class="px" src="img/sprites/enemy_garza.png" width="38" height="28" alt="">Garza de Ceniza</li>
+        <li><img class="px" src="img/sprites/enemy_lacrima.png" width="32" height="32" alt="">Madre Lacrima</li>
+      </ul>
+    </div></div>
+  </article>
+
+  <article class="stratum" style="--acc:#ff9a3c">
+    <img src="img/estrato-3.webp" width="1920" height="1080" loading="lazy" alt="Vulkaris, Herrero de Aureolas, junto a su yunque rodeado de fuego">
+    <div class="wrap st-wrap"><div class="st-in rv">
+      <span class="st-num">ESTRATO III</span>
+      <h3>Fundición de Halos</h3>
+      <p>Crisoles y yunques donde los nombres de los caídos se funden hasta ser aureolas.</p>
+      <div class="archon">
+        <img class="px" src="img/sprites/boss_vulkaris.png" width="64" height="64" alt="Vulkaris">
+        <b>Vulkaris, Herrero de Aureolas</b>
+        <q>Cada aureola de la Espiral salió de este yunque. Cada una pesa lo que pesa un nombre.</q>
+      </div>
+      <ul class="foes" aria-label="Enemigos del Estrato III">
+        <li><img class="px" src="img/sprites/enemy_ascua.png" width="32" height="32" alt="">Hueco de Ascua</li>
+        <li><img class="px" src="img/sprites/enemy_fundidor.png" width="32" height="32" alt="">Fundidor</li>
+        <li><img class="px" src="img/sprites/enemy_chispero.png" width="32" height="32" alt="">Chispero</li>
+        <li><img class="px" src="img/sprites/enemy_forjador.png" width="32" height="32" alt="">Forjador de Nombres</li>
+        <li><img class="px" src="img/sprites/enemy_kronagh.png" width="48" height="48" alt="">Kronagh</li>
+      </ul>
+    </div></div>
+  </article>
+
+  <article class="stratum flip" style="--acc:#c79bff">
+    <img src="img/estrato-4.webp" width="1920" height="1080" loading="lazy" alt="Azrahel, Rey del Abismo, con las alas abiertas en el Trono Vacío">
+    <div class="wrap st-wrap"><div class="st-in rv">
+      <span class="st-num">ESTRATO IV</span>
+      <h3>El Trono Vacío</h3>
+      <p>Una corte arrodillada que lleva mil años esperando una orden. Abajo del todo, alguien recuerda tu nombre.</p>
+      <div class="archon">
+        <img class="px" src="img/sprites/boss_azrahel.png" width="72" height="112" alt="Azrahel">
+        <b>Azrahel, Rey del Abismo</b>
+        <q>Por fin. El Desplumado que la Voz me prometió.</q>
+      </div>
+      <ul class="foes" aria-label="Enemigos del Estrato IV">
+        <li><img class="px" src="img/sprites/enemy_cortesano.png" width="32" height="32" alt="">Cortesano</li>
+        <li><img class="px" src="img/sprites/enemy_caballero.png" width="32" height="32" alt="">Caballero del Trono</li>
+        <li><img class="px" src="img/sprites/enemy_doncella.png" width="32" height="32" alt="">Doncella de Espinas</li>
+        <li><img class="px" src="img/sprites/enemy_sabueso.png" width="38" height="28" alt="">Sabueso Real</li>
+        <li><img class="px" src="img/sprites/enemy_ysolde.png" width="48" height="48" alt="">Reina Ysolde</li>
+      </ul>
+    </div></div>
+  </article>
+</section>
+
+<section class="combat" id="combate">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Fácil de empezar, difícil de dominar</span>
+      <h2>Desvía o cae</h2>
+      <p class="lead">El prólogo te lo enseña paso a paso: un jefe sencillo lanza el golpe y el juego se detiene para que reacciones. Después, estás solo.</p>
+    </div>
+    <div class="bento">
+      <article class="tile wide rv"><img src="img/parry.webp" width="1280" height="720" loading="lazy" alt="Parry perfecto en pleno combate contra varios enemigos"><div>
+        <h3><span class="key">Clic der.</span> Parry en dos tiempos</h3>
+        <p>El desvío anula el daño. El parry perfecto aturde, devuelve los proyectiles con el doble de fuerza y deja lista una Réplica: tu siguiente golpe se lanza contra el enemigo, crítico. Seguidos, se encadenan.</p>
+      </div></article>
+      <article class="tile wide rv"><img src="img/cataclismo.webp" width="1280" height="720" loading="lazy" alt="El Carcelero desata su Cataclismo en el Patio"><div>
+        <h3>Furia Final y Cataclismo</h3>
+        <p>Los jefes tienen todas sus fases en cualquier dificultad. Al borde de la muerte entran en Furia y desatan su último ataque. Rompe su postura en ese momento y podrás perdonarlos.</p>
+      </div></article>
+      <article class="tile rv"><img src="img/ira.webp" width="1280" height="720" loading="lazy" alt="Explosión de la Ira Seráfica"><div>
+        <h3><span class="key">R</span> Ira Seráfica</h3>
+        <p>Se carga golpeando y estalla a tu alrededor. Se consigue al vencer al Carcelero.</p>
+      </div></article>
+      <article class="tile rv"><img src="img/pluma.webp" width="1280" height="720" loading="lazy" alt="La Pluma Dorada cruza la sala hacia los enemigos"><div>
+        <h3><span class="key">Q</span> Pluma Dorada</h3>
+        <p>Atraviesa a todos, estalla en esquirlas y vuelve a tu mano.</p>
+      </div></article>
+      <article class="tile rv"><img src="img/dash.webp" width="1280" height="720" loading="lazy" alt="El Desplumado pelea entre enemigos en la Fundición"><div>
+        <h3><span class="key">Shift</span> El Instante</h3>
+        <p>Esquiva justo antes del golpe: cámara lenta y crítico asegurado. Rompe la postura de los enemigos y cada golpe dolerá más.</p>
+      </div></article>
+    </div>
+  </div>
+</section>
+
+<section class="arsenal" id="armas">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Arsenal completo</span>
+      <h2>Quince armas, quince estilos</h2>
+      <p class="lead">Cada una pelea distinto y tiene su propio Arte, una técnica definitiva en la tecla <span class="key">V</span>. Al llegar a +5 despiertan un poder que cambia cómo se juegan.</p>
+    </div>
+    <div class="forge">
+      <div class="racks" role="tablist" aria-label="Armas" aria-orientation="horizontal">
+        <button class="rack" type="button" role="tab" id="r-sword" aria-controls="b-sword" aria-selected="true"><img class="px" src="img/sprites/weapon_sword.png" width="64" height="24" alt="">Espada del Desplumado</button>
+        <button class="rack" type="button" role="tab" id="r-spear" aria-controls="b-spear" aria-selected="false"><img class="px" src="img/sprites/weapon_spear.png" width="64" height="24" alt="">Lanza de Ceniza</button>
+        <button class="rack" type="button" role="tab" id="r-scythe" aria-controls="b-scythe" aria-selected="false"><img class="px" src="img/sprites/weapon_scythe.png" width="64" height="24" alt="">Guadañas Gemelas</button>
+        <button class="rack" type="button" role="tab" id="r-hammer" aria-controls="b-hammer" aria-selected="false"><img class="px" src="img/sprites/weapon_hammer.png" width="64" height="24" alt="">Martillo del Juramento</button>
+        <button class="rack" type="button" role="tab" id="r-choir" aria-controls="b-choir" aria-selected="false"><img class="px" src="img/sprites/weapon_choir.png" width="64" height="24" alt="">Diapasón del Coro</button>
+        <button class="rack" type="button" role="tab" id="r-seravel" aria-controls="b-seravel" aria-selected="false"><img class="px" src="img/sprites/weapon_seravel.png" width="64" height="24" alt="">Hoja de Seravel</button>
+        <button class="rack" type="button" role="tab" id="r-reaper" aria-controls="b-reaper" aria-selected="false"><img class="px" src="img/sprites/weapon_reaper.png" width="64" height="24" alt="">Guadaña del Segador</button>
+        <button class="rack" type="button" role="tab" id="r-staff" aria-controls="b-staff" aria-selected="false"><img class="px" src="img/sprites/weapon_staff.png" width="64" height="24" alt="">Báculo del Alba</button>
+        <button class="rack" type="button" role="tab" id="r-fists" aria-controls="b-fists" aria-selected="false"><img class="px" src="img/sprites/weapon_fists.png" width="64" height="24" alt="">Puños del Penitente</button>
+        <button class="rack" type="button" role="tab" id="r-verdugo" aria-controls="b-verdugo" aria-selected="false"><img class="px" src="img/sprites/weapon_verdugo.png" width="64" height="24" alt="">Hoja del Verdugo</button>
+        <button class="rack" type="button" role="tab" id="r-bow" aria-controls="b-bow" aria-selected="false"><img class="px" src="img/sprites/weapon_bow.png" width="64" height="24" alt="">Arco de Pluma</button>
+        <button class="rack" type="button" role="tab" id="r-mangual" aria-controls="b-mangual" aria-selected="false"><img class="px" src="img/sprites/weapon_mangual.png" width="64" height="24" alt="">Mangual del Carcelero</button>
+        <button class="rack" type="button" role="tab" id="r-yunque" aria-controls="b-yunque" aria-selected="false"><img class="px" src="img/sprites/weapon_yunque.png" width="64" height="24" alt="">Maza del Gran Yunque</button>
+        <button class="rack" type="button" role="tab" id="r-astas" aria-controls="b-astas" aria-selected="false"><img class="px" src="img/sprites/weapon_astas.png" width="64" height="24" alt="">Astas de Orrun</button>
+        <button class="rack" type="button" role="tab" id="r-corona" aria-controls="b-corona" aria-selected="false"><img class="px" src="img/sprites/weapon_corona.png" width="64" height="24" alt="">Cetro del Rey Vacío</button>
+      </div>
+      <div class="blades">
+        <article class="blade" id="b-sword" role="tabpanel" aria-labelledby="r-sword">
+          <img class="shot" src="img/arte-sword.webp" width="1280" height="720" loading="lazy" alt="Corte Lunar de la Espada del Desplumado">
+          <div><img class="sprite px" src="img/sprites/weapon_sword.png" width="64" height="24" alt=""><h3>Espada del Desplumado</h3><p>Equilibrada y fiable. La primera hoja que recuerdas.</p>
+          <div class="meters"><span>Daño</span><i style="--v:47%"></i><span>Velocidad</span><i style="--v:57%"></i><span>Alcance</span><i style="--v:63%"></i></div>
+          <div class="art"><b>Arte: Corte Lunar</b>Te lanzas atravesando a tus enemigos y remata una media luna a tu alrededor. <b>Despertar</b>El remate lanza una onda de luz.</div></div>
+        </article>
+        <article class="blade" id="b-spear" role="tabpanel" aria-labelledby="r-spear">
+          <img class="shot" src="img/arte-spear.webp" width="1280" height="720" loading="lazy" alt="Mil Estocadas de la Lanza de Ceniza">
+          <div><img class="sprite px" src="img/sprites/weapon_spear.png" width="64" height="24" alt=""><h3>Lanza de Ceniza</h3><p>Estocadas largas y precisas. Mantén la distancia.</p>
+          <div class="meters"><span>Daño</span><i style="--v:40%"></i><span>Velocidad</span><i style="--v:63%"></i><span>Alcance</span><i style="--v:92%"></i></div>
+          <div class="art"><b>Arte: Mil Estocadas</b>Seis estocadas relámpago en línea recta con un alcance enorme. <b>Despertar</b>Alcance mucho mayor.</div></div>
+        </article>
+        <article class="blade" id="b-scythe" role="tabpanel" aria-labelledby="r-scythe">
+          <img class="shot" src="img/arte-scythe.webp" width="1280" height="720" loading="lazy" alt="Torbellino de Luz de las Guadañas Gemelas">
+          <div><img class="sprite px" src="img/sprites/weapon_scythe.png" width="64" height="24" alt=""><h3>Guadañas Gemelas</h3><p>Torbellino de cortes. Provoca sangrado de luz.</p>
+          <div class="meters"><span>Daño</span><i style="--v:30%"></i><span>Velocidad</span><i style="--v:83%"></i><span>Alcance</span><i style="--v:63%"></i></div>
+          <div class="art"><b>Arte: Torbellino de Luz</b>Giras con las dos guadañas segando todo lo que haya alrededor. <b>Despertar</b>El sangrado de luz casi siempre se activa.</div></div>
+        </article>
+        <article class="blade" id="b-hammer" role="tabpanel" aria-labelledby="r-hammer">
+          <img class="shot" src="img/arte-hammer.webp" width="1280" height="720" loading="lazy" alt="Terremoto del Martillo del Juramento">
+          <div><img class="sprite px" src="img/sprites/weapon_hammer.png" width="64" height="24" alt=""><h3>Martillo del Juramento</h3><p>Lento y devastador. Rompe la postura de cualquiera.</p>
+          <div class="meters"><span>Daño</span><i style="--v:90%"></i><span>Velocidad</span><i style="--v:39%"></i><span>Alcance</span><i style="--v:67%"></i></div>
+          <div class="art"><b>Arte: Terremoto</b>Tres ondas sísmicas cada vez más grandes que rompen la postura. <b>Despertar</b>Barridos más amplios y aún más castigo a la postura.</div></div>
+        </article>
+        <article class="blade" id="b-choir" role="tabpanel" aria-labelledby="r-choir">
+          <img class="shot" src="img/arte-choir.webp" width="1280" height="720" loading="lazy" alt="Aria Hueca del Diapasón del Coro">
+          <div><img class="sprite px" src="img/sprites/weapon_choir.png" width="64" height="24" alt=""><h3>Diapasón del Coro</h3><p>El golpe final lanza notas que atraviesan a los enemigos.</p>
+          <div class="meters"><span>Daño</span><i style="--v:57%"></i><span>Velocidad</span><i style="--v:69%"></i><span>Alcance</span><i style="--v:71%"></i></div>
+          <div class="art"><b>Arte: Aria Hueca</b>Una nota imposible: dieciséis ondas en todas direcciones que frenan a quien tocan. <b>Despertar</b>El remate lanza cinco notas.</div></div>
+        </article>
+        <article class="blade" id="b-seravel" role="tabpanel" aria-labelledby="r-seravel">
+          <img class="shot" src="img/arte-seravel.webp" width="1280" height="720" loading="lazy" alt="Juicio de las Puertas de la Hoja de Seravel">
+          <div><img class="sprite px" src="img/sprites/weapon_seravel.png" width="64" height="24" alt=""><h3>Hoja de Seravel</h3><p>Arma de Arconte. El tercer corte libera una onda de luz.</p>
+          <div class="meters"><span>Daño</span><i style="--v:67%"></i><span>Velocidad</span><i style="--v:63%"></i><span>Alcance</span><i style="--v:75%"></i></div>
+          <div class="art"><b>Arte: Juicio de las Puertas</b>Cinco espadas de luz caen en línea delante de ti. <b>Despertar</b>La onda de luz golpea un 60% más fuerte.</div></div>
+        </article>
+        <article class="blade" id="b-reaper" role="tabpanel" aria-labelledby="r-reaper">
+          <img class="shot" src="img/arte-reaper.webp" width="1280" height="720" loading="lazy" alt="La Cosecha de la Guadaña del Segador">
+          <div><img class="sprite px" src="img/sprites/weapon_reaper.png" width="64" height="24" alt=""><h3>Guadaña del Segador</h3><p>Barridos enormes y lentos. Cada golpe te devuelve vida y el último atrae a todos hacia la hoja.</p>
+          <div class="meters"><span>Daño</span><i style="--v:63%"></i><span>Velocidad</span><i style="--v:45%"></i><span>Alcance</span><i style="--v:88%"></i></div>
+          <div class="art"><b>Arte: La Cosecha</b>Un barrido total que atrae a todos hacia la hoja y te devuelve vida por cada uno. <b>Despertar</b>Bebe casi el doble de vida.</div></div>
+        </article>
+        <article class="blade" id="b-staff" role="tabpanel" aria-labelledby="r-staff">
+          <img class="shot" src="img/arte-staff.webp" width="1280" height="720" loading="lazy" alt="Amanecer del Báculo del Alba">
+          <div><img class="sprite px" src="img/sprites/weapon_staff.png" width="64" height="24" alt=""><h3>Báculo del Alba</h3><p>Arma de apoyo: dispara orbes de luz. El ataque cargado crea un círculo que te cura a ti y a tu compañero.</p>
+          <div class="meters"><span>Daño</span><i style="--v:37%"></i><span>Velocidad</span><i style="--v:57%"></i><span>A distancia</span><i style="--v:100%"></i></div>
+          <div class="art"><b>Arte: Amanecer</b>Un sol estalla: círculo de curación enorme y doce orbes en todas direcciones. <b>Despertar</b>Los orbes atraviesan y disparas más rápido.</div></div>
+        </article>
+        <article class="blade" id="b-fists" role="tabpanel" aria-labelledby="r-fists">
+          <img class="shot" src="img/arte-fists.webp" width="1280" height="720" loading="lazy" alt="Cien Puños de los Puños del Penitente">
+          <div><img class="sprite px" src="img/sprites/weapon_fists.png" width="64" height="24" alt=""><h3>Puños del Penitente</h3><p>Ráfagas de cinco puñetazos que destrozan la postura. El quinto es un gancho que levanta al enemigo.</p>
+          <div class="meters"><span>Daño</span><i style="--v:27%"></i><span>Velocidad</span><i style="--v:100%"></i><span>Alcance</span><i style="--v:46%"></i></div>
+          <div class="art"><b>Arte: Cien Puños</b>Una ráfaga imparable de diez puñetazos y un gancho final. <b>Despertar</b>Ráfagas de seis golpes.</div></div>
+        </article>
+        <article class="blade" id="b-verdugo" role="tabpanel" aria-labelledby="r-verdugo">
+          <img class="shot" src="img/arte-verdugo.webp" width="1280" height="720" loading="lazy" alt="Sentencia Final de la Hoja del Verdugo">
+          <div><img class="sprite px" src="img/sprites/weapon_verdugo.png" width="64" height="24" alt=""><h3>Hoja del Verdugo</h3><p>Recompensa de una batalla secreta. Tajos anchos y pesados; el tercero, la Sentencia, lanza una media luna carmesí.</p>
+          <div class="meters"><span>Daño</span><i style="--v:77%"></i><span>Velocidad</span><i style="--v:48%"></i><span>Alcance</span><i style="--v:83%"></i></div>
+          <div class="art"><b>Arte: Sentencia Final</b>Tres medias lunas carmesí que atraviesan todo. <b>Despertar</b>La Sentencia lanza dos medias lunas.</div></div>
+        </article>
+        <article class="blade" id="b-bow" role="tabpanel" aria-labelledby="r-bow">
+          <img class="shot" src="img/arte-bow.webp" width="1280" height="720" loading="lazy" alt="Lluvia de Plumas del Arco de Pluma">
+          <div><img class="sprite px" src="img/sprites/weapon_bow.png" width="64" height="24" alt=""><h3>Arco de Pluma</h3><p>Flechas de pluma a distancia; la tercera se abre en abanico. Cargado: una flecha que atraviesa a todos en línea.</p>
+          <div class="meters"><span>Daño</span><i style="--v:40%"></i><span>Velocidad</span><i style="--v:60%"></i><span>A distancia</span><i style="--v:100%"></i></div>
+          <div class="art"><b>Arte: Lluvia de Plumas</b>Una lluvia de flechas cae sobre la zona a la que apuntas. <b>Despertar</b>El tercer disparo se abre en cinco flechas.</div></div>
+        </article>
+        <article class="blade" id="b-mangual" role="tabpanel" aria-labelledby="r-mangual">
+          <img class="shot" src="img/arte-mangual.webp" width="1280" height="720" loading="lazy" alt="Cadena Rota del Mangual del Carcelero">
+          <div><img class="sprite px" src="img/sprites/weapon_mangual.png" width="64" height="24" alt=""><h3>Mangual del Carcelero</h3><p>Una bola de hierro y una cadena. Barre a todo lo que tengas delante con mucho alcance.</p>
+          <div class="meters"><span>Daño</span><i style="--v:70%"></i><span>Velocidad</span><i style="--v:46%"></i><span>Alcance</span><i style="--v:96%"></i></div>
+          <div class="art"><b>Arte: Cadena Rota</b>Haces girar la bola tres veces a tu alrededor y atraes a los enemigos. <b>Despertar</b>El último golpe atrae a todos.</div></div>
+        </article>
+        <article class="blade" id="b-yunque" role="tabpanel" aria-labelledby="r-yunque">
+          <img class="shot" src="img/arte-yunque.webp" width="1280" height="720" loading="lazy" alt="Campanada del Yunque de la Maza del Gran Yunque">
+          <div><img class="sprite px" src="img/sprites/weapon_yunque.png" width="64" height="24" alt=""><h3>Maza del Gran Yunque</h3><p>Forjada por Vulkaris, sigue al rojo. Lenta y demoledora: cada golpe quema a quien lo recibe.</p>
+          <div class="meters"><span>Daño</span><i style="--v:100%"></i><span>Velocidad</span><i style="--v:35%"></i><span>Alcance</span><i style="--v:71%"></i></div>
+          <div class="art"><b>Arte: Campanada del Yunque</b>Un único golpe que hace temblar la sala, quema y aturde a todos. <b>Despertar</b>La quemadura casi se duplica.</div></div>
+        </article>
+        <article class="blade" id="b-astas" role="tabpanel" aria-labelledby="r-astas">
+          <img class="shot" src="img/arte-astas.webp" width="1280" height="720" loading="lazy" alt="Embestida del Ciervo de las Astas de Orrun">
+          <div><img class="sprite px" src="img/sprites/weapon_astas.png" width="64" height="24" alt=""><h3>Astas de Orrun</h3><p>Un glaive de hueso con fuego azul. Estocadas larguísimas que te lanzan hacia delante.</p>
+          <div class="meters"><span>Daño</span><i style="--v:53%"></i><span>Velocidad</span><i style="--v:66%"></i><span>Alcance</span><i style="--v:100%"></i></div>
+          <div class="art"><b>Arte: Embestida del Ciervo</b>Cargas en línea recta dejando columnas de fuego azul a tu paso. <b>Despertar</b>Estocadas aún más largas que roban vida.</div></div>
+        </article>
+        <article class="blade" id="b-corona" role="tabpanel" aria-labelledby="r-corona">
+          <img class="shot" src="img/arte-corona.webp" width="1280" height="720" loading="lazy" alt="Decreto Real del Cetro del Rey Vacío">
+          <div><img class="sprite px" src="img/sprites/weapon_corona.png" width="64" height="24" alt=""><h3>Cetro del Rey Vacío</h3><p>La corona que nadie quiso, clavada en un asta. Quien la empuña manda... y paga por ello.</p>
+          <div class="meters"><span>Daño</span><i style="--v:87%"></i><span>Velocidad</span><i style="--v:54%"></i><span>Alcance</span><i style="--v:83%"></i></div>
+          <div class="art"><b>Arte: Decreto Real</b>Una orden que nadie puede desobedecer: daño enorme y rompe la postura de todos. <b>Despertar</b>El remate lanza además notas que atraviesan.</div></div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tree" id="arbol">
+  <div class="wrap two">
+    <figure class="rv"><div class="frame"><img src="img/arbol.webp" width="1280" height="720" loading="lazy" alt="Árbol de habilidades de Seraphall con la rama Filo"></div><figcaption>Elecciones excluyentes, Estigmas finales y maestría por rama. Puedes olvidarlo todo en una Brasa.</figcaption></figure>
+    <div class="rv">
+      <span class="eyebrow">Árbol de habilidades</span>
+      <h2>66 nodos en 6 ramas</h2>
+      <ul class="branches">
+        <li style="--c:#ff7366"><img class="px" src="img/sprites/icon_filo.png" width="16" height="16" alt=""><div><b>Filo <small>13</small></b><span>Golpear primero. Golpear último.</span></div></li>
+        <li style="--c:#99d9ff"><img class="px" src="img/sprites/icon_ala.png" width="16" height="16" alt=""><div><b>Ala <small>13</small></b><span>Lo que no te toca no te mata.</span></div></li>
+        <li style="--c:#ffe680"><img class="px" src="img/sprites/icon_luz.png" width="16" height="16" alt=""><div><b>Luz <small>13</small></b><span>Arde la vela que te guía.</span></div></li>
+        <li style="--c:#d99966"><img class="px" src="img/sprites/icon_ceniza.png" width="16" height="16" alt=""><div><b>Ceniza <small>13</small></b><span>Caer es la primera lección.</span></div></li>
+        <li style="--c:#ffd1eb"><img class="px" src="img/sprites/icon_feather.png" width="16" height="16" alt=""><div><b>Pluma <small>8</small></b><span>Cada pluma que pierdes te enseña algo.</span></div></li>
+        <li style="--c:#ff5973"><img class="px" src="img/sprites/icon_arconte.png" width="16" height="16" alt=""><div><b>Arconte <small>6</small></b><span>Lo que les arrancas, lo llevas contigo.</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="coop" id="coop">
+  <div class="coop-top">
+    <img src="img/coop.webp" width="1920" height="1080" loading="lazy" alt="Dos Desplumados pelean juntos en la Fundición de Halos">
+    <div class="wrap rv">
+      <span class="eyebrow">Cooperativo para 2</span>
+      <h2>No caigas solo</h2>
+    </div>
+  </div>
+  <div class="wrap coop-body">
+    <p class="lead rv" style="margin-bottom:34px">Toda la campaña se puede jugar con un amigo. Tu compañero ve tu personaje tal como lo creaste.</p>
+    <ul class="perks">
+      <li class="rv"><h3>Alas Cruzadas</h3><p>Si los dos hacéis un dash cruzado a la vez, dais un tajo en X devastador.</p></li>
+      <li class="rv"><h3>Atrapa su pluma</h3><p>Si tu compañero cae, suelta una pluma que revolotea. Atrápala y vuelve con la mitad de la vida.</p></li>
+      <li class="rv"><h3>Alas Unidas</h3><p>Al revivir, los dos ganáis un 20% de daño durante 10 segundos.</p></li>
+      <li class="rv"><h3>Marcas</h3><p>Con la tecla G señalas un sitio, un enemigo o un objeto, con baliza de luz y flecha si está lejos.</p></li>
+      <li class="rv"><h3>Viajar al compañero</h3><p>Al descansar en una Brasa puedes ir directo a su lado.</p></li>
+      <li class="rv"><h3>El mirador</h3><p>Sentaos juntos en el banco del mirador: hay una conversación solo para dos.</p></li>
+    </ul>
+    <h3 class="rv">Cómo conectaros</h3>
+    <ol class="steps rv">
+      <li><strong>Anfitrión:</strong> elige <em>Crear partida cooperativa</em> y comparte el código.</li>
+      <li><strong>Misma red:</strong> tu amigo pulsa <em>Unirse con código</em> y la partida aparece sola en la lista.</li>
+      <li><strong>Por Internet:</strong> escribe el código. El juego intenta abrir el puerto solo con UPnP.</li>
+    </ol>
+    <p class="fine">Si tu router no lo permite o tu proveedor no te da IP pública, el juego te avisa. Entonces abre el puerto UDP 24680 o usad una red virtual gratuita, como Tailscale, Radmin VPN o ZeroTier. Los dos tenéis que usar la misma versión.</p>
+  </div>
+</section>
+
+<section class="yours" id="dificultad">
+  <div class="wrap two">
+    <div class="rv">
+      <span class="eyebrow">Tu descenso</span>
+      <h2>Elige cómo caer</h2>
+      <p class="body" style="margin-bottom:18px">Cuerpo, peinado y colores de pelo, piel, ojos, capa, armadura, alas y aureola. Después, cuatro dificultades. Los jefes siempre son un duelo de verdad.</p>
+      <div class="diffs">
+        <article class="diff" style="--c:#8cd9ff"><h3>Ala Ligera</h3><span class="sk">Accesible</span><p>Conservas todos tus Ecos y las Brasas te devuelven plumas. Avisos de ataque más visibles.</p></article>
+        <article class="diff" style="--c:#73e699"><h3>Peregrino</h3><span class="sk">Para la historia</span><p>Enemigos asequibles y jefes duros. Conservas la mitad de tus Ecos al caer.</p></article>
+        <article class="diff" style="--c:#ffd14d"><h3>Desplumado</h3><span class="sk">La experiencia pensada</span><p>Enemigos exigentes y jefes muy duros. Tus Ecos se quedan donde caes.</p></article>
+        <article class="diff" style="--c:#ff4059"><h3>Serafín Caído</h3><span class="sk">Sin piedad</span><p>Todo pega más fuerte desde la primera sala y los jefes ganan ataques nuevos. +30% de Ecos.</p></article>
+      </div>
+    </div>
+    <figure class="rv"><div class="frame"><img src="img/creador.webp" width="1280" height="720" loading="lazy" alt="Creador de personaje de Seraphall"></div><figcaption>El creador de personaje, tal cual sale en el juego.</figcaption></figure>
+  </div>
+</section>
+
+<section class="cast" id="elenco">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Los que aún no han caído del todo</span>
+      <h2>Quién te espera abajo</h2>
+    </div>
+    <ul class="people">
+      <li class="rv"><img class="px" src="img/sprites/bust_brenna.png" width="48" height="48" alt=""><div><b>Brenna</b><p>Herrera del Santuario. Forjó la primera espada de Seravel y aún habla de ella con orgullo.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_ilse.png" width="48" height="48" alt=""><div><b>Madre Ilse</b><p>Cose plumas a quien las pierde. Reza por todos, incluso por los que ya no recuerdan su nombre.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_nyx.png" width="48" height="48" alt=""><div><b>Nyx</b><p>Mercader de la máscara de pico. Compra barato, vende caro y nunca pregunta de dónde vienes.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_ozias.png" width="48" height="48" alt=""><div><b>Ozias</b><p>Grabador de runas. Talló el Himno en las campanas y olvidó para qué servía.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_velaria.png" width="48" height="48" alt=""><div><b>Sor Velaria</b><p>Guarda los ecos de los Arcontes caídos y deja que vuelvas a enfrentarte a ellos.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_carto.png" width="48" height="48" alt=""><div><b>El Cartógrafo</b><p>Dibuja la Espiral desde hace siglos. Su mapa termina donde empieza su miedo.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_oso.png" width="48" height="48" alt=""><div><b>Hermano Oso</b><p>Fue serafín. Un día dejó de volar y se quedó a cuidar lo que queda del bosque.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_archivero.png" width="48" height="48" alt=""><div><b>El Archivero</b><p>Copia los nombres que la Fundición arranca a los caídos antes de que se pierdan.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/bust_lirio.png" width="48" height="48" alt=""><div><b>Lirio, la Jardinera</b><p>Cuida el jardín de un Rey que nunca baja a verlo. Sus rosas de oro no huelen a nada.</p></div></li>
+    </ul>
+  </div>
+</section>
+
+<section class="ost" id="musica">
+  <div class="wrap two">
+    <div class="rv">
+      <span class="eyebrow">Banda sonora original</span>
+      <h2>Escucha la Espiral</h2>
+      <p class="body">Los mismos temas (la Pluma, la Voz, Seravel, el lamento del Coro, la Cadena) reaparecen transformados en cada pista. Cada jefe tiene el suyo y cambia en la fase final.</p>
+    </div>
+    <div class="tracks rv">
+      <button class="track" type="button" aria-pressed="false" data-src="audio/tema.ogg"><i></i>Tema de Seraphall<small>Pantalla de título</small></button>
+      <button class="track" type="button" aria-pressed="false" data-src="audio/seravel.ogg"><i></i>Juicio del Nimbo<small>Seravel, fase final</small></button>
+      <button class="track" type="button" aria-pressed="false" data-src="audio/bosque.ogg"><i></i>Bosque de Plumas Muertas<small>Estrato II</small></button>
+      <button class="track" type="button" aria-pressed="false" data-src="audio/fundicion.ogg"><i></i>Fundición de Halos<small>Estrato III</small></button>
+      <button class="track" type="button" aria-pressed="false" data-src="audio/azrahel.ogg"><i></i>Rey del Abismo<small>Azrahel</small></button>
+    </div>
+  </div>
+</section>
+
+<section class="more" id="mas">
+  <div class="wrap">
+    <div class="head rv"><span class="eyebrow">Para quien quiera más</span><h2>Y cuando creas que has terminado</h2></div>
+    <ul class="grid3">
+      <li class="rv"><img class="px" src="img/sprites/icon_key.png" width="16" height="16" alt=""><div><h3>Batallas secretas</h3><p>Tres combates escondidos, con recompensas que no se consiguen de otra forma. Nadie te dirá dónde están.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/icon_arconte.png" width="16" height="16" alt=""><div><h3>Ascensión y Juramentos</h3><p>Sor Velaria te deja volver a pelear contra los jefes en rangos más duros y jurarles lealtad.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/icon_phoenix.png" width="16" height="16" alt=""><div><h3>Segundo Descenso</h3><p>Conservas personaje, armas y objetos. El mundo vuelve a empezar, más cruel.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/icon_scroll.png" width="16" height="16" alt=""><div><h3>Logros de perfil</h3><p>Historia, exploración, combate, desafíos de verdad y ocultos, con aviso animado al conseguirlos.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/icon_memory.png" width="16" height="16" alt=""><div><h3>Misiones y recuerdos</h3><p>Encargos de personajes, cacerías, recuerdos perdidos y un diario con filtros y seguimiento.</p></div></li>
+      <li class="rv"><img class="px" src="img/sprites/icon_eco.png" width="16" height="16" alt=""><div><h3>A tu manera</h3><p>Mando o teclado, controles reasignables, temblor y destellos ajustables, modo foto y dos idiomas.</p></div></li>
+    </ul>
+  </div>
+</section>
+
+<section class="road" id="ruta">
+  <div class="wrap">
+    <div class="head rv"><span class="eyebrow">Hoja de ruta</span><h2>Esto solo es el principio</h2></div>
+    <ol class="path">
+      <li class="now rv"><span class="tag">Ya disponible</span><h3>Juego base: Alfa Final</h3><p>Estratos I a IV y un final abierto. Pensado para unas 10 horas. Todavía en fase alfa: tus partidas nos ayudarán a equilibrarlo.</p></li>
+      <li class="rv"><span class="tag">Planeado</span><h3>DLC I: Los Cielos Rotos</h3><p>Sube a los cielos del Arquitecto. Pensado para unas 5 horas.</p></li>
+      <li class="rv"><span class="tag">Planeado</span><h3>DLC II: El Abismo Sin Nombre</h3><p>Baja bajo la Espiral, hasta el fondo. Pensado para unas 5 horas.</p></li>
+    </ol>
+    <div class="ends rv">
+      <div style="--c:#4de0ff"><h3>Alas Abiertas</h3><p>Rompe la Espiral y libera a los caídos.</p></div>
+      <div style="--c:#ff2e4d"><h3>El Trono Vacío</h3><p>Ocupa el trono y conviértete en el nuevo Arquitecto.</p></div>
+    </div>
+    <p class="fine rv">Tus decisiones mueven la balanza del destino desde el primer Estrato: perdonar a un jefe, jurarle lealtad, recuperar recuerdos, conservar plumas. Los dos finales definitivos llegarán con los DLC.</p>
+  </div>
+</section>
+
+<section class="get" id="descargar">
+  <img src="img/portada.webp" width="1920" height="1080" loading="lazy" alt="">
+  <div class="wrap">
+    <div class="get-top rv">
+      <span class="eyebrow">Gratis · Alfa Final <span data-version>v0.9.2</span></span>
+      <h2>Empieza tu descenso</h2>
+      <p class="lead">Sin instalación ni cuentas. Descomprime, abre y cae.</p>
+      <a class="btn" href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip"><span>Descargar Seraphall-Windows.zip</span></a>
+    </div>
+    <div class="get-grid">
+      <div class="rv">
+        <h3>Cómo jugar</h3>
+        <ol class="howto">
+          <li><span><a href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip">Descarga el zip</a> y descomprímelo en una carpeta.</span></li>
+          <li><span>Abre <strong>Seraphall.exe</strong>.</span></li>
+          <li><span>Si Windows avisa de que protegió tu PC, pulsa <em>Más información</em> y luego <em>Ejecutar de todas formas</em>. Sale porque el juego no está firmado digitalmente.</span></li>
+        </ol>
+        <h3>Qué necesitas</h3>
+        <dl class="specs">
+          <dt>Sistema</dt><dd>Windows de 64 bits</dd>
+          <dt>Gráficos</dt><dd>Compatibles con OpenGL 3.3</dd>
+          <dt>Descarga</dt><dd><span data-size>70 MB</span></dd>
+          <dt>Idiomas</dt><dd>Español e inglés</dd>
+          <dt>Mando</dt><dd>Sí, y también teclado y ratón</dd>
+        </dl>
+      </div>
+      <div class="rv">
+        <table>
+          <caption class="sr">Controles principales con teclado, ratón y mando</caption>
+          <thead><tr><th scope="col">Acción</th><th scope="col">Teclado y ratón</th><th scope="col">Mando</th></tr></thead>
+          <tbody>
+            <tr><td>Moverse</td><td>WASD</td><td>Stick izq.</td></tr>
+            <tr><td>Ataque / cargado</td><td>Clic izq. / Espacio</td><td>X / Y</td></tr>
+            <tr><td>Dash</td><td>Shift</td><td>A</td></tr>
+            <tr><td>Parry</td><td>Clic der.</td><td>LB</td></tr>
+            <tr><td>Pluma Dorada / Nova</td><td>Q / E</td><td>RB / →</td></tr>
+            <tr><td>Ira Seráfica</td><td>R</td><td>R3</td></tr>
+            <tr><td>Arte de arma</td><td>V</td><td>L3</td></tr>
+            <tr><td>Curar / objeto</td><td>C / X</td><td>↑ / ↓</td></tr>
+            <tr><td>Interactuar</td><td>F</td><td>B</td></tr>
+            <tr><td>Menú / mapa</td><td>Tab / M</td><td>Select / -</td></tr>
+          </tbody>
+        </table>
+        <p class="fine">Las habilidades se desbloquean jugando. Todos los controles se pueden cambiar en el menú.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="preguntas">
+  <div class="wrap">
+    <div class="head rv"><span class="eyebrow">Preguntas frecuentes</span><h2>Antes de caer</h2></div>
+    <div class="faq-list">
+      <details><summary>¿Seraphall es gratis?</summary><p>Sí. La Alfa Final se descarga gratis y no tiene compras dentro del juego.</p></details>
+      <details><summary>¿Qué significa «Alfa Final»?</summary><p>Que el juego base se puede jugar de principio a fin, pero aún no ha pasado por pruebas con muchos jugadores. Puede tener fallos y el equilibrio cambiará.</p></details>
+      <details><summary>¿Cuánto dura?</summary><p>El juego base está pensado para unas 10 horas, aunque todavía no lo hemos medido con jugadores. Dependerá mucho de la dificultad y de cuánto explores.</p></details>
+      <details><summary>¿Por qué Windows dice que protegió mi PC?</summary><p>Porque el juego no tiene firma digital, algo habitual en juegos independientes gratuitos. Pulsa <em>Más información</em> y <em>Ejecutar de todas formas</em>. Descárgalo solo desde esta web o desde GitHub.</p></details>
+      <details><summary>¿Funciona en Mac, Linux o móvil?</summary><p>De momento solo en Windows de 64 bits, con una tarjeta gráfica compatible con OpenGL 3.3.</p></details>
+      <details><summary>¿Se puede jugar con un amigo?</summary><p>Sí, dos jugadores en cooperativo, por red local o por Internet con un código de partida. Por Internet, según el router, puede hacer falta abrir un puerto o usar una red virtual gratuita.</p></details>
+      <details><summary>¿Cuántas partidas puedo guardar?</summary><p>Tres huecos de partida independientes. Los logros son de tu perfil y valen para todas.</p></details>
+      <details><summary>He encontrado un fallo. ¿Dónde lo cuento?</summary><p>En la <a href="https://github.com/kotex-debug/Seraphall/issues">página de incidencias de GitHub</a>, explicando qué pasó y en qué sala.</p></details>
+    </div>
+  </div>
+</section>
+
 </main>
+
 <footer>
-  Seraphall · Hecho con Godot · <a href="https://github.com/kotex-debug/Seraphall">Código en GitHub</a>
+  <div class="wrap">
+    <div class="foot">
+      <div lang="en">
+        <h2>In English</h2>
+        <p><strong>Seraphall: The Fall of the Seraph</strong> is a free top-down 2D action RPG for Windows with 2-player co-op. You play a Featherless, a fallen angel descending the Spiral, and every death tears a feather from your wings. The game is available in English and Spanish. <a href="https://github.com/kotex-debug/Seraphall/releases/latest/download/Seraphall-Windows.zip">Download the Final Alpha for free</a>.</p>
+      </div>
+      <ul>
+        <li><a href="https://github.com/kotex-debug/Seraphall">Código en GitHub</a></li>
+        <li><a href="https://github.com/kotex-debug/Seraphall/releases">Todas las versiones</a></li>
+        <li><a href="https://github.com/kotex-debug/Seraphall/issues">Avisar de un fallo</a></li>
+        <li><a href="video/seraphall-trailer-1080p.mp4" download="Seraphall_trailer_1080p.mp4">Descargar el tráiler</a></li>
+      </ul>
+    </div>
+    <p class="small">Seraphall. Hecho con Godot. Todas las imágenes y vídeos están capturados del propio juego. Fuentes Jersey y Silkscreen con licencia SIL Open Font.</p>
+  </div>
 </footer>
+
+<script src="site.js"></script>
 </body>
 </html>

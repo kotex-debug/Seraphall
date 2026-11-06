@@ -24,6 +24,10 @@ Multijugador: dos procesos a la vez, `--autotest=lobby_host` y, 2 s después, `-
 Las pruebas usan `user://seraphall_test_slotN.json`: nunca tocan las partidas reales (`seraphall_slot1..3.json`, `Prog.slot`).
 También: `slots` (huecos de partida), `economy` (reparto de Ecos por estrato, furia y Cataclismo), `retry` (reintento de jefes).
 
+## Web y tráiler
+- `docs/` es la web publicada en GitHub Pages. Sus imágenes salen del juego: `--autotest=webshots`, `webarts` y `webtitle` (`tools/web_shots.gd`), y `tools/web_images.gd` las convierte a WebP.
+- `tools/web_trailer.gd` rueda el tráiler con el propio juego: un bot juega de verdad y marca cada toma (`--autotest=trailer` vertical con textos, `trailerh` panorámico sin textos). `tools/make_trailer.sh` graba con Movie Maker y monta con FFmpeg (cortes en `tools/trailer_cortes.txt` y `descenso_cortes.txt`, banda sonora en `tools/gen_trailer_score.gd`): `docs/video/seraphall-trailer*.mp4` y `assets/video/descenso.ogv` (acto II de la película de introducción, `scripts/ui/intro_film.gd`).
+
 ## Exportar
 `godot --headless --path . --export-release "Windows Desktop" build/Seraphall.exe` y comprimir con `tools/LEEME.txt`. En GitHub: subir una etiqueta `v*` lanza `.github/workflows/release.yml`, que compila y publica el zip en Releases. Si cambian las RPC, sube `Net.PROTOCOL`.
 

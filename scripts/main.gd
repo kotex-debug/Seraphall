@@ -198,6 +198,22 @@ func _ready() -> void:
 				await get_tree().create_timer(0.35).timeout
 				await _shot(sd2 + "/f%02d.png" % k)
 			get_tree().quit()
+		"filmfull":
+			# la película entera a velocidad real, con su vídeo: una captura cada 2 s
+			var sd4 := OS.get_environment("SERAPHALL_SHOTS")
+			G.look = Look.sane({"body": "f", "hair": 1})
+			var film4 := preload("res://scripts/ui/intro_film.gd").new()
+			var ended4 := [false]
+			film4.finished.connect(func() -> void: ended4[0] = true)
+			add_child(film4)
+			var n4 := 0
+			while not ended4[0] and n4 < 90:
+				await get_tree().create_timer(2.0).timeout
+				await _shot(sd4 + "/ff%02d.png" % n4)
+				n4 += 1
+			print("FILMFULL capturas=", n4, " termino=", ended4[0], " video=", ResourceLoader.exists(film4.VIDEO))
+			print("AUTOTEST_FILMFULL_OK" if ended4[0] else "AUTOTEST_FILMFULL_FAIL")
+			get_tree().quit()
 		"teaser":
 			var sd3 := OS.get_environment("SERAPHALL_SHOTS")
 			var tz := preload("res://scripts/ui/intro_film.gd").new()
@@ -209,6 +225,9 @@ func _ready() -> void:
 				await get_tree().create_timer(0.35).timeout
 				await _shot(sd3 + "/t%02d.png" % k)
 			get_tree().quit()
+		"webtitle":
+			var web_t = load("res://tools/web_shots.gd").new()
+			await web_t.run_title(self, OS.get_environment("SERAPHALL_SHOTS"))
 		"title2":
 			# ficha de "Continuar" con una partida de ejemplo
 			Prog.reset()
@@ -507,6 +526,18 @@ func _run_autotest() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var w := world
 	match G.autotest:
+		"webarts":
+			var web_a = load("res://tools/web_shots.gd").new()
+			await web_a.run_arts(self, w, out)
+		"webshots":
+			var web_w = load("res://tools/web_shots.gd").new()
+			await web_w.run_world(self, w, out)
+		"trailer":
+			var web_v = load("res://tools/web_trailer.gd").new()
+			await web_v.run(self, w, true)
+		"trailerh":
+			var web_h = load("res://tools/web_trailer.gd").new()
+			await web_h.run(self, w, false)
 		"shots":
 			var lp: Player = w.local_player()
 			await _shot(out + "/01_santuario.png")
