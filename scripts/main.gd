@@ -538,6 +538,10 @@ func _run_autotest() -> void:
 		"trailerh":
 			var web_h = load("res://tools/web_trailer.gd").new()
 			await web_h.run(self, w, false)
+		"trailerc":
+			var web_c = load("res://tools/web_trailer.gd").new()
+			web_c.cerca = true
+			await web_c.run(self, w, true)
 		"shots":
 			var lp: Player = w.local_player()
 			await _shot(out + "/01_santuario.png")

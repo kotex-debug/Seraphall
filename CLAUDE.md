@@ -26,7 +26,7 @@ También: `slots` (huecos de partida), `economy` (reparto de Ecos por estrato, f
 
 ## Web y tráiler
 - `docs/` es la web publicada en GitHub Pages. Sus imágenes salen del juego: `--autotest=webshots`, `webarts` y `webtitle` (`tools/web_shots.gd`), y `tools/web_images.gd` las convierte a WebP.
-- `tools/web_trailer.gd` rueda el tráiler con el propio juego: un bot juega de verdad y marca cada toma (`--autotest=trailer` vertical con textos, `trailerh` panorámico sin textos). `tools/make_trailer.sh` graba con Movie Maker y monta con FFmpeg (cortes en `tools/trailer_cortes.txt` y `descenso_cortes.txt`, banda sonora en `tools/gen_trailer_score.gd`): `docs/video/seraphall-trailer*.mp4` y `assets/video/descenso.ogv` (acto II de la película de introducción, `scripts/ui/intro_film.gd`).
+- `tools/web_trailer.gd` rueda el tráiler con el propio juego: un bot juega de verdad y marca cada toma (`--autotest=trailer` vertical con textos, `trailerc` igual con la cámara más cerca para TikTok, `trailerh` panorámico sin textos). `tools/make_trailer.sh` graba con Movie Maker y monta con FFmpeg (cortes en `tools/trailer_cortes.txt` y `descenso_cortes.txt`, banda sonora en `tools/gen_trailer_score.gd`): `docs/video/seraphall-trailer*.mp4` y `assets/video/descenso.ogv` (acto II de la película de introducción, `scripts/ui/intro_film.gd`).
 
 ## Exportar
 `godot --headless --path . --export-release "Windows Desktop" build/Seraphall.exe` y comprimir con `tools/LEEME.txt`. En GitHub: subir una etiqueta `v*` lanza `.github/workflows/release.yml`, que compila y publica el zip en Releases. Si cambian las RPC, sube `Net.PROTOCOL`.

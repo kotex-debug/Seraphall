@@ -2,6 +2,7 @@
 # Monta los vídeos a partir de las tomas rodadas por tools/web_trailer.gd.
 #   tools/make_trailer.sh rodar CARPETA        graba trailer.avi (vertical) y trailerh.avi (panorámico)
 #   tools/make_trailer.sh vertical CARPETA     escribe CARPETA/Seraphall_trailer_tiktok.mp4 (1080x1920) y docs/video/seraphall-trailer.mp4 (720x1280)
+#   tools/make_trailer.sh tiktok CARPETA      escribe CARPETA/Seraphall_TikTok.mp4 (menos de 30 MB, rodado con tools/make_trailer.sh cerca)
 #   tools/make_trailer.sh panoramico CARPETA   escribe assets/video/descenso.ogv (acto II de la película de introducción)
 # Los cortes están en tools/trailer_cortes.txt y tools/descenso_cortes.txt.
 # Necesita Godot 4.7 y FFmpeg (variables GODOT y FFMPEG, o en el PATH).
@@ -20,6 +21,8 @@ rodar() {
 	SERAPHALL_SHOTS="$OUT" "$GODOT" --path "$P" --position 0,0 --fixed-fps 30 --write-movie "$OUT/$name.avi" -- --autotest="$name" > "$OUT/$name.log" 2> "$OUT/$name.err" || true
 	rm -f "$P/override.cfg"
 	grep -c '^TAKE' "$OUT/$name.log"
+	# si la ventana deja de dibujarse las tomas salen vacías y el vídeo repetiría el último fotograma
+	awk -F'|' '$1 == "TAKE" && $4 <= $3 { print "TOMA VACIA: " $2; mal = 1 } END { exit mal }' "$OUT/$name.log"
 }
 
 # Genera el filtro de corte. Acumula el tiempo real para no perder el ritmo al redondear a fotogramas.
@@ -58,12 +61,18 @@ rodar)
 	rodar trailer 1080 1920 360 640
 	rodar trailerh 1920 1080 640 360
 	;;
-vertical)
+cerca)
+	# para TikTok: el mismo guion con la cámara más cerca
+	rodar trailerc 1080 1920 360 640
+	;;
+vertical|tiktok)
 	# banda sonora original (tools/gen_trailer_score.gd) con el sonido del juego por debajo
 	"$GODOT" --headless --path "$P" --script res://tools/gen_trailer_score.gd -- "$OUT" > /dev/null 2>&1
-	montaje trailer "$P/tools/trailer_cortes.txt" "$OUT/v.flt" 1
+	TOMA=trailer
+	[ "$MODE" = tiktok ] && TOMA=trailerc
+	montaje "$TOMA" "$P/tools/trailer_cortes.txt" "$OUT/v.flt" 1
 	DUR=$(cat "$OUT/v.flt.dur")
-	LOGO=$(awk 'BEGIN { print int(4.6 * 1000) }')
+	TRUENO=1900   # cuando se arranca la pluma
 	{
 		# imagen: resplandor en las luces, color más intenso, viñeta y brasas que suben
 		# shortcut: las mezclas "screen" van en RGB (format=gbrp); en YUV tiñen toda la imagen de magenta
@@ -71,8 +80,14 @@ vertical)
 '
 		printf '[vout]format=gbrp,split[base][alto];\n'
 		printf '[alto]scale=270:480,curves=all=\x270/0 0.5/0 1/1\x27,gblur=sigma=9,scale=1080:1920:flags=bilinear,format=gbrp[brillo];\n'
-		printf '[base][brillo]blend=all_mode=screen:all_opacity=0.5,eq=contrast=1.07:saturation=1.2:brightness=0.015,vignette=angle=PI/7,format=gbrp[grado];\n'
-		printf '[grado][brasas]blend=all_mode=screen:all_opacity=0.65,format=yuv420p[vfin];\n'
+		printf '[base][brillo]blend=all_mode=screen:all_opacity=0.5,eq=contrast=1.07:saturation=1.2:brightness=0.015:gamma=1.12,vignette=angle=PI/7,format=gbrp[grado];\n'
+		if [ "$MODE" = tiktok ]; then
+			cp "$P/assets/fonts/Silkscreen-Bold.ttf" "$OUT/aviso.ttf"
+			AV="enable=\x27between(t,$(grep '^# caida' "$P/tools/trailer_cortes.txt" | cut -d' ' -f3),$(awk -v d="$DUR" 'BEGIN { print d - 5.0 }'))\x27"
+			printf "[grado][brasas]blend=all_mode=screen:all_opacity=0.65,scale=out_range=tv,format=yuv420p,drawbox=x=130:y=146:w=820:h=70:color=0xff2e4d:t=fill:$AV,drawtext=fontfile=aviso.ttf:text=\x27SERAPHALL · GRATIS EN PC\x27:fontsize=40:fontcolor=white:x=(w-tw)/2:y=161:$AV[vfin];\\n"
+		else
+			printf '[grado][brasas]blend=all_mode=screen:all_opacity=0.65,scale=out_range=tv,format=yuv420p[vfin];\n'
+		fi
 		# música: cada grupo con su espacio
 		printf '[1:a]aecho=0.9:0.4:28|47:0.16|0.1,pan=stereo|c0=c0|c1=c0,volume=0.8[m0];\n'
 		printf '[2:a]aecho=0.85:0.6:45|95|160:0.26|0.2|0.13,pan=stereo|c0=c0|c1=c0,adelay=0|14,volume=0.95[m1];\n'
@@ -84,11 +99,19 @@ vertical)
 		printf '[m0][m1][m2][m3][m4][m5][m6]amix=inputs=7:normalize=0:duration=longest,highpass=f=32,equalizer=f=2600:t=q:w=1:g=3,acompressor=threshold=0.4:ratio=2:attack=15:release=200:makeup=1,volume=0.62[musica];\n'
 		# sonido del juego, por debajo de la música; truenos en el gancho y en el logo
 		printf '[sfx]highpass=f=150,volume=0.34[juego];\n'
-		printf '[8:a]asplit=2[tr0][tr1];[tr0]volume=0.8[tr0b];[tr1]adelay=%s:all=1,volume=0.9[tr1b];\n' "$LOGO"
+		printf '[8:a]asplit=2[tr0][tr1];[tr0]volume=0.8[tr0b];[tr1]adelay=%s:all=1,volume=0.9[tr1b];\n' "$TRUENO"
 		printf '[musica][juego][tr0b][tr1b]amix=inputs=4:normalize=0:duration=longest,atrim=0:%s,afade=t=out:st=%s:d=1.6,alimiter=limit=0.89:level=disabled[aout]\n' "$DUR" "$(awk -v d="$DUR" 'BEGIN { print d - 1.6 }')"
 	} >> "$OUT/v.flt"
-	"$FFMPEG" -y -v error -i "$OUT/trailer.avi" -i "$OUT/score_drums.wav" -i "$OUT/score_strings.wav" -i "$OUT/score_brass.wav" -i "$OUT/score_choir.wav" -i "$OUT/score_bass.wav" -i "$OUT/score_fx.wav" -i "$OUT/score_bell.wav" -i "$A/sfx_thunder.wav" -loop 1 -framerate 30 -t "$DUR" -i "$OUT/embers.png" \
-		-/filter_complex "$OUT/v.flt" -map "[vfin]" -map "[aout]" -r 30 -c:v libx264 -preset slow -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart "$OUT/Seraphall_trailer_tiktok.mp4"
+	ENTRADAS="-i $TOMA.avi -i score_drums.wav -i score_strings.wav -i score_brass.wav -i score_choir.wav -i score_bass.wav -i score_fx.wav -i score_bell.wav"
+	if [ "$MODE" = tiktok ]; then
+		# archivo ligero (menos de 30 MB) para pasarlo al móvil y subirlo desde allí
+		( cd "$OUT" && "$FFMPEG" -y -v error $ENTRADAS -i "$A/sfx_thunder.wav" -loop 1 -framerate 30 -t "$DUR" -i embers.png \
+			-/filter_complex v.flt -map "[vfin]" -map "[aout]" -r 30 -c:v libx264 -preset slow -b:v 5000k -maxrate 7000k -bufsize 10000k -profile:v high -level 4.2 -pix_fmt yuv420p -color_range tv -c:a aac -b:a 160k -movflags +faststart Seraphall_TikTok.mp4 )
+		ls -la "$OUT/Seraphall_TikTok.mp4"
+		exit 0
+	fi
+	( cd "$OUT" && "$FFMPEG" -y -v error $ENTRADAS -i "$A/sfx_thunder.wav" -loop 1 -framerate 30 -t "$DUR" -i embers.png \
+		-/filter_complex v.flt -map "[vfin]" -map "[aout]" -r 30 -c:v libx264 -preset slow -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart Seraphall_trailer_tiktok.mp4 )
 	mkdir -p "$P/docs/video"
 	"$FFMPEG" -y -v error -i "$OUT/Seraphall_trailer_tiktok.mp4" -vf scale=720:1280:flags=lanczos -c:v libx264 -preset slow -crf 27 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "$P/docs/video/seraphall-trailer.mp4"
 	ls -la "$OUT/Seraphall_trailer_tiktok.mp4" "$P/docs/video/seraphall-trailer.mp4"
@@ -107,5 +130,5 @@ panoramico)
 	ls -la "$P/assets/video/descenso.ogv"
 	;;
 *)
-	echo "uso: make_trailer.sh rodar|vertical|panoramico CARPETA"; exit 1 ;;
+	echo "uso: make_trailer.sh rodar|vertical|tiktok|panoramico CARPETA"; exit 1 ;;
 esac

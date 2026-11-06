@@ -86,7 +86,9 @@ Tres combates épicos escondidos, con recompensas que no se consiguen de otra fo
 - **El Coloso del Abismo**: hay un muro agrietado al norte del Mirador… y un cuerno que solo responde a quien ha cruzado las Puertas. Solo se le hiere en las runas de sus manos y en su núcleo. Recompensa: **Ala de Tormenta** (tu dash invoca rayos) y **Corazón del Coloso** (+15 % de vida y +1 Lágrima).
 - **Panteón de los Arcontes**: Sor Velaria lo ofrece cuando has vencido a los tres Arcontes y superado alguna Ascensión. Los tres seguidos en Ascensión II. Recompensa: la **Pluma Áurea**.
 
-## 🧪 ALFA FINAL (v0.9.2)
+## 🧪 ALFA FINAL (v0.9.3)
+
+**Novedades de la 0.9.3:** las armas se dibujan con un tamaño proporcionado al personaje; su alcance no cambia.
 - **Película de introducción nueva**: la historia del cielo y la caída, y después metraje real del juego con los Estratos, los Arcontes, las armas y el cooperativo. Se puede saltar con Esc.
 - **Web nueva** con tráiler vertical (descargable), información de todo el juego y banda sonora: [kotex-debug.github.io/Seraphall](https://kotex-debug.github.io/Seraphall/).
 - **Prólogo nuevo** en una sala aparte, la **Cuna de Ceniza**: un jefe sencillo te enseña las mecánicas parando el juego cuando tienes que reaccionar. Termina llegando al Santuario.

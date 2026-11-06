@@ -4,10 +4,12 @@ extends RefCounted
 ## tools/make_trailer.sh. Dos formatos:
 ##   --autotest=trailer   vertical 1080x1920 (TikTok), con textos
 ##   --autotest=trailerh  panorámico 1920x1080, sin textos (para la película de introducción y la web)
+##   --autotest=trailerc  vertical con la cámara más cerca (TikTok)
 ## No se exporta con el juego. Solo se ejecuta con esas dos pruebas.
 
 const SETUP_SPEED := 4.0
 const VIEW := Vector2(360, 640)
+const ZOOM_CERCA := 1.6
 const T1 := ["hueco", "acolito", "penitente", "guardia", "bestia"]
 const T2 := ["musgoso", "nidal", "espino", "garza", "musgoso"]
 const T3 := ["ascua", "fundidor", "chispero", "forjador", "ascua"]
@@ -29,7 +31,6 @@ var boss_floor := 0.0
 var mate: Player
 var mate_on := false
 var _taps: Array[String] = []
-var _atk := 0.0
 var _dash := 1.0
 var _mate_t := 0.0
 var _flip := false
@@ -37,6 +38,15 @@ var _dlg := 0.0
 var _fill: ColorRect
 var _take := ""
 var _t0 := 0
+var cerca := false
+var show_ach := false
+var _punch := 0.0
+var _types: Array = []
+var _spawn_t := 0.0
+var _hits_seen := 0
+var _swing_on := false
+var _swing_hits := 0
+var _swing_prev := 0.0
 
 func _t(s: float) -> void:
 	await main.get_tree().create_timer(s).timeout
@@ -44,6 +54,9 @@ func _t(s: float) -> void:
 # ---------------------------------------------------------------------- control por fotograma
 func _tick() -> void:
 	var dt: float = main.get_process_delta_time()
+	# minimizada, la ventana no se dibuja y el vídeo se congela
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	for a in _taps:
 		Input.action_release(a)
 	_taps.clear()
@@ -53,7 +66,10 @@ func _tick() -> void:
 	lp.stamina = 100.0
 	lp.light = 100.0
 	w.hud.visible = false
-	Ach._layer.visible = false
+	Ach._layer.visible = show_ach
+	if cerca:
+		_punch *= exp(-dt * 12.0)
+		w.camera.zoom = Vector2.ONE * ZOOM_CERCA * (1.0 + _punch)
 	_dlg -= dt
 	if _dlg <= 0.0 and w.dialog.is_open():
 		w.dialog._advance()
@@ -63,7 +79,9 @@ func _tick() -> void:
 			boss.hp = maxf(boss.hp, boss.max_hp * boss_floor)
 		if _fill:
 			_fill.size.x = 300.0 * clampf(boss.hp / boss.max_hp, 0.0, 1.0)
+	_log_swings()
 	if bot:
+		_keep_enemies(dt)
 		_play(dt)
 	if mate_on:
 		_mate_step(dt)
@@ -84,10 +102,10 @@ func _axis(mv: Vector2) -> void:
 	elif mv.y > 0.05:
 		Input.action_press("down", mv.y)
 
-func _target() -> Node2D:
+func _target() -> Enemy:
 	if boss and is_instance_valid(boss) and boss.is_alive():
 		return boss
-	var best: Node2D = null
+	var best: Enemy = null
 	var bd := 230.0
 	for e in w.enemies_alive():
 		if e.is_boss:
@@ -98,7 +116,39 @@ func _target() -> Node2D:
 			best = e
 	return best
 
-## Juega como un jugador: se acerca, rodea, golpea y esquiva
+## Nunca una pantalla vacía: si quedan pocos enemigos cerca, llegan más
+func _keep_enemies(dt: float) -> void:
+	_spawn_t -= dt
+	if boss or _types.is_empty() or _spawn_t > 0.0:
+		return
+	var close := 0
+	for e in w.enemies_alive():
+		if e.global_position.distance_to(lp.global_position) < 110.0:
+			close += 1
+	if close >= 3:
+		return
+	var at: Vector2 = lp.global_position + Vector2.from_angle(randf() * TAU) * randf_range(46.0, 64.0)
+	if not w.is_wall_at(at):
+		_spawn_t = 0.12
+		w._spawn_trial_enemy(_types.pick_random(), at)
+
+## Registro para elegir los cortes: HIT cuando un golpe conecta, AIR cuando uno no toca a nadie
+func _log_swings() -> void:
+	var frame := Engine.get_frames_drawn()
+	if lp._hits_landed != _hits_seen:
+		_hits_seen = lp._hits_landed
+		print("HIT|%d" % frame)
+	var swinging: bool = lp.state == "attack"
+	if _swing_on and (not swinging or lp.attack_t < _swing_prev):
+		if lp._hits_landed == _swing_hits:
+			print("AIR|%d" % frame)
+		_swing_on = false
+	if swinging and not _swing_on:
+		_swing_on = true
+		_swing_hits = lp._hits_landed
+	_swing_prev = lp.attack_t
+
+## Juega como un jugador bueno: solo golpea si llega, se lanza a por el enemigo y encadena con esquivas
 func _play(dt: float) -> void:
 	var tgt := _target()
 	if tgt == null:
@@ -106,39 +156,45 @@ func _play(dt: float) -> void:
 		return
 	var to: Vector2 = tgt.global_position - lp.global_position
 	var d := to.length()
-	var wpn: Dictionary = Prog.WEAPONS[Prog.equipped]
-	var near: float = 90.0 if wpn.get("ranged", false) else float(wpn.range) * 0.85
-	if boss and tgt == boss:
-		near += 16.0
-	var mv := Vector2.ZERO
-	if d > near:
-		mv = to.normalized()
-	elif d < near * 0.5:
-		mv = -to.normalized()
-	else:
-		mv = to.normalized().rotated(PI * 0.5) * 0.55
-	_axis(mv)
-	_atk -= dt
-	if _atk <= 0.0 and d < near + 30.0:
-		_tap("attack")
-		_atk = 0.15
+	var wpn: Dictionary = Prog.weapon_data()
+	var reach: float = 90.0 if wpn.get("ranged", false) else float(wpn.range) * 0.9 + tgt.body_radius
 	_dash -= dt
-	if _dash <= 0.0:
+	# intocable en este momento (Cataclismo, cambio de fase): esquiva en vez de golpear al aire
+	if not tgt in w.enemies_alive():
+		_axis(to.normalized().rotated(1.3))
+		if _dash <= 0.0:
+			_tap("dash")
+			_dash = 0.6
+		return
+	if d > reach:
+		_axis(to.normalized())
+		if d > reach + 34.0 and _dash <= 0.0:
+			_tap("dash")
+			_dash = 0.35
+		return
+	if lp.combo >= int(wpn.combo) and _dash <= 0.0 and lp.state == "move":
+		_flip = not _flip
+		_axis(to.normalized().rotated(0.6 if _flip else -0.6))
 		_tap("dash")
-		_dash = randf_range(1.3, 2.3)
+		_dash = 0.8
+		return
+	# quieto, el juego lo encara solo al enemigo más cercano
+	_axis(Vector2.ZERO)
+	if lp.state == "move":
+		_tap("attack")
 
 ## El compañero: en una partida real estos datos llegarían por red
 func _mate_step(dt: float) -> void:
 	var tgt := _target()
 	var goal: Vector2 = lp.position + Vector2(-46, 16)
 	if tgt:
-		goal = tgt.global_position + (tgt.global_position - lp.global_position).normalized().rotated(PI * 0.5) * 40.0
+		goal = tgt.global_position + (tgt.global_position - lp.global_position).normalized().rotated(PI * 0.5) * 26.0
 	var np: Vector2 = mate.position.move_toward(goal, 120.0 * dt)
 	var vel: Vector2 = (np - mate.position) / maxf(dt, 0.001)
 	var aim_to: Vector2 = (tgt.global_position - np) if tgt else Vector2.RIGHT
 	mate._net_state(np, vel, aim_to.angle(), "move", "run" if vel.length() > 20.0 else "idle", 0, 0.8, 1 if aim_to.x >= 0.0 else -1, "hammer")
 	_mate_t -= dt
-	if _mate_t <= 0.0 and tgt and aim_to.length() < 70.0:
+	if _mate_t <= 0.0 and tgt and aim_to.length() < 44.0:
 		_flip = not _flip
 		mate._net_fx("slash", [aim_to.angle(), 36.0, 130.0, false, _flip, false])
 		if tgt is Enemy and not (tgt as Enemy).is_boss:
@@ -166,6 +222,7 @@ func _setup(pos: Vector2, types: Array, weapon: String, radius := 56.0) -> void:
 	lp.respawn_at(w.tile_pos(pos.x, pos.y))
 	lp.state = "move"
 	lp.cutscene = false
+	_types = types
 	await _t(0.4)
 	Prog.equipped = weapon
 	lp._update_weapon_sprite()
@@ -173,10 +230,10 @@ func _setup(pos: Vector2, types: Array, weapon: String, radius := 56.0) -> void:
 		w._spawn_trial_enemy(types[i], lp.global_position + Vector2.from_angle(TAU * i / types.size() + 0.5) * radius)
 	await _t(0.35)
 
-func _combat(nm: String, pos: Vector2, types: Array, weapon: String, big: String, band: String, secs := 2.8) -> void:
+func _combat(nm: String, pos: Vector2, types: Array, weapon: String, place: String, secs := 4.0) -> void:
 	await _setup(pos, types, weapon)
 	_begin(nm)
-	_cap(big, band)
+	_cap("4 MUNDOS", place)
 	bot = true
 	await _t(secs)
 	_end()
@@ -205,6 +262,7 @@ func _wait_boss(tp: String) -> Enemy:
 
 func _fight(be: Enemy, nm: String, secs: float, floor_ratio: float, title: String, sub: String) -> void:
 	boss = be
+	be.active = true  # sin esto no cuenta como enemigo vivo y los golpes lo atraviesan
 	boss_floor = floor_ratio
 	lp.state = "move"
 	lp.cutscene = false
@@ -241,12 +299,7 @@ func _cine(kind: String) -> void:
 	Prog.flags["cine_" + kind] = true
 	await _t(0.5)
 
-# ---------------------------------------------------------------------- guion de rodaje
-func run(p_main: Node, p_world, p_portrait: bool) -> void:
-	main = p_main
-	w = p_world
-	portrait = p_portrait
-	lp = w.local_player()
+func _prep() -> void:
 	G.music_volume = 0.0
 	Audio.refresh_volume()
 	G.combat_mode = 1
@@ -268,11 +321,7 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	Engine.time_scale = SETUP_SPEED
 	await _t(1.0)
 
-	# Estrato I
-	await _combat("st1", P1, T1, "sword", "VESTÍBULO DE CENIZA", "ESTRATO I")
-	await _art(P1, T1, "mangual", "MANGUAL DEL CARCELERO")
-	await _art(P1, T1, "reaper", "GUADAÑA DEL SEGADOR")
-	await _art(P1, T1, "verdugo", "HOJA DEL VERDUGO")
+func _take_moves() -> void:
 	# parry de verdad contra el enemigo más cercano
 	await _setup(P1, T1, "sword", 34.0)
 	_begin("parry")
@@ -309,6 +358,84 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 		lp._cast_lance()
 		await _t(0.55)
 	_end()
+
+## Los avisos de logro de verdad, centrados en la pantalla vertical (el juego los centra en 640 de ancho)
+func _take_logros() -> void:
+	await _setup(P4, T4, "corona")
+	var pop = Ach.popup
+	pop.queue.clear()
+	pop.cur = {}
+	pop.scale = Vector2.ONE * 1.15
+	pop.position = Vector2(VIEW.x / 2.0 - 320.0 * 1.15, 180.0)
+	show_ach = true
+	_begin("logros")
+	_cap("%d LOGROS" % Ach.count("base")[1], "BRONCE · PLATA · ORO · ÉPICOS")
+	bot = true
+	var pct: float = Ach.percent()
+	pop.push({"id": "azrahel", "kind": "unlock", "from": pct, "to": pct + 3.0})
+	await _t(1.0)
+	pop.t = pop._dur - 0.3
+	await _t(0.32)
+	pop.push({"id": "sb_panteon", "kind": "unlock", "from": pct + 3.0, "to": pct + 9.0})
+	await _t(2.6)
+	_end()
+	show_ach = false
+	pop.queue.clear()
+	pop.cur = {}
+
+func _take_coop() -> void:
+	mate = w._spawn_player(77, 2)
+	mate.set_look(Look.defaults_p2(), 7)
+	mate.iframes = 99999.0
+	await _setup(P3, T3, "reaper")
+	mate.position = lp.position + Vector2(-40, 18)
+	mate_on = true
+	_begin("coop")
+	_cap("COOPERATIVO", "2 JUGADORES · LAN Y ONLINE")
+	bot = true
+	await _t(4.0)
+	_end()
+	await _setup(P3, T3, "sword", 44.0)
+	_begin("coop_cross")
+	_cap("ALAS CRUZADAS", "DASH CRUZADO: TAJO EN X")
+	bot = true
+	await _t(0.5)
+	w._cross_slash((lp.global_position + mate.global_position) / 2.0, Net.my_id())
+	await _t(1.4)
+	w._cross_slash((lp.global_position + mate.global_position) / 2.0, Net.my_id())
+	await _t(1.2)
+	_end()
+	mate_on = false
+	await _setup(P3, [], "sword")
+	mate.position = lp.position + Vector2(34, 6)
+	mate._net_state(mate.position, Vector2.ZERO, 0.0, "downed", "idle", 0, 0.0, 1, "hammer")
+	await _t(0.3)
+	_begin("coop_revive")
+	_cap("ATRAPA SU PLUMA", "Y REVÍVELO")
+	await _t(1.0)
+	mate._net_state(mate.position, Vector2.ZERO, 0.0, "move", "idle", 0, 0.5, 1, "hammer")
+	w.on_partner_revived(true)
+	await _t(1.8)
+	_end()
+
+# ---------------------------------------------------------------------- guion de rodaje
+func run(p_main: Node, p_world, p_portrait: bool) -> void:
+	main = p_main
+	w = p_world
+	portrait = p_portrait
+	lp = w.local_player()
+	if cerca and G.punch_requested.is_connected(w._on_punch):
+		# su animación devolvería el zoom a 1
+		G.punch_requested.disconnect(w._on_punch)
+		G.punch_requested.connect(func(amount: float) -> void: _punch = maxf(_punch, amount))
+	await _prep()
+
+	# Estrato I
+	await _combat("st1", P1, T1, "sword", "VESTÍBULO DE CENIZA")
+	await _art(P1, T1, "mangual", "MANGUAL DEL CARCELERO")
+	await _art(P1, T1, "reaper", "GUADAÑA DEL SEGADOR")
+	await _art(P1, T1, "verdugo", "HOJA DEL VERDUGO")
+	await _take_moves()
 	for kind in ["carcelero", "choir", "seravel"]:
 		await _cine(kind)
 
@@ -353,7 +480,7 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	# Estrato II
 	w._descend(2)
 	await _t(3.0)
-	await _combat("st2", P2, T2, "astas", "BOSQUE DE PLUMAS MUERTAS", "ESTRATO II")
+	await _combat("st2", P2, T2, "astas", "BOSQUE DE PLUMAS MUERTAS")
 	await _art(P2, T2, "astas", "ASTAS DE ORRUN")
 	await _art(P2, T2, "bow", "ARCO DE PLUMA")
 	await _art(P2, T2, "scythe", "GUADAÑAS GEMELAS")
@@ -362,6 +489,8 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	w._trial_reset()
 	lp.respawn_at(w.tile_pos(141, 16))
 	var orr: Enemy = await _wait_boss("orrun")
+	Prog.equipped = "astas"  # el último Arte fue a distancia
+	lp._update_weapon_sprite()
 	await _fight(orr, "orrun", 6.0, 0.55, "ORRUN", "EL CIERVO HUECO")
 	boss_floor = 0.0
 	w._server_damage(orr.idx, orr.max_hp * 0.52, Vector2.RIGHT, 0.0, false)
@@ -372,43 +501,11 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	# Estrato III y cooperativo
 	w._descend(3)
 	await _t(3.0)
-	await _combat("st3", P3, T3, "yunque", "FUNDICIÓN DE HALOS", "ESTRATO III")
+	await _combat("st3", P3, T3, "yunque", "FUNDICIÓN DE HALOS")
 	await _art(P3, T3, "yunque", "MAZA DEL GRAN YUNQUE")
 	await _art(P3, T3, "hammer", "MARTILLO DEL JURAMENTO")
 	await _art(P3, T3, "fists", "PUÑOS DEL PENITENTE")
-	mate = w._spawn_player(77, 2)
-	mate.set_look(Look.defaults_p2(), 7)
-	mate.iframes = 99999.0
-	await _setup(P3, T3, "reaper")
-	mate.position = lp.position + Vector2(-40, 18)
-	mate_on = true
-	_begin("coop")
-	_cap("COOPERATIVO", "2 JUGADORES · LAN Y ONLINE")
-	bot = true
-	await _t(4.0)
-	_end()
-	await _setup(P3, T3, "sword", 44.0)
-	_begin("coop_cross")
-	_cap("ALAS CRUZADAS", "DASH CRUZADO: TAJO EN X")
-	bot = true
-	await _t(0.5)
-	w._cross_slash((lp.global_position + mate.global_position) / 2.0, Net.my_id())
-	await _t(1.4)
-	w._cross_slash((lp.global_position + mate.global_position) / 2.0, Net.my_id())
-	await _t(1.2)
-	_end()
-	mate_on = false
-	await _setup(P3, [], "sword")
-	mate.position = lp.position + Vector2(34, 6)
-	mate._net_state(mate.position, Vector2.ZERO, 0.0, "downed", "idle", 0, 0.0, 1, "hammer")
-	await _t(0.3)
-	_begin("coop_revive")
-	_cap("ATRAPA SU PLUMA", "Y REVÍVELO")
-	await _t(1.0)
-	mate._net_state(mate.position, Vector2.ZERO, 0.0, "move", "idle", 0, 0.5, 1, "hammer")
-	w.on_partner_revived(true)
-	await _t(1.8)
-	_end()
+	await _take_coop()
 	mate_on = true
 	w._reset_enemies(true)
 	w._trial_reset()
@@ -428,11 +525,12 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	# Estrato IV
 	w._descend(4)
 	await _t(3.0)
-	await _combat("st4", P4, T4, "corona", "EL TRONO VACÍO", "ESTRATO IV")
+	await _combat("st4", P4, T4, "corona", "EL TRONO VACÍO")
 	await _art(P4, T4, "corona", "CETRO DEL REY VACÍO")
 	await _art(P4, T4, "seravel", "HOJA DE SERAVEL")
 	await _art(P4, T4, "choir", "DIAPASÓN DEL CORO")
 	if portrait:
+		await _take_logros()
 		await _title_takes()
 	w._reset_enemies(true)
 	w._trial_reset()
@@ -450,9 +548,16 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	await _t(1.8)
 	boss = az
 	boss_floor = 0.12
+	Prog.wing_feathers = 1
+	_begin("hook3")
+	bot = true
+	_cap_lines(["Y SIN PLUMAS", "PEGAS MÁS FUERTE"], UIKit.GOLD)
+	await _t(6.0)
+	_end()
+	Prog.wing_feathers = Prog.WING_MAX
 	_begin("hook1")
 	bot = true
-	_cap_lines(["CADA VEZ", "QUE MUERES..."], UIKit.WHITE)
+	_cap_lines(["CADA MUERTE", "TE ARRANCA"], UIKit.WHITE)
 	await _t(11.0)
 	_end()
 	# muerte de verdad: la pluma se arranca
@@ -460,7 +565,7 @@ func run(p_main: Node, p_world, p_portrait: bool) -> void:
 	immortal = false
 	_begin("hook2")
 	bot = false
-	_cap_lines(["...TE ARRANCA", "UNA PLUMA."], UIKit.GOLD)
+	_cap_lines(["UNA PLUMA"], UIKit.GOLD)
 	_feather_row()
 	await _t(0.5)
 	lp.iframes = 0.0
@@ -538,15 +643,16 @@ func _title_takes() -> void:
 	_cover()
 	await _t(0.05)
 	_logo(92.0)
-	await _t(0.71)
+	await _t(0.357)
 	_band("ALFA FINAL", 200.0)
-	await _t(0.71)
+	await _t(0.357)
 	_line("YA DISPONIBLE", 56, 226.0, UIKit.GOLD)
 	_flash(0.6, 0.2)
-	await _t(0.71)
-	_line("GRATIS · WINDOWS · COOP", 24, 292.0, UIKit.WHITE)
-	await _t(0.71)
-	_line("kotex-debug.github.io/Seraphall", 18, 334.0, UIKit.GOLD_HOT, "body")
+	await _t(0.357)
+	_line("GRATIS · PC WINDOWS · COOP", 28, 290.0, UIKit.WHITE)
+	await _t(0.357)
+	_band("ENLACE EN MI PERFIL", 330.0)
+	_line("kotex-debug.github.io/Seraphall", 22, 368.0, UIKit.GOLD_HOT, "body")
 	await _t(5.0)
 	_end()
 	await _t(0.3)
@@ -629,11 +735,11 @@ func _cap_lines(lines: Array, col: Color) -> void:
 func _name_card(title: String, sub: String) -> void:
 	if not portrait:
 		return
-	_line(title, 56, 418.0, UIKit.WHITE, "title", false)
-	_band(sub, 472.0)
+	_line(title, 56, 380.0, UIKit.WHITE, "title", false)
+	_band(sub, 434.0)
 	var back := ColorRect.new()
 	back.color = Color(0.05, 0.02, 0.07, 0.9)
-	back.position = Vector2(30, 503)
+	back.position = Vector2(30, 465)
 	back.size = Vector2(300, 8)
 	over.add_child(back)
 	_fill = ColorRect.new()

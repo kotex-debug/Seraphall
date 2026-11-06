@@ -6,6 +6,7 @@ extends SceneTree
 
 const SR := 44100
 const BEAT := 60.0 / 168.0
+const FIN := 5.0  # segundos del cierre con el logo; igual que el último corte
 const PLUMA := [[74, 1.0], [81, 1.0], [79, 0.5], [77, 0.5], [76, 1.0], [77, 0.5], [76, 0.5], [74, 2.0], [72, 1.0], [74, 0.5], [76, 0.5], [77, 1.0], [76, 1.0], [72, 1.0], [74, 3.0]]
 const SERAVEL := [[69, 1.5], [72, 0.5], [76, 1.0], [74, 1.0], [72, 0.5], [71, 0.5], [69, 2.0], [65, 1.0], [67, 1.0], [69, 1.0], [76, 1.0], [74, 4.0]]
 const DM := [38, 50, 57, 62, 65, 69]
@@ -420,9 +421,10 @@ func _intro() -> void:
 	for nt: Array in [[74, 0.42], [81, 0.42], [79, 0.21], [77, 0.21], [76, 0.42], [74, 0.9]]:
 		put("bell", bell(nt[0]), t, 0.34)
 		t += nt[1]
-	put("drums", taiko(), 2.2, 0.8)
-	put("drums", taiko(), 2.55, 0.55)
-	# el logo: braam y subida hasta la caída
+	# la pluma se arranca
+	put("drums", taiko(), d1 - 1.2, 0.8)
+	put("drums", taiko(), d1 - 0.85, 0.55)
+	# braam y subida hasta la caída
 	put("brass", braam(), d1, 1.0)
 	put("fx", boom(), d1, 1.0)
 	put("fx", crash(), d1, 0.4)
@@ -439,17 +441,17 @@ func _bar_chord(beat: float) -> Array:
 	return [DM, BB, CM, AM][bar % 4]
 
 func _body() -> void:
-	var last := int(round((total - 7.0 - drop) / BEAT))
+	var last := int(round((total - FIN - drop) / BEAT))
 	for bi in last:
 		var b := float(bi)
 		var ch: Array = _bar_chord(b)
 		var first_of_bar := (bi + 1) % 4 == 0 or bi == 0
 		var sect := 0
-		if bi >= 46:
+		if bi >= 40:
 			sect = 3
-		elif bi >= 24:
+		elif bi >= 20:
 			sect = 2
-		elif bi >= 12:
+		elif bi >= 8:
 			sect = 1
 		# ostinato de cuerdas en corcheas
 		for k in 2:
@@ -478,39 +480,35 @@ func _body() -> void:
 		if sect >= 3:
 			put("drums", taiko(), at(b + 0.5), 0.45)
 	# melodías del juego
-	melody("brass", SERAVEL, 12.0, 0.34)
-	melody("choir", PLUMA, 30.0, 0.5, 0, "o")
-	melody("bell", PLUMA, 30.0, 0.16, 12)
-	melody("brass", SERAVEL, 46.0, 0.42)
-	melody("choir", SERAVEL, 46.0, 0.55)
-	melody("brass", PLUMA, 62.0, 0.46)
-	melody("choir", PLUMA, 62.0, 0.6)
-	melody("bell", PLUMA, 62.0, 0.14, 12)
+	melody("brass", PLUMA, 8.0, 0.34)
+	melody("choir", SERAVEL, 24.0, 0.5, 0, "o")
+	melody("brass", SERAVEL, 40.0, 0.46)
+	melody("choir", SERAVEL, 40.0, 0.6)
 	# redobles antes de cada sección
-	for sb in [12.0, 24.0, 46.0, float(last)]:
+	for sb in [8.0, 20.0, 40.0, float(last)]:
 		for k3 in 8:
 			put("drums", snare(), at(sb - 2.0 + k3 * 0.25), 0.2 + k3 * 0.06)
 
 func _finale() -> void:
-	var t := total - 7.0
+	var t := total - FIN
 	put("fx", boom(), t, 1.0)
 	put("brass", braam(2.6), t, 0.9)
 	put("fx", crash(), t, 0.6)
 	put("drums", taiko(), t, 1.0)
-	chord_pad(DM, t, 1.4, 0.8)
+	chord_pad(DM, t, 0.7, 0.8)
 	for k in range(1, DM.size()):
-		put("brass", brass(DM[k], 1.3), t, 0.2)
-		put("strings", strings(DM[k] + 12, 1.3, 3400.0, 0.02, 0.3), t, 0.2)
-	put("bass", bass(38, 1.4), t, 0.55)
+		put("brass", brass(DM[k], 0.65), t, 0.2)
+		put("strings", strings(DM[k] + 12, 0.65, 3400.0, 0.02, 0.3), t, 0.2)
+	put("bass", bass(38, 0.7), t, 0.55)
 	# el final se abre a modo mayor: la esperanza de la Pluma
-	var t2 := t + 1.43
+	var t2 := t + 0.714
 	put("drums", taiko(), t2, 1.0)
 	put("fx", crash(), t2, 0.35)
-	chord_pad(DMAJ, t2, 4.3, 0.95)
+	chord_pad(DMAJ, t2, 3.0, 0.95)
 	for k2 in range(1, DMAJ.size()):
-		put("brass", brass(DMAJ[k2], 2.8), t2, 0.2)
-		put("strings", strings(DMAJ[k2] + 12, 4.3, 2600.0, 0.3, 1.0), t2, 0.26)
-	put("bass", bass(38, 4.3), t2, 0.5)
+		put("brass", brass(DMAJ[k2], 2.2), t2, 0.2)
+		put("strings", strings(DMAJ[k2] + 12, 3.0, 2600.0, 0.3, 1.0), t2, 0.26)
+	put("bass", bass(38, 3.0), t2, 0.5)
 	var tb := t2 + 0.3
 	for nt: Array in [[74, 0.42], [81, 0.42], [79, 0.21], [78, 0.21], [76, 0.42], [74, 1.2]]:
 		put("bell", bell(nt[0]), tb, 0.3)

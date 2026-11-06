@@ -179,9 +179,17 @@ func refresh_stats(full := false) -> void:
 		phoenix_used = false
 	_update_orbit()
 
+## Solo el dibujo (lienzo de 64 px; el personaje mide 26): el alcance de cada golpe está en Prog.WEAPONS
+const WEAPON_SCALE := {
+	"sword": 0.42, "seravel": 0.44, "verdugo": 0.48, "scythe": 0.42, "choir": 0.44, "fists": 0.4,
+	"spear": 0.56, "reaper": 0.56, "staff": 0.5, "astas": 0.56, "corona": 0.5, "bow": 0.46,
+	"hammer": 0.5, "yunque": 0.5, "mangual": 0.5,
+}
+
 func _update_weapon_sprite() -> void:
 	var wid: String = Prog.equipped if is_local() else _remote_weapon
 	weapon_spr.texture = Fx.tex("weapon_" + Prog.WEAPONS[wid].sprite)
+	weapon_spr.scale = Vector2.ONE * float(WEAPON_SCALE.get(wid, 0.45))
 	# aura según el nivel: despertada (+5) y ascendida (+10)
 	_weapon_glow = Prog.weapon_tier(wid) if is_local() else 0
 
